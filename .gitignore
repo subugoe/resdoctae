@@ -1,18 +1,44 @@
-# Build and Release Folders
-bin-debug/
-bin-release/
-[Oo]bj/
-[Bb]in/
+## Ignore the MVN compiled output directories from version tracking
+target/
 
-# Other files and folders
+## Ignore tags index files created by Exuberant Ctags
+tags
+
+## Ignore project files created by Eclipse
 .settings/
+/bin/
+.project
+.classpath
+.checkstyle
 
-# Executables
-*.swf
-*.air
-*.ipa
-*.apk
+## Ignore project files created by IntelliJ IDEA
+*.iml
+*.ipr
+*.iws
+.idea/
+overlays/
 
-# Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
-# should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+## Ignore project files created by NetBeans
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+nbactions.xml
+nb-configuration.xml
+
+## Ignore all *.properties file in root folder, EXCEPT build.properties (the default)
+## KEPT FOR BACKWARDS COMPATIBILITY WITH 5.x (build.properties is now replaced with local.cfg)
+/*.properties
+!/build.properties
+
+# Ignore a local.cfg file in root folder, if it exists
+/local.cfg
+# Also ignore it under dspace/config
+/dspace/config/local.cfg
+
+##Mac noise
+.DS_Store
+
+##Ignore JRebel project configuration
+rebel.xml
