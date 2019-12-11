@@ -22,15 +22,10 @@ import org.dspace.app.xmlui.utils.ContextUtil;
 import org.dspace.app.xmlui.utils.HandleUtil;
 import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.content.Bitstream;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
 import org.elasticsearch.action.search.SearchRequestBuilder;
 import org.elasticsearch.action.search.SearchResponse;
 
@@ -41,7 +36,6 @@ import org.xml.sax.SAXException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -52,22 +46,13 @@ import java.util.*;
 public class CSVOutputter extends AbstractReader implements Recyclable 
 {
     protected static final Logger log = Logger.getLogger(CSVOutputter.class);
-    private static ThreadLocal<DateFormat> dateFormat = new ThreadLocal<DateFormat>(){
-                    @Override
-                    protected DateFormat initialValue() {
-                        return new SimpleDateFormat("yyyy-MM-dd");
-                    }
-                  };
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
     protected Response response;
     protected Request request;
     protected Context context;
     protected CSVWriter writer = null;
-
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    protected HandleService handleService = HandleServiceFactory.getInstance().getHandleService();
-
+    
     public void setup(SourceResolver sourceResolver, Map objectModel, String src, Parameters parameters) throws IOException, SAXException, ProcessingException {
         log.info("CSV Writer for stats");
         super.setup(sourceResolver, objectModel, src, parameters);
@@ -126,6 +111,8 @@ public class CSVOutputter extends AbstractReader implements Recyclable
             }
             
             ElasticSearchStatsViewer esStatsViewer = new ElasticSearchStatsViewer(dso, fromDate, toDate);
+            StatisticsTransformer statisticsTransformerInstance = new StatisticsTransformer(fromDate, toDate);
+
             if(requestedReport.equalsIgnoreCase("topCountries"))
             {                
                 SearchRequestBuilder requestBuilder = esStatsViewer.facetedQueryBuilder(esStatsViewer.facetTopCountries);
@@ -191,19 +178,19 @@ public class CSVOutputter extends AbstractReader implements Recyclable
         {
             if(termType.equalsIgnoreCase("bitstream"))
             {
-                Bitstream bitstream = bitstreamService.findByIdOrLegacyId(context, facetEntry.getTerm().string());
-                Item item = (Item) bitstreamService.getParentObject(context, bitstream);
+                Bitstream bitstream = Bitstream.find(context, Integer.parseInt(facetEntry.getTerm().string()));
+                Item item = (Item) bitstream.getParentObject();
                 
                 String[] entryValues = new String[9];
                 
                 entryValues[0] = bitstream.getID() + "";
                 entryValues[1] = bitstream.getName();
-                entryValues[2] = bitstream.getBundles().get(0).getName();
+                entryValues[2] = bitstream.getBundles()[0].getName();
                 entryValues[3] = item.getName();
-                entryValues[4] = handleService.getCanonicalPrefix() + item.getHandle();
-                entryValues[5] = wrapInDelimitedString(itemService.getMetadataByMetadataString(item, "dc.creator"));
-                entryValues[6] = wrapInDelimitedString(itemService.getMetadataByMetadataString(item, "dc.publisher"));
-                entryValues[7] = wrapInDelimitedString(itemService.getMetadataByMetadataString(item, "dc.date.issued"));
+                entryValues[4] = "http://hdl.handle.net/" + item.getHandle();
+                entryValues[5] = wrapInDelimitedString(item.getMetadataByMetadataString("dc.creator"));
+                entryValues[6] = wrapInDelimitedString(item.getMetadataByMetadataString("dc.publisher"));
+                entryValues[7] = wrapInDelimitedString(item.getMetadataByMetadataString("dc.date.issued"));
                 entryValues[8] = facetEntry.getCount() + "";
                 writer.writeNext(entryValues);
             } else {
@@ -212,15 +199,15 @@ public class CSVOutputter extends AbstractReader implements Recyclable
         }
     }
     
-    public String wrapInDelimitedString(List<MetadataValue> metadataEntries) {
+    public String wrapInDelimitedString(Metadatum[] metadataEntries) {
         StringBuilder metadataString = new StringBuilder();
 
-        for(MetadataValue metadataEntry : metadataEntries) {
+        for(Metadatum metadataEntry : metadataEntries) {
             if(metadataString.length() > 0) {
                 // Delimit entries with the || double pipe character sequence.
                 metadataString.append("\\|\\|");
             }
-            metadataString.append(metadataEntry.getValue());
+            metadataString.append(metadataEntry.value);
         }
         
         return metadataString.toString();
@@ -237,7 +224,7 @@ public class CSVOutputter extends AbstractReader implements Recyclable
 
         for(DateHistogramFacet.Entry histogramEntry : monthlyFacetEntries) {
             Date facetDate = new Date(histogramEntry.getTime());
-            writer.writeNext(new String[]{dateFormat.get().format(facetDate), String.valueOf(histogramEntry.getCount())});
+            writer.writeNext(new String[]{dateFormat.format(facetDate), String.valueOf(histogramEntry.getCount())});
         }
     }
 

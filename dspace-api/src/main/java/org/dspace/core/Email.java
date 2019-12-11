@@ -37,15 +37,15 @@ import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 import javax.mail.internet.MimeMultipart;
 import org.apache.log4j.Logger;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.services.EmailService;
+import org.dspace.utils.DSpace;
 
 /**
  * Class representing an e-mail message, also used to send e-mails.
  * <P>
  * Typical use:
  * <P>
- * <code>Email email = new Email();</code><br>
+ * <code>Email email = ConfigurationManager.getEmail(name);</code><br>
  * <code>email.addRecipient("foo@bar.com");</code><br>
  * <code>email.addArgument("John");</code><br>
  * <code>email.addArgument("On the Testing of DSpace");</code><br>
@@ -232,24 +232,23 @@ public class Email
      *
      * @throws MessagingException
      *             if there was a problem sending the mail.
-     * @throws IOException if IO error
+     * @throws IOException 
      */
     public void send() throws MessagingException, IOException
     {
-        ConfigurationService config = DSpaceServicesFactory.getInstance().getConfigurationService();
-
         // Get the mail configuration properties
-        String from = config.getProperty("mail.from.address");
-        boolean disabled = config.getBooleanProperty("mail.server.disabled", false);
+        String from = ConfigurationManager.getProperty("mail.from.address");
+        boolean disabled = ConfigurationManager.getBooleanProperty("mail.server.disabled", false);
 
         // If no character set specified, attempt to retrieve a default
         if (charset == null)
         {
-            charset = config.getProperty("mail.charset");
+            charset = ConfigurationManager.getProperty("mail.charset");
         }
 
         // Get session
-        Session session = DSpaceServicesFactory.getInstance().getEmailService().getSession();
+        Session session = new DSpace().getServiceManager().
+                getServicesByType(EmailService.class).get(0).getSession();
 
         // Create message
         MimeMessage message = new MimeMessage(session);
@@ -370,7 +369,7 @@ public class Email
      * @return the email object, with the content and subject filled out from
      *         the template
      *
-     * @throws IOException if IO error
+     * @throws IOException
      *             if the template couldn't be found, or there was some other
      *             error reading the template
      */
@@ -463,11 +462,10 @@ public class Email
      */
     public static void main(String[] args)
     {
-        ConfigurationService config = DSpaceServicesFactory.getInstance().getConfigurationService();
-        String to = config.getProperty("mail.admin");
+        String to = ConfigurationManager.getProperty("mail.admin");
         String subject = "DSpace test email";
-        String server = config.getProperty("mail.server");
-        String url = config.getProperty("dspace.url");
+        String server = ConfigurationManager.getProperty("mail.server");
+        String url = ConfigurationManager.getProperty("dspace.url");
         Email e = new Email();
         e.setSubject(subject);
         e.addRecipient(to);
@@ -476,7 +474,7 @@ public class Email
         System.out.println(" - To: " + to);
         System.out.println(" - Subject: " + subject);
         System.out.println(" - Server: " + server);
-        boolean disabled = config.getBooleanProperty("mail.server.disabled", false);
+        boolean disabled = ConfigurationManager.getBooleanProperty("mail.server.disabled", false);
         try
         {
             if( disabled)
@@ -565,24 +563,20 @@ public class Email
                baos.write(buff, 0, read);            
            }        
        }                
-
-       @Override
-       public String getContentType() {
+       
+       public String getContentType() {            
            return contentType;        
        }         
        
-       @Override
-       public InputStream getInputStream() throws IOException {
-           return new ByteArrayInputStream(baos.toByteArray());
+       public InputStream getInputStream() throws IOException {            
+           return new ByteArrayInputStream(baos.toByteArray());        
        }         
        
-       @Override
-       public String getName() {
+       public String getName() {            
            return name;        
        }         
-
-       @Override
-       public OutputStream getOutputStream() throws IOException {
+       
+       public OutputStream getOutputStream() throws IOException {            
            throw new IOException("Cannot write to this read-only resource");        
        }    
    }

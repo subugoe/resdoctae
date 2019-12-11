@@ -23,8 +23,8 @@ import java.util.List;
  */
 public interface AuthoritySearchService {
 
-    public QueryResponse search(SolrQuery query) throws SolrServerException, MalformedURLException;
+    QueryResponse search(SolrQuery query) throws SolrServerException, MalformedURLException;
 
-    public List<String> getAllIndexedMetadataFields() throws Exception;
+    List<String> getAllIndexedMetadataFields() throws Exception;
 
 }

@@ -47,7 +47,7 @@ import org.purl.sword.base.SWORDErrorException;
 public class DepositServlet extends HttpServlet {
 
 	/** Sword repository */
-	protected transient SWORDServer myRepository;
+	protected SWORDServer myRepository;
 
 	/** Authentication type */
 	private String authN;
@@ -59,39 +59,37 @@ public class DepositServlet extends HttpServlet {
 	private String tempDirectory;
 
 	/** Counter */
-	private static final AtomicInteger counter = new AtomicInteger(0);
+	private static AtomicInteger counter = new AtomicInteger(0);
 
 	/** Logger */
-	private static final Logger log = Logger.getLogger(DepositServlet.class);
+	private static Logger log = Logger.getLogger(DepositServlet.class);
 
-    /**
-	 * Initialise the servlet.
-	 *
-	 * @throws ServletException if there is trouble with the upload directory.
+	/**
+	 * Initialise the servlet
+	 * 
+	 * @throws ServletException
 	 */
-    @Override
 	public void init() throws ServletException {
-
-        // Instantiate the correct SWORD Server class
+		// Instantiate the correct SWORD Server class
 		String className = getServletContext().getInitParameter("sword-server-class");
 		if (className == null) {
 			log.fatal("Unable to read value of 'sword-server-class' from Servlet context");
-            throw new ServletException("Unable to read value of 'sword-server-class' from Servlet context");
+		} else {
+			try {
+				myRepository = (SWORDServer) Class.forName(className)
+						.newInstance();
+				log.info("Using " + className + " as the SWORDServer");
+			} catch (Exception e) {
+				log
+						.fatal("Unable to instantiate class from 'sword-server-class': "
+								+ className);
+				throw new ServletException(
+						"Unable to instantiate class from 'sword-server-class': "
+								+ className, e);
+			}
 		}
 
-        try {
-            myRepository = (SWORDServer) Class.forName(className)
-                    .newInstance();
-            log.info("Using " + className + " as the SWORDServer");
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            log.fatal("Unable to instantiate class from 'sword-server-class': "
-                            + className);
-            throw new ServletException(
-                    "Unable to instantiate class from 'sword-server-class': "
-                            + className, e);
-        }
-
-        authN = getServletContext().getInitParameter("authentication-method");
+		authN = getServletContext().getInitParameter("authentication-method");
 		if ((authN == null) || (authN.equals(""))) {
 			authN = "None";
 		}
@@ -146,28 +144,16 @@ public class DepositServlet extends HttpServlet {
 
 	/**
 	 * Process the Get request. This will return an unimplemented response.
-     * @param request the request.
-     * @param response the response.
-     * @throws javax.servlet.ServletException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-    @Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// Send a '501 Not Implemented'
 		response.sendError(HttpServletResponse.SC_NOT_IMPLEMENTED);
 	}
 
 	/**
 	 * Process a post request.
-     * @param request the request.
-     * @param response the response.
-     * @throws javax.servlet.ServletException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-    @Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 		// Create the Deposit request
 		Deposit d = new Deposit();
 		Date date = new Date();
@@ -249,7 +235,7 @@ public class DepositServlet extends HttpServlet {
 				d.setFile(file);
 
 				// Set the X-On-Behalf-Of header
-                String onBehalfOf = request.getHeader(HttpHeaders.X_ON_BEHALF_OF);
+                String onBehalfOf = request.getHeader(HttpHeaders.X_ON_BEHALF_OF.toString());
 				if ((onBehalfOf != null) && (onBehalfOf.equals("reject"))) {
                     // user name is "reject", so throw a not know error to allow the client to be tested
                     throw new SWORDErrorException(ErrorCodes.TARGET_OWNER_UKNOWN,"unknown user \"reject\"");
@@ -313,13 +299,13 @@ public class DepositServlet extends HttpServlet {
 				DepositResponse dr = myRepository.doDeposit(d);
 				
 				// Echo back the user agent
-				if (request.getHeader(HttpHeaders.USER_AGENT) != null) {
-					dr.getEntry().setUserAgent(request.getHeader(HttpHeaders.USER_AGENT));
+				if (request.getHeader(HttpHeaders.USER_AGENT.toString()) != null) {
+					dr.getEntry().setUserAgent(request.getHeader(HttpHeaders.USER_AGENT.toString()));
 				}
 				
 				// Echo back the packaging format
-				if (request.getHeader(HttpHeaders.X_PACKAGING) != null) {
-					dr.getEntry().setPackaging(request.getHeader(HttpHeaders.X_PACKAGING));
+				if (request.getHeader(HttpHeaders.X_PACKAGING.toString()) != null) {
+					dr.getEntry().setPackaging(request.getHeader(HttpHeaders.X_PACKAGING.toString()));
 				}
 				
 				// Print out the Deposit Response
@@ -394,8 +380,8 @@ public class DepositServlet extends HttpServlet {
 		Summary sum = new Summary();
 		sum.setContent(summary);
 		sed.setSummary(sum);
-		if (request.getHeader(HttpHeaders.USER_AGENT) != null) {
-			sed.setUserAgent(request.getHeader(HttpHeaders.USER_AGENT));
+		if (request.getHeader(HttpHeaders.USER_AGENT.toString()) != null) {
+			sed.setUserAgent(request.getHeader(HttpHeaders.USER_AGENT.toString()));
 		}
 		response.setStatus(status);
     	response.setContentType("application/atom+xml; charset=UTF-8");

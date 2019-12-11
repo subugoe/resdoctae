@@ -12,7 +12,7 @@ import org.dspace.content.Collection;
 import org.dspace.discovery.configuration.DiscoveryConfiguration;
 import org.dspace.discovery.configuration.DiscoveryConfigurationService;
 import org.dspace.kernel.ServiceManager;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 import java.sql.SQLException;
 import java.util.*;
@@ -32,7 +32,8 @@ public class SearchUtils {
     public static SearchService getSearchService()
     {
         if(searchService ==  null){
-            org.dspace.kernel.ServiceManager manager = DSpaceServicesFactory.getInstance().getServiceManager();
+            DSpace dspace = new DSpace();
+            org.dspace.kernel.ServiceManager manager = dspace.getServiceManager() ;
             searchService = manager.getServiceByName(SearchService.class.getName(),SearchService.class);
         }
         return searchService;
@@ -61,7 +62,8 @@ public class SearchUtils {
     }
 
     public static DiscoveryConfigurationService getConfigurationService() {
-        ServiceManager manager = DSpaceServicesFactory.getInstance().getServiceManager();
+        DSpace dspace  = new DSpace();
+        ServiceManager manager = dspace.getServiceManager();
         return manager.getServiceByName(DiscoveryConfigurationService.class.getName(), DiscoveryConfigurationService.class);
     }
 
@@ -79,7 +81,7 @@ public class SearchUtils {
     public static List<DiscoveryConfiguration> getAllDiscoveryConfigurations(Item item) throws SQLException {
         Map<String, DiscoveryConfiguration> result = new HashMap<String, DiscoveryConfiguration>();
 
-        List<Collection> collections = item.getCollections();
+        Collection[] collections = item.getCollections();
         for (Collection collection : collections) {
             DiscoveryConfiguration configuration = getDiscoveryConfiguration(collection);
             if(!result.containsKey(configuration.getId())){

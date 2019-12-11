@@ -23,18 +23,14 @@ import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
-import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CommunityService;
+import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
-import org.dspace.discovery.DiscoverQuery;
-import org.dspace.discovery.DiscoverResult;
-import org.dspace.discovery.SearchServiceException;
-import org.dspace.discovery.SearchUtils;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
+import org.dspace.handle.HandleManager;
+import org.dspace.search.DSQuery;
+import org.dspace.search.QueryArgs;
+import org.dspace.search.QueryResults;
 
 /**
  * Servlet that provides funcionality for searching the repository using a
@@ -46,7 +42,7 @@ import org.dspace.handle.service.HandleService;
 public class ControlledVocabularySearchServlet extends DSpaceServlet
 {
     // the log
-    private static final Logger log = Logger
+    private static Logger log = Logger
             .getLogger(ControlledVocabularySearchServlet.class);
 
     // the jsp that displays the HTML version of controlled-vocabulary
@@ -55,16 +51,9 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
     // the jsp that will show the search results
     private static final String RESULTS_JSP = "/controlledvocabulary/results.jsp";
 
-    private final transient HandleService handleService
-             = HandleServiceFactory.getInstance().getHandleService();
-    
-    private final transient CommunityService communityService
-             = ContentServiceFactory.getInstance().getCommunityService();
-    
     /**
      * Handles requests
      */
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -102,7 +91,7 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
      */
     private List<String> extractKeywords(HttpServletRequest request)
     {
-        List<String> keywords = new ArrayList<>();
+        List<String> keywords = new ArrayList<String>();
         Enumeration enumeration = request.getParameterNames();
         while (enumeration.hasMoreElements())
         {
@@ -133,6 +122,7 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
         // Get the query
         // String query = request.getParameter("query");
         int start = UIUtil.getIntParameter(request, "start");
+        String advanced = request.getParameter("advanced");
 
         // can't start earlier than 0 in the results!
         if (start < 0)
@@ -140,14 +130,30 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
             start = 0;
         }
 
-        DiscoverQuery qArgs = new DiscoverQuery();
+        List<String> itemHandles = new ArrayList<String>();
+        List<String> collectionHandles = new ArrayList<String>();
+        List<String> communityHandles = new ArrayList<String>();
+
+        Item[] resultsItems;
+        Collection[] resultsCollections;
+        Community[] resultsCommunities;
+
+        QueryResults qResults = null;
+        QueryArgs qArgs = new QueryArgs();
+
+        // if the "advanced" flag is set, build the query string from the
+        // multiple query fields
+        if (advanced != null)
+        {
+            query = qArgs.buildQuery(request);
+        }
 
         // Ensure the query is non-null
         if (query == null)
         {
             query = "";
         }
-        
+
         // Build log information
         String logInfo = "";
 
@@ -156,90 +162,152 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
         Collection collection = UIUtil.getCollectionLocation(request);
 
         // get the start of the query results page
+        // List resultObjects = null;
         qArgs.setQuery(query);
         qArgs.setStart(start);
-        
+
         // Perform the search
-        DiscoverResult qResults = null;
-        try
+        if (collection != null)
         {
-            if (collection != null)
+            logInfo = "collection_id=" + collection.getID() + ",";
+
+            // Values for drop-down box
+            request.setAttribute("community", community);
+            request.setAttribute("collection", collection);
+
+            qResults = DSQuery.doQuery(context, qArgs, collection);
+        }
+        else if (community != null)
+        {
+            logInfo = "community_id=" + community.getID() + ",";
+
+            request.setAttribute("community", community);
+
+            // Get the collections within the community for the dropdown box
+            request
+                    .setAttribute("collection.array", community
+                            .getCollections());
+
+            qResults = DSQuery.doQuery(context, qArgs, community);
+        }
+        else
+        {
+            // Get all communities for dropdown box
+            Community[] communities = Community.findAll(context);
+            request.setAttribute("community.array", communities);
+
+            qResults = DSQuery.doQuery(context, qArgs);
+        }
+
+        // now instantiate the results and put them in their buckets
+        for (int i = 0; i < qResults.getHitHandles().size(); i++)
+        {
+            String myHandle = qResults.getHitHandles().get(i);
+            Integer myType = qResults.getHitTypes().get(i);
+
+            // add the handle to the appropriate lists
+            switch (myType.intValue())
             {
-                logInfo = "collection_id=" + collection.getID() + ",";
+            case Constants.ITEM:
+                itemHandles.add(myHandle);
 
-                request.setAttribute("community", community);
-                request.setAttribute("collection", collection);
+                break;
 
-                qResults = SearchUtils.getSearchService().search(context, collection, qArgs);
-            }
-            else if (community != null)
-            {
-                logInfo = "community_id=" + community.getID() + ",";
+            case Constants.COLLECTION:
+                collectionHandles.add(myHandle);
 
-                request.setAttribute("community", community);
+                break;
 
-                qResults = SearchUtils.getSearchService().search(context, community, qArgs);
-            }
-            else
-            {
-                qResults = SearchUtils.getSearchService().search(context, qArgs);
+            case Constants.COMMUNITY:
+                communityHandles.add(myHandle);
+
+                break;
             }
         }
-        catch(SearchServiceException e)
-        {
-            throw new IOException(e);
-        }
-        
-        List<Community> resultsListComm = new ArrayList<Community>();
-        List<Collection> resultsListColl = new ArrayList<Collection>();
-        List<Item> resultsListItem = new ArrayList<Item>();
 
-        for (DSpaceObject dso : qResults.getDspaceObjects())
+        int numCommunities = communityHandles.size();
+        int numCollections = collectionHandles.size();
+        int numItems = itemHandles.size();
+
+        // Make objects from the handles - make arrays, fill them out
+        resultsCommunities = new Community[numCommunities];
+        resultsCollections = new Collection[numCollections];
+        resultsItems = new Item[numItems];
+
+        for (int i = 0; i < numItems; i++)
         {
-            if (dso instanceof Item)
+            String myhandle = itemHandles.get(i);
+
+            Object o = HandleManager.resolveToObject(context, myhandle);
+
+            resultsItems[i] = (Item) o;
+
+            if (resultsItems[i] == null)
             {
-                resultsListItem.add((Item) dso);
+                throw new SQLException("Query \"" + query
+                        + "\" returned unresolvable handle: " + myhandle);
             }
-            else if (dso instanceof Collection)
+        }
+
+        for (int i = 0; i < collectionHandles.size(); i++)
+        {
+            String myhandle = collectionHandles.get(i);
+
+            Object o = HandleManager.resolveToObject(context, myhandle);
+
+            resultsCollections[i] = (Collection) o;
+
+            if (resultsCollections[i] == null)
             {
-                resultsListColl.add((Collection) dso);
+                throw new SQLException("Query \"" + query
+                        + "\" returned unresolvable handle: " + myhandle);
             }
-            else if (dso instanceof Community)
+        }
+
+        for (int i = 0; i < communityHandles.size(); i++)
+        {
+            String myhandle = communityHandles.get(i);
+
+            Object o = HandleManager.resolveToObject(context, myhandle);
+
+            resultsCommunities[i] = (Community) o;
+
+            if (resultsCommunities[i] == null)
             {
-                resultsListComm.add((Community) dso);
+                throw new SQLException("Query \"" + query
+                        + "\" returned unresolvable handle: " + myhandle);
             }
         }
 
         // Log
         log.info(LogManager.getHeader(context, "search", logInfo + "query=\""
-                + query + "\",results=(" + resultsListComm.size() + ","
-                + resultsListColl.size() + "," + resultsListItem.size() + ")"));
+                + query + "\",results=(" + resultsCommunities.length + ","
+                + resultsCollections.length + "," + resultsItems.length + ")"));
 
         // Pass in some page qualities
         // total number of pages
-        long pageTotal = 1 + ((qResults.getTotalSearchResults() - 1) / qResults
-                .getMaxResults());
+        int pageTotal = 1 + ((qResults.getHitCount() - 1) / qResults
+                .getPageSize());
 
         // current page being displayed
-        long pageCurrent = 1 + (qResults.getStart() / qResults
-                .getMaxResults());
+        int pageCurrent = 1 + (qResults.getStart() / qResults.getPageSize());
 
         // pageLast = min(pageCurrent+9,pageTotal)
-        long pageLast = ((pageCurrent + 9) > pageTotal) ? pageTotal
+        int pageLast = ((pageCurrent + 9) > pageTotal) ? pageTotal
                 : (pageCurrent + 9);
 
         // pageFirst = max(1,pageCurrent-9)
-        long pageFirst = ((pageCurrent - 9) > 1) ? (pageCurrent - 9) : 1;
+        int pageFirst = ((pageCurrent - 9) > 1) ? (pageCurrent - 9) : 1;
 
         // Pass the results to the display JSP
-        request.setAttribute("items", resultsListItem);
-        request.setAttribute("communities", resultsListComm);
-        request.setAttribute("collections", resultsListColl);
+        request.setAttribute("items", resultsItems);
+        request.setAttribute("communities", resultsCommunities);
+        request.setAttribute("collections", resultsCollections);
 
-        request.setAttribute("pagetotal", pageTotal);
-        request.setAttribute("pagecurrent", pageCurrent);
-        request.setAttribute("pagelast", pageLast);
-        request.setAttribute("pagefirst", pageFirst);
+        request.setAttribute("pagetotal", Integer.valueOf(pageTotal));
+        request.setAttribute("pagecurrent", Integer.valueOf(pageCurrent));
+        request.setAttribute("pagelast", Integer.valueOf(pageLast));
+        request.setAttribute("pagefirst", Integer.valueOf(pageFirst));
 
         request.setAttribute("queryresults", qResults);
 
@@ -277,7 +345,6 @@ public class ControlledVocabularySearchServlet extends DSpaceServlet
     /**
      * Handle posts
      */
-    @Override
     protected void doDSPost(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException

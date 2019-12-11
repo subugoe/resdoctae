@@ -9,25 +9,19 @@ package org.dspace.curate;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.List;
+import java.util.Properties;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CommunityService;
-import org.dspace.content.service.ItemService;
+import org.dspace.content.ItemIterator;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.handle.HandleManager;
 
 /**
  * AbstractCurationTask encapsulates a few common patterns of task use,
@@ -41,22 +35,16 @@ public abstract class AbstractCurationTask implements CurationTask
     protected Curator curator = null;
     // curator-assigned taskId
     protected String taskId = null;
+    // optional task configuration properties
+    private Properties taskProps = null;
     // logger
     private static Logger log = Logger.getLogger(AbstractCurationTask.class);
-    protected CommunityService communityService;
-    protected ItemService itemService;
-    protected HandleService handleService;
-    protected ConfigurationService configurationService;
 
     @Override
     public void init(Curator curator, String taskId) throws IOException
     {
         this.curator = curator;
         this.taskId = taskId;
-        communityService = ContentServiceFactory.getInstance().getCommunityService();
-        itemService = ContentServiceFactory.getInstance().getItemService();
-        handleService = HandleServiceFactory.getInstance().getHandleService();
-        configurationService = DSpaceServicesFactory.getInstance().getConfigurationService();
     }
 
     @Override
@@ -77,7 +65,7 @@ public abstract class AbstractCurationTask implements CurationTask
      * DSOs or just all Items, respectively.
      * 
      * @param dso current DSpaceObject
-     * @throws IOException if IO error
+     * @throws IOException
      */
     protected void distribute(DSpaceObject dso) throws IOException
     {
@@ -90,12 +78,10 @@ public abstract class AbstractCurationTask implements CurationTask
             int type = dso.getType();
             if (Constants.COLLECTION == type)
             {
-                Iterator<Item> iter = itemService.findByCollection(Curator.curationContext(), (Collection) dso);
+                ItemIterator iter = ((Collection)dso).getItems();
                 while (iter.hasNext())
                 {
-                    Item item = iter.next();
-                    performObject(item);
-                    Curator.curationContext().uncacheEntity(item);
+                    performObject(iter.next());
                 }
             }
             else if (Constants.COMMUNITY == type)
@@ -112,7 +98,7 @@ public abstract class AbstractCurationTask implements CurationTask
             }
             else if (Constants.SITE == type)
             {
-                List<Community> topComm = communityService.findAllTop(Curator.curationContext());
+                Community[] topComm = Community.findAllTop(Curator.curationContext());
                 for (Community comm : topComm)
                 {
                     distribute(comm);
@@ -139,8 +125,8 @@ public abstract class AbstractCurationTask implements CurationTask
      * <code>distribute</code> method is used.
      * 
      * @param dso the DSpaceObject
-     * @throws SQLException if database error
-     * @throws IOException if IO error
+     * @throws SQLException
+     * @throws IOException
      */
     protected void performObject(DSpaceObject dso) throws SQLException, IOException
     {
@@ -149,7 +135,7 @@ public abstract class AbstractCurationTask implements CurationTask
         if(dso.getType()==Constants.ITEM)
         {
             performItem((Item)dso);
-        }
+        }    
         
         //no-op for all other types of DSpace Objects
     }
@@ -165,8 +151,8 @@ public abstract class AbstractCurationTask implements CurationTask
      * <code>distribute</code> method is used.
      * 
      * @param item the DSpace Item
-     * @throws SQLException if database error
-     * @throws IOException if IO error
+     * @throws SQLException
+     * @throws IOException
      */
     protected void performItem(Item item) throws SQLException, IOException
     {
@@ -189,13 +175,13 @@ public abstract class AbstractCurationTask implements CurationTask
      *        canonical id of object
      * @return dso
      *        DSpace object, or null if no object with id exists
-     * @throws IOException if IO error
+     * @throws IOException
      */
     protected DSpaceObject dereference(Context ctx, String id) throws IOException
     {
         try
         {
-            return handleService.resolveToObject(ctx, id);
+            return HandleManager.resolveToObject(ctx, id);
         }
         catch (SQLException sqlE)
         {
@@ -237,15 +223,29 @@ public abstract class AbstractCurationTask implements CurationTask
      */
     protected String taskProperty(String name)
     {
-        // If a taskID/Name is specified, prepend it on the configuration name
-        if(StringUtils.isNotBlank(taskId))
-        {
-            return configurationService.getProperty(taskId + "." + name);
+    	if (taskProps == null)
+    	{
+    		// load properties
+    		taskProps = new Properties();
+    		StringBuilder modName = new StringBuilder();
+    		for (String segment : taskId.split("\\."))
+    		{
+    			// load property segments if present
+    			modName.append(segment);
+    			Properties modProps = ConfigurationManager.getProperties(modName.toString());
+    			if (modProps != null)
+    			{
+    				taskProps.putAll(modProps);
+    			}
+    			modName.append(".");
+    		}
+        	// warn if *no* properties found
+        	if (taskProps.size() == 0)
+        	{
+        		log.warn("Warning: No configuration properties found for task: " + taskId);
+        	}
     	}
-        else
-        {
-            return configurationService.getProperty(name);
-        }
+    	return taskProps.getProperty(name);
     }
     
     /**
@@ -262,15 +262,20 @@ public abstract class AbstractCurationTask implements CurationTask
      */
     protected int taskIntProperty(String name, int defaultValue)
     {
-        // If a taskID/Name is specified, prepend it on the configuration name
-    	if(StringUtils.isNotBlank(taskId))
-        {
-            return configurationService.getIntProperty(taskId + "." + name, defaultValue);
+    	int intVal = defaultValue;
+    	String strVal = taskProperty(name);
+    	if (strVal != null)
+    	{
+    		try
+    		{
+    			intVal = Integer.parseInt(strVal.trim());
+    		}
+    		catch(NumberFormatException nfE)
+    		{
+    			log.warn("Warning: Number format error in module: " + taskId + " property: " + name);
+    		}
     	}
-        else
-        {
-            return configurationService.getIntProperty(name, defaultValue);
-        }
+    	return intVal;
     } 
     
     /**
@@ -287,15 +292,20 @@ public abstract class AbstractCurationTask implements CurationTask
      */
     protected long taskLongProperty(String name, long defaultValue)
     {
-        // If a taskID/Name is specified, prepend it on the configuration name
-    	if(StringUtils.isNotBlank(taskId))
-        {
-            return configurationService.getLongProperty(taskId + "." + name, defaultValue);
+    	long longVal = defaultValue;
+    	String strVal = taskProperty(name);
+    	if (strVal != null)
+    	{
+    		try
+    		{
+    			longVal = Long.parseLong(strVal.trim());
+    		}
+    		catch(NumberFormatException nfE)
+    		{
+    			log.warn("Warning: Number format error in module: " + taskId + " property: " + name);
+    		}
     	}
-        else
-        {
-            return configurationService.getLongProperty(name, defaultValue);
-        }
+    	return longVal;
     }  
     
     /**
@@ -312,37 +322,13 @@ public abstract class AbstractCurationTask implements CurationTask
      */
     protected boolean taskBooleanProperty(String name, boolean defaultValue)
     {
-        // If a taskID/Name is specified, prepend it on the configuration name
-    	if(StringUtils.isNotBlank(taskId))
-        {
-            return configurationService.getBooleanProperty(taskId + "." + name, defaultValue);
+    	String strVal = taskProperty(name);
+    	if (strVal != null)
+    	{
+    		strVal = strVal.trim();
+    	    return strVal.equalsIgnoreCase("true") ||
+    	           strVal.equalsIgnoreCase("yes");
     	}
-        else
-        {
-            return configurationService.getBooleanProperty(name, defaultValue);
-        }
-    }
-    
-    /**
-     * Returns task configuration Array property value for passed name, else
-     * <code>null</code> if no properties defined or no value for passed key.
-     * 
-     * @param name
-     *        the property name
-     * @return value
-     *        the property value, or null
-     * 
-     */
-    protected String[] taskArrayProperty(String name)
-    {
-        // If a taskID/Name is specified, prepend it on the configuration name
-        if(StringUtils.isNotBlank(taskId))
-        {
-            return configurationService.getArrayProperty(taskId + "." + name);
-    	}
-        else
-        {
-            return configurationService.getArrayProperty(name);
-        }
-    }
+    	return defaultValue;
+    }  
 }

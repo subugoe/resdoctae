@@ -13,7 +13,6 @@ import java.net.URLConnection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
@@ -35,21 +34,16 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
-import org.dspace.authorize.service.ResourcePolicyService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.BitstreamFormat;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.BundleService;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
+import org.dspace.content.Bundle;
+import org.dspace.eperson.Group;
 import org.dspace.rest.common.Bitstream;
 import org.dspace.rest.common.ResourcePolicy;
 import org.dspace.rest.exceptions.ContextException;
-import org.dspace.storage.bitstore.factory.StorageServiceFactory;
-import org.dspace.storage.bitstore.service.BitstreamStorageService;
+import org.dspace.storage.bitstore.BitstreamStorageManager;
+import org.dspace.storage.rdbms.DatabaseManager;
+import org.dspace.storage.rdbms.TableRow;
 import org.dspace.usage.UsageEvent;
 
 /**
@@ -60,13 +54,6 @@ import org.dspace.usage.UsageEvent;
 @Path("/bitstreams")
 public class BitstreamResource extends Resource
 {
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected BundleService bundleService = ContentServiceFactory.getInstance().getBundleService();
-    protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-    protected BitstreamStorageService bitstreamStorageService = StorageServiceFactory.getInstance().getBitstreamStorageService();
-    protected ResourcePolicyService resourcePolicyService = AuthorizeServiceFactory.getInstance().getResourcePolicyService();
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
 
     private static Logger log = Logger.getLogger(BitstreamResource.class);
 
@@ -98,7 +85,7 @@ public class BitstreamResource extends Resource
     @GET
     @Path("/{bitstream_id}")
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    public Bitstream getBitstream(@PathParam("bitstream_id") String bitstreamId, @QueryParam("expand") String expand,
+    public Bitstream getBitstream(@PathParam("bitstream_id") Integer bitstreamId, @QueryParam("expand") String expand,
             @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -110,15 +97,15 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.READ);
 
             writeStats(dspaceBitstream, UsageEvent.Action.VIEW, user_ip, user_agent, xforwardedfor, headers,
                     request, context);
 
-            bitstream = new Bitstream(dspaceBitstream, servletContext, expand, context);
+            bitstream = new Bitstream(dspaceBitstream, expand);
             context.complete();
-            log.trace("Bitstream(id=" + bitstreamId + ") was successfully read.");
+            log.trace("Bitsream(id=" + bitstreamId + ") was successfully read.");
 
         }
         catch (SQLException e)
@@ -154,7 +141,7 @@ public class BitstreamResource extends Resource
     @GET
     @Path("/{bitstream_id}/policy")
     @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    public ResourcePolicy[] getBitstreamPolicies(@PathParam("bitstream_id") String bitstreamId, @Context HttpHeaders headers)
+    public ResourcePolicy[] getBitstreamPolicies(@PathParam("bitstream_id") Integer bitstreamId, @Context HttpHeaders headers)
     {
 
         log.info("Reading bitstream(id=" + bitstreamId + ") policies.");
@@ -163,9 +150,11 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.READ);
-            policies = new Bitstream(dspaceBitstream, servletContext, "policies", context).getPolicies();
+            AuthorizeManager.getPolicies(context, dspaceBitstream);
+
+            policies = new Bitstream(dspaceBitstream,"policies").getPolicies();
 
             context.complete();
             log.trace("Policies for bitstream(id=" + bitstreamId + ") was successfully read.");
@@ -223,26 +212,26 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
-            List<org.dspace.content.Bitstream> dspaceBitstreams = bitstreamService.findAll(context);
+            context = createContext(getUser(headers));
+            org.dspace.content.Bitstream[] dspaceBitstreams = org.dspace.content.Bitstream.findAll(context);
 
             if (!((limit != null) && (limit >= 0) && (offset != null) && (offset >= 0)))
             {
-                log.warn("Paging was badly set.");
+                log.warn("Pagging was badly set.");
                 limit = 100;
                 offset = 0;
             }
 
             // TODO If bitstream doesn't exist, throws exception.
-            for (int i = offset; (i < (offset + limit)) && (i < dspaceBitstreams.size()); i++)
+            for (int i = offset; (i < (offset + limit)) && (i < dspaceBitstreams.length); i++)
             {
-                if (authorizeService.authorizeActionBoolean(context, dspaceBitstreams.get(i), org.dspace.core.Constants.READ))
+                if (AuthorizeManager.authorizeActionBoolean(context, dspaceBitstreams[i], org.dspace.core.Constants.READ))
                 {
-                    if (bitstreamService.getParentObject(context, dspaceBitstreams.get(i)) != null)
+                    if (dspaceBitstreams[i].getParentObject() != null)
                     { // To eliminate bitstreams which cause exception, because of
                       // reading under administrator permissions
-                        bitstreams.add(new Bitstream(dspaceBitstreams.get(i), servletContext, expand, context));
-                        writeStats(dspaceBitstreams.get(i), UsageEvent.Action.VIEW, user_ip, user_agent,
+                        bitstreams.add(new Bitstream(dspaceBitstreams[i], expand));
+                        writeStats(dspaceBitstreams[i], UsageEvent.Action.VIEW, user_ip, user_agent,
                                 xforwardedfor, headers, request, context);
                     }
                 }
@@ -292,7 +281,7 @@ public class BitstreamResource extends Resource
      */
     @GET
     @Path("/{bitstream_id}/retrieve")
-    public javax.ws.rs.core.Response getBitstreamData(@PathParam("bitstream_id") String bitstreamId,
+    public javax.ws.rs.core.Response getBitstreamData(@PathParam("bitstream_id") Integer bitstreamId,
             @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -306,15 +295,15 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.READ);
 
             writeStats(dspaceBitstream, UsageEvent.Action.VIEW, user_ip, user_agent, xforwardedfor, headers,
                     request, context);
 
-            log.trace("Bitstream(id=" + bitstreamId + ") data was successfully read.");
-            inputStream = bitstreamService.retrieve(context, dspaceBitstream);
-            type = dspaceBitstream.getFormat(context).getMIMEType();
+            log.trace("Bitsream(id=" + bitstreamId + ") data was successfully read.");
+            inputStream = dspaceBitstream.retrieve();
+            type = dspaceBitstream.getFormat().getMIMEType();
             name = dspaceBitstream.getName();
 
             context.complete();
@@ -366,7 +355,7 @@ public class BitstreamResource extends Resource
     @POST
     @Path("/{bitstream_id}/policy")
     @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    public javax.ws.rs.core.Response addBitstreamPolicy(@PathParam("bitstream_id") String bitstreamId, ResourcePolicy policy,
+    public javax.ws.rs.core.Response addBitstreamPolicy(@PathParam("bitstream_id") Integer bitstreamId, ResourcePolicy policy,
             @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -378,7 +367,7 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.WRITE);
 
             writeStats(dspaceBitstream, UsageEvent.Action.UPDATE, user_ip, user_agent, xforwardedfor, headers,
@@ -437,7 +426,7 @@ public class BitstreamResource extends Resource
     @PUT
     @Path("/{bitstream_id}")
     @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
-    public Response updateBitstream(@PathParam("bitstream_id") String bitstreamId, Bitstream bitstream,
+    public Response updateBitstream(@PathParam("bitstream_id") Integer bitstreamId, Bitstream bitstream,
             @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -448,40 +437,37 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.WRITE);
 
             writeStats(dspaceBitstream, UsageEvent.Action.UPDATE, user_ip, user_agent, xforwardedfor,
                     headers, request, context);
 
             log.trace("Updating bitstream metadata.");
-
-            dspaceBitstream.setDescription(context, bitstream.getDescription());
+            dspaceBitstream.setDescription(bitstream.getDescription());
             if (getMimeType(bitstream.getName()) == null)
             {
-                BitstreamFormat unknownFormat = bitstreamFormatService.findUnknown(context);
-                bitstreamService.setFormat(context, dspaceBitstream, unknownFormat);
+                dspaceBitstream.setFormat(BitstreamFormat.findUnknown(context));
             }
             else
             {
-                BitstreamFormat guessedFormat = bitstreamFormatService.findByMIMEType(context, getMimeType(bitstream.getName()));
-                bitstreamService.setFormat(context, dspaceBitstream, guessedFormat);
+                dspaceBitstream.setFormat(BitstreamFormat.findByMIMEType(context, getMimeType(bitstream.getName())));
             }
-            dspaceBitstream.setName(context, bitstream.getName());
+            dspaceBitstream.setName(bitstream.getName());
             Integer sequenceId = bitstream.getSequenceId();
             if (sequenceId != null && sequenceId.intValue() != -1)
             {
                 dspaceBitstream.setSequenceID(sequenceId);
             }
 
-            bitstreamService.update(context, dspaceBitstream);
+            dspaceBitstream.update();
 
             if (bitstream.getPolicies() != null)
             {
                 log.trace("Updating bitstream policies.");
 
                 // Remove all old bitstream policies.
-                authorizeService.removeAllPolicies(context,dspaceBitstream);
+                AuthorizeManager.removeAllPolicies(context,dspaceBitstream);
 
                 // Add all new bitstream policies
                 for (ResourcePolicy policy : bitstream.getPolicies()) {
@@ -542,7 +528,7 @@ public class BitstreamResource extends Resource
     // TODO Change to better logic, without editing database.
     @PUT
     @Path("/{bitstream_id}/data")
-    public Response updateBitstreamData(@PathParam("bitstream_id") String bitstreamId, InputStream is,
+    public Response updateBitstreamData(@PathParam("bitstream_id") Integer bitstreamId, InputStream is,
             @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -553,18 +539,32 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.WRITE);
 
             writeStats(dspaceBitstream, UsageEvent.Action.UPDATE, user_ip, user_agent, xforwardedfor,
                     headers, request, context);
 
             log.trace("Creating new bitstream.");
+            int newBitstreamId = BitstreamStorageManager.store(context, is);
 
-            UUID newBitstreamId = bitstreamStorageService.store(context, dspaceBitstream, is);
-            log.trace("Bitstream data stored: " + newBitstreamId);
+            log.trace("Looking for table rows of bitstreams.");
+            TableRow originalBitstreamRow = DatabaseManager.find(context, "Bitstream", bitstreamId);
+            TableRow bitstream = DatabaseManager.find(context, "Bitstream", newBitstreamId);
+
+            log.trace("Changing new internal id with old internal id.");
+            String internal_id = originalBitstreamRow.getStringColumn("internal_id");
+            Long size_bytes = originalBitstreamRow.getLongColumn("size_bytes");
+            originalBitstreamRow.setColumn("internal_id", bitstream.getStringColumn("internal_id"));
+            originalBitstreamRow.setColumn("size_bytes", bitstream.getLongColumn("size_bytes"));
+            bitstream.setColumn("internal_id", internal_id);
+            bitstream.setColumn("size_bytes", size_bytes);
+
+            DatabaseManager.update(context, originalBitstreamRow);
+            BitstreamStorageManager.delete(context, newBitstreamId);
 
             context.complete();
+
         }
         catch (SQLException e)
         {
@@ -606,14 +606,14 @@ public class BitstreamResource extends Resource
      *         that id does not exist and UNAUTHORIZED(401) if user is not
      *         allowed to delete bitstream.
      * @throws WebApplicationException
-     *             Can be thrown if there was a problem reading or editing
+     *             Can be thron if there was a problem reading or editting
      *             the database. Or problem deleting the file. Or problem with
      *             authorization to bitstream and bundles. Or problem with
      *             creating context.
      */
     @DELETE
     @Path("/{bitstream_id}")
-    public Response deleteBitstream(@PathParam("bitstream_id") String bitstreamId, @QueryParam("userIP") String user_ip,
+    public Response deleteBitstream(@PathParam("bitstream_id") Integer bitstreamId, @QueryParam("userIP") String user_ip,
             @QueryParam("userAgent") String user_agent, @QueryParam("xforwardedfor") String xforwardedfor,
             @Context HttpHeaders headers, @Context HttpServletRequest request) throws WebApplicationException
     {
@@ -623,16 +623,20 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.DELETE);
 
             writeStats(dspaceBitstream, UsageEvent.Action.DELETE, user_ip, user_agent, xforwardedfor,
                     headers, request, context);
 
             log.trace("Deleting bitstream from all bundles.");
-            bitstreamService.delete(context, dspaceBitstream);
+            for (org.dspace.content.Bundle bundle : dspaceBitstream.getBundles())
+            {
+                org.dspace.content.Bundle.find(context, bundle.getID()).removeBitstream(dspaceBitstream);
+            }
 
             context.complete();
+
         }
         catch (SQLException e)
         {
@@ -671,11 +675,11 @@ public class BitstreamResource extends Resource
      *            If you want to access the item as the user logged into the context.
      *            The header "rest-dspace-token" with the token passed
      *            from the login method must be set.
-     * @return It returns Ok, if all was ok. Otherwise status code 500.
+     * @return It returns Ok, if was all ok. Otherwise status code 500.
      */
     @DELETE
     @Path("/{bitstream_id}/policy/{policy_id}")
-    public javax.ws.rs.core.Response deleteBitstreamPolicy(@PathParam("bitstream_id") String bitstreamId,
+    public javax.ws.rs.core.Response deleteBitstreamPolicy(@PathParam("bitstream_id") Integer bitstreamId,
             @PathParam("policy_id") Integer policyId, @QueryParam("userIP") String user_ip, @QueryParam("userAgent") String user_agent,
             @QueryParam("xforwardedfor") String xforwardedfor, @Context HttpHeaders headers, @Context HttpServletRequest request)
             throws WebApplicationException
@@ -685,24 +689,32 @@ public class BitstreamResource extends Resource
 
         try
         {
-            context = createContext();
+            context = createContext(getUser(headers));
             org.dspace.content.Bitstream dspaceBitstream = findBitstream(context, bitstreamId, org.dspace.core.Constants.WRITE);
 
             writeStats(dspaceBitstream, UsageEvent.Action.UPDATE, user_ip, user_agent, xforwardedfor, headers,
                     request, context);
 
-            org.dspace.authorize.ResourcePolicy resourcePolicy = resourcePolicyService.find(context, policyId);
-            if(resourcePolicy.getdSpaceObject().getID().equals(dspaceBitstream.getID()) && authorizeService.authorizeActionBoolean(context, dspaceBitstream, org.dspace.core.Constants.REMOVE)) {
-
-                try {
-                    resourcePolicyService.delete(context, resourcePolicy);
-                } catch (AuthorizeException e) {
-                    processException("Someting went wrong while deleting policy(id=" + policyId + ") to bitstream(id=" + bitstreamId
-                            + "), AuthorizeException! Message: " + e, context);
+            // Check if resource policy exists in bitstream.
+            boolean found = false;
+            List<org.dspace.authorize.ResourcePolicy> policies =  AuthorizeManager.getPolicies(context, dspaceBitstream);
+            for(org.dspace.authorize.ResourcePolicy policy : policies) {
+                if(policy.getID() == policyId) {
+                    found = true;
+                    break;
                 }
-                log.trace("Policy for bitstream(id=" + bitstreamId + ") was successfully removed.");
             }
+
+            if(found) {
+                removePolicyFromBitstream(context, policyId, bitstreamId);
+            } else {
+                context.abort();
+                throw new WebApplicationException(Response.Status.NOT_FOUND);
+            }
+
             context.complete();
+            log.trace("Policy for bitstream(id=" + bitstreamId + ") was successfully removed.");
+
         }
         catch (SQLException e)
         {
@@ -743,16 +755,30 @@ public class BitstreamResource extends Resource
      * @throws AuthorizeException
      */
     private void addPolicyToBitstream(org.dspace.core.Context context, ResourcePolicy policy, org.dspace.content.Bitstream dspaceBitstream) throws SQLException, AuthorizeException {
-        org.dspace.authorize.ResourcePolicy dspacePolicy = resourcePolicyService.create(context);
+        org.dspace.authorize.ResourcePolicy dspacePolicy = org.dspace.authorize.ResourcePolicy.create(context);
         dspacePolicy.setAction(policy.getActionInt());
-        dspacePolicy.setGroup(groupService.findByIdOrLegacyId(context, policy.getGroupId()));
-        dspacePolicy.setdSpaceObject(dspaceBitstream);
+        dspacePolicy.setGroup(Group.find(context, policy.getGroupId()));
+        dspacePolicy.setResourceID(dspaceBitstream.getID());
+        dspacePolicy.setResource(dspaceBitstream);
+        dspacePolicy.setResourceType(org.dspace.core.Constants.BITSTREAM);
         dspacePolicy.setStartDate(policy.getStartDate());
         dspacePolicy.setEndDate(policy.getEndDate());
         dspacePolicy.setRpDescription(policy.getRpDescription());
         dspacePolicy.setRpName(policy.getRpName());
 
-        resourcePolicyService.update(context, dspacePolicy);
+        dspacePolicy.update();
+        dspaceBitstream.updateLastModified();
+    }
+
+    /**
+     * Remove policy from bitstream. But only if resourceID of policy is same as bitstream id.
+     * @param context Context to delete policy.
+     * @param policyID Id of resource policy, which will be deleted.
+     * @param bitstreamID Id of bitstream.
+     * @throws SQLException
+     */
+    private void removePolicyFromBitstream(org.dspace.core.Context context, int policyID, int bitstreamID) throws SQLException {
+        DatabaseManager.updateQuery(context, "DELETE FROM resourcepolicy WHERE POLICY_ID = ? AND RESOURCE_ID = ?", policyID,bitstreamID);
     }
 
     /**
@@ -771,21 +797,21 @@ public class BitstreamResource extends Resource
      *             Is thrown when item with passed id is not exists and if user
      *             has no permission to do passed action.
      */
-    private org.dspace.content.Bitstream findBitstream(org.dspace.core.Context context, String id, int action)
+    private org.dspace.content.Bitstream findBitstream(org.dspace.core.Context context, int id, int action)
             throws WebApplicationException
     {
         org.dspace.content.Bitstream bitstream = null;
         try
         {
-            bitstream = bitstreamService.findByIdOrLegacyId(context, id);
+            bitstream = org.dspace.content.Bitstream.find(context, id);
 
-            if ((bitstream == null) || (bitstreamService.getParentObject(context, bitstream) == null))
+            if ((bitstream == null) || (bitstream.getParentObject() == null))
             {
                 context.abort();
                 log.warn("Bitstream(id=" + id + ") was not found!");
                 throw new WebApplicationException(Response.Status.NOT_FOUND);
             }
-            else if (!authorizeService.authorizeActionBoolean(context, bitstream, action))
+            else if (!AuthorizeManager.authorizeActionBoolean(context, bitstream, action))
             {
                 context.abort();
                 if (context.getCurrentUser() != null)

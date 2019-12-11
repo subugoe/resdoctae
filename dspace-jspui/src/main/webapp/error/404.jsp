@@ -19,6 +19,16 @@
     prefix="fmt" %>
 
 <%@ taglib uri="http://www.dspace.org/dspace-tags.tld" prefix="dspace" %>
+<%@ page import="org.dspace.app.webui.util.UIUtil" %>
+<%@ page import="org.dspace.core.Context" %>
+
+<%
+    Context context = null;
+
+	try
+	{
+		context = UIUtil.obtainContext(request);
+%>
 
 <dspace:layout titlekey="jsp.error.404.title">
 
@@ -48,3 +58,11 @@
     </p>
 
 </dspace:layout>
+<%
+	}
+	finally
+	{
+	    if (context != null && context.isValid())
+	        context.abort();
+	}
+%>

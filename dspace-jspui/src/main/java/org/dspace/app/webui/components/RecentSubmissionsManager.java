@@ -7,20 +7,19 @@
  */
 package org.dspace.app.webui.components;
 
-import java.util.List;
-
-import org.apache.log4j.Logger;
+import org.dspace.core.Context;
+import org.dspace.content.DSpaceObject;
 import org.dspace.browse.BrowseEngine;
-import org.dspace.browse.BrowseException;
+import org.dspace.browse.BrowserScope;
 import org.dspace.browse.BrowseIndex;
 import org.dspace.browse.BrowseInfo;
-import org.dspace.browse.BrowserScope;
-import org.dspace.content.DSpaceObject;
-import org.dspace.content.Item;
-import org.dspace.core.ConfigurationManager;
-import org.dspace.core.Context;
-import org.dspace.sort.SortException;
+import org.dspace.browse.BrowseException;
 import org.dspace.sort.SortOption;
+import org.dspace.sort.SortException;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.content.Item;
+
+import org.apache.log4j.Logger;
 
 /**
  * Class that obtains recent submissions to DSpace containers.
@@ -89,7 +88,7 @@ public class RecentSubmissionsManager
 			
 			BrowseInfo results = be.browseMini(bs);
 			
-			List<Item> items = results.getResults();
+			Item[] items = results.getItemResults(context);
 			
 			RecentSubmissions rs = new RecentSubmissions(items);
 			

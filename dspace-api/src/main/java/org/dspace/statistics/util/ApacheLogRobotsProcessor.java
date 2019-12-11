@@ -32,7 +32,7 @@ public class ApacheLogRobotsProcessor {
      * by analyzing users of the robots.txt file
      *
      * @param args
-     * @throws Exception if error
+     * @throws Exception
      */
 
     public static void main(String[] args) throws Exception {

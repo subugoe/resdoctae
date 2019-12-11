@@ -15,7 +15,6 @@ package org.dspace.sort;
  */
 public class OrderFormatDate implements OrderFormatDelegate
 {
-    @Override
     public String makeSortString(String value, String language)
     {
         int padding = 0;

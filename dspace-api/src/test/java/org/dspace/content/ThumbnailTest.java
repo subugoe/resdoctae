@@ -11,9 +11,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.SQLException;
-
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
 import org.junit.*;
 import static org.junit.Assert.* ;
 import org.apache.log4j.Logger;
@@ -29,8 +26,6 @@ public class ThumbnailTest extends AbstractUnitTest
 
     /** log4j category */
     private static final Logger log = Logger.getLogger(ThumbnailTest.class);
-
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
 
     /**
      * Bitstream instance for the tests, thumbnail copy
@@ -63,9 +58,11 @@ public class ThumbnailTest extends AbstractUnitTest
         {
             //we have to create a new bitstream in the database
             File f = new File(testProps.get("test.bitstream").toString());
-            thumb = bitstreamService.create(context, new FileInputStream(f));
-            orig = bitstreamService.create(context, new FileInputStream(f));
-            t = new Thumbnail(thumb, orig);
+            thumb = Bitstream.create(context, new FileInputStream(f));
+            context.commit();
+            orig = Bitstream.create(context, new FileInputStream(f));
+            context.commit();
+            t = new Thumbnail(thumb, orig);            
         }
         catch (IOException ex) {
             log.error("IO Error in init", ex);

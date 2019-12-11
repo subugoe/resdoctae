@@ -14,16 +14,12 @@ import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DCDate;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.MetadataSchema;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.eperson.EPerson;
+import org.dspace.utils.DSpace;
 import org.dspace.versioning.Version;
-import org.dspace.versioning.factory.VersionServiceFactory;
-import org.dspace.versioning.service.VersioningService;
-
-import java.sql.SQLException;
+import org.dspace.versioning.VersioningService;
 
 /**
  *
@@ -52,8 +48,6 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
     private static final Message T_submit_delete = message("xmlui.general.delete");
 	private static final Message T_submit_cancel = message("xmlui.general.cancel");
 
-    protected VersioningService versioningService = VersionServiceFactory.getInstance().getVersionService();
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
 
 	public void addPageMeta(PageMeta pageMeta) throws WingException {
 		pageMeta.addMetadata("title").addContent(T_title);
@@ -63,7 +57,7 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
 		pageMeta.addTrail().addContent(T_trail);
 	}
 
-	public void addBody(Body body) throws WingException, AuthorizeException, SQLException {
+	public void addBody(Body body) throws WingException, AuthorizeException {
 		Division main = createMainDivision(body);
 
 		createTable(main);
@@ -84,7 +78,7 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
     }
 
 
-    private void createTable(Division main) throws WingException, SQLException {
+    private void createTable(Division main) throws WingException {
         // Get all our parameters
 		String idsString = parameters.getParameter("versionIDs", null);
 
@@ -100,6 +94,7 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
 
         for (String id : idsString.split(","))
         {
+            VersioningService versioningService = new DSpace().getSingletonService(VersioningService.class);
             Version version = null;
 
             if(StringUtils.isNotBlank(id))
@@ -113,7 +108,7 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
 			    row.addCell().addContent(version.getVersionNumber());
                 addItemIdentifier(row.addCell(), version.getItem());
 
-                EPerson editor = version.getEPerson();
+                EPerson editor = version.getEperson();
                 row.addCell().addXref("mailto:" + editor.getEmail(), editor.getFullName());
                 row.addCell().addContent(new DCDate(version.getVersionDate()).toString());
                 row.addCell().addContent(version.getSummary());
@@ -131,11 +126,11 @@ public class DeleteVersionsConfirm extends AbstractDSpaceTransformer {
     private void addItemIdentifier(Cell cell, org.dspace.content.Item item) throws WingException {
         String itemHandle = item.getHandle();
 
-        java.util.List<MetadataValue> identifiers = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "identifier", null, org.dspace.content.Item.ANY);
+        Metadatum[] identifiers = item.getMetadata(MetadataSchema.DC_SCHEMA, "identifier", null, org.dspace.content.Item.ANY);
         String itemIdentifier=null;
-        if(identifiers!=null && identifiers.size() > 0)
+        if(identifiers!=null && identifiers.length > 0)
         {
-            itemIdentifier = identifiers.get(0).getValue();
+            itemIdentifier = identifiers[0].value;
         }
 
         if(itemIdentifier!=null)

@@ -10,15 +10,9 @@ package org.dspace.xmlworkflow;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
-import org.dspace.xmlworkflow.factory.XmlWorkflowServiceFactory;
 import org.dspace.xmlworkflow.storedcomponents.*;
-import org.dspace.xmlworkflow.storedcomponents.service.CollectionRoleService;
-import org.dspace.xmlworkflow.storedcomponents.service.WorkflowItemRoleService;
 
 import java.sql.SQLException;
-import java.util.List;
 
 /**
  * The role that is responsible for a certain step
@@ -32,9 +26,6 @@ import java.util.List;
  */
 public class Role {
 
-    private GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-    private CollectionRoleService collectionRoleService = XmlWorkflowServiceFactory.getInstance().getCollectionRoleService();
-    private WorkflowItemRoleService workflowItemRoleService = XmlWorkflowServiceFactory.getInstance().getWorkflowItemRoleService();
     private String id;
     private String name;
     private String description;
@@ -79,7 +70,7 @@ public class Role {
 
     public RoleMembers getMembers(Context context, XmlWorkflowItem wfi) throws SQLException {
         if(scope == Scope.REPOSITORY){
-            Group group = groupService.findByName(context, name);
+            Group group = Group.findByName(context, name);
             if(group == null)
                 return new RoleMembers();
             else{
@@ -89,7 +80,7 @@ public class Role {
             }
         } else
         if(scope == Scope.COLLECTION){
-            CollectionRole collectionRole = collectionRoleService.find(context,wfi.getCollection(),id);
+            CollectionRole collectionRole = CollectionRole.find(context,wfi.getCollection().getID(),id);
             if(collectionRole != null){
                 RoleMembers assignees =  new RoleMembers();
                 assignees.addGroup(collectionRole.getGroup());
@@ -97,7 +88,7 @@ public class Role {
             }
             return new RoleMembers();
         }else{
-            List<WorkflowItemRole> roles = workflowItemRoleService.find(context, wfi, id);
+            WorkflowItemRole[] roles = WorkflowItemRole.find(context, wfi.getID(), id);
             RoleMembers assignees = new RoleMembers();
             for (WorkflowItemRole itemRole : roles){
                 EPerson user = itemRole.getEPerson();

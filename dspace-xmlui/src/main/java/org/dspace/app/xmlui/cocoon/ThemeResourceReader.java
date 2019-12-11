@@ -15,8 +15,8 @@ import org.apache.cocoon.ProcessingException;
 import org.apache.cocoon.ResourceNotFoundException;
 import org.apache.cocoon.caching.CacheableProcessingComponent;
 import org.apache.cocoon.environment.SourceResolver;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.apache.commons.lang.StringUtils;
+import org.dspace.core.ConfigurationManager;
 import org.xml.sax.SAXException;
 
 /**
@@ -30,8 +30,7 @@ public class ThemeResourceReader extends SafeResourceReader
         implements CacheableProcessingComponent, Configurable
 {
     // Default whitelist of file extensions that are allowed in an XMLUI theme
-    protected String[] DEFAULT_WHITELIST = new String[]{"css", "js", "json", "gif", "jpg", "jpeg", "png", "ico", "bmp", "htm", "html", "svg", "ttf", "woff", "hbs"};
-    protected ConfigurationService configurationService = DSpaceServicesFactory.getInstance().getConfigurationService();
+    protected String[] DEFAULT_WHITELIST = new String[]{"css", "js", "json", "gif", "jpg", "jpeg", "png", "ico", "bmp", "htm", "html", "svg", "ttf", "woff"};
 
     @Override
     public void setup(SourceResolver resolver, Map objectModel, String src, Parameters par)
@@ -46,13 +45,23 @@ public class ThemeResourceReader extends SafeResourceReader
         }
 
         // Otherwise, we'll load our configured file-extension whitelist
-        String[] whitelist = configurationService.getArrayProperty("xmlui.theme.whitelist", DEFAULT_WHITELIST);
+        String whitelistProp = ConfigurationManager.getProperty("xmlui.theme.whitelist");
+        String[] whitelist;
+
+        if(StringUtils.isEmpty(whitelistProp))
+        {
+            whitelist = DEFAULT_WHITELIST;
+        }
+        else
+        {
+            whitelist = whitelistProp.split(",");
+        }
 
         // Check resource suffix against our whitelist
         for(String suffix : whitelist)
         {
             // If it is in our whitelist, let it through to the SafeResourceReader
-            if(src != null && src.toLowerCase().endsWith("." + suffix))
+            if(src != null && src.toLowerCase().endsWith("." + suffix.trim()))
             {
                 super.setup(resolver, objectModel, src, par);
                 return;

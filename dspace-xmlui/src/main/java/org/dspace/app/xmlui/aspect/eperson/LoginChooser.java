@@ -30,10 +30,9 @@ import org.dspace.app.xmlui.wing.element.Division;
 import org.dspace.app.xmlui.wing.element.Item;
 import org.dspace.app.xmlui.wing.element.List;
 import org.dspace.app.xmlui.wing.element.PageMeta;
+import org.dspace.authenticate.AuthenticationManager;
 import org.dspace.authenticate.AuthenticationMethod;
-import org.dspace.authenticate.factory.AuthenticateServiceFactory;
-import org.dspace.authenticate.service.AuthenticationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 import org.xml.sax.SAXException;
 
 /**
@@ -56,7 +55,6 @@ public class LoginChooser extends AbstractDSpaceTransformer implements
 
 	public static final Message T_para1 = message("xmlui.EPerson.LoginChooser.para1");
 
-	protected AuthenticationService authenticationService = AuthenticateServiceFactory.getInstance().getAuthenticationService();
 	/**
 	 * Generate the unique caching key. This key must be unique inside the space
 	 * of this component.
@@ -135,7 +133,7 @@ public class LoginChooser extends AbstractDSpaceTransformer implements
 	 */
 	public void addBody(Body body) throws SQLException, SAXException,
 			WingException {
-		Iterator authMethods = authenticationService
+		Iterator authMethods = AuthenticationManager
 				.authenticationMethodIterator();
 		Request request = ObjectModelHelper.getRequest(objectModel);
 		HttpSession session = request.getSession();
@@ -197,13 +195,13 @@ public class LoginChooser extends AbstractDSpaceTransformer implements
             if (loginURL != null && authTitle != null)
             {
 
-                if (DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("xmlui.force.ssl")
+                if (ConfigurationManager.getBooleanProperty("xmlui.force.ssl")
                         && !request.isSecure())
                 {
                     StringBuffer location = new StringBuffer("https://");
                     location
                             .append(
-                                    DSpaceServicesFactory.getInstance().getConfigurationService()
+                                    ConfigurationManager
                                             .getProperty("dspace.hostname"))
                             .append(loginURL).append(
                                     request.getQueryString() == null ? ""

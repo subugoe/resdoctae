@@ -34,7 +34,7 @@ import org.dspace.content.Collection;
 import org.dspace.content.InProgressSubmission;
 import org.dspace.content.WorkspaceItem;
 import org.dspace.submit.AbstractProcessingStep;
-import org.dspace.workflowbasic.BasicWorkflowItem;
+import org.dspace.workflow.WorkflowItem;
 import org.xml.sax.SAXException;
 
 /**
@@ -49,7 +49,7 @@ import org.xml.sax.SAXException;
  */
 public abstract class AbstractStep extends AbstractDSpaceTransformer 
 {
-	private static final Logger log = Logger.getLogger(AbstractStep.class);
+	private static Logger log = Logger.getLogger(AbstractStep.class);
 
     /** General Language Strings */
     protected static final Message T_submission_title = 
@@ -155,16 +155,7 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 	 * 
 	 * If the implementer set any required parameters then ensure that 
 	 * they are all present.
-     *
-     * @param resolver source resolver.
-     * @param objectModel TBD
-     * @param src TBD
-     * @param parameters sitemap parameters.
-     * @throws org.apache.cocoon.ProcessingException passed through.
-     * @throws org.xml.sax.SAXException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-    @Override
 	public void setup(SourceResolver resolver, Map objectModel, String src, Parameters parameters) 
 	throws ProcessingException, SAXException, IOException
 	{ 
@@ -196,7 +187,7 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
                 throw new ProcessingException("Unable to find submission for id: " + this.id);
             }
 			
-			if (this.requireWorkflow && !(submission instanceof BasicWorkflowItem))
+			if (this.requireWorkflow && !(submission instanceof WorkflowItem))
             {
                 throw new ProcessingException("The submission is not a workflow, " + this.id);
             }
@@ -226,17 +217,10 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 
 	/** 
 	 * Base pageMeta that is added to ALL submission stages 
-     * @throws org.xml.sax.SAXException passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
 	 */
-    @Override
-	public void addPageMeta(PageMeta pageMeta)
-            throws SAXException, WingException, UIException, SQLException,
-            IOException, AuthorizeException
+	public void addPageMeta(PageMeta pageMeta) throws SAXException,
+	WingException, UIException, SQLException, IOException,
+	AuthorizeException
 	{
 		if (submission instanceof WorkspaceItem)
 		{
@@ -245,7 +229,7 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 			Collection collection = submission.getCollection();
 			
 	        pageMeta.addTrailLink(contextPath + "/",T_dspace_home);
-	        HandleUtil.buildHandleTrail(context, collection,pageMeta,contextPath, true);
+	        HandleUtil.buildHandleTrail(collection,pageMeta,contextPath, true);
 	        pageMeta.addTrail().addContent(T_submission_trail);
 		}
 		else if (submissionInfo != null && submissionInfo.isInWorkflow())
@@ -255,7 +239,7 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 			Collection collection = submission.getCollection();
 			
 	        pageMeta.addTrailLink(contextPath + "/",T_dspace_home);
-	        HandleUtil.buildHandleTrail(context, collection,pageMeta,contextPath, true);
+	        HandleUtil.buildHandleTrail(collection,pageMeta,contextPath, true);
 	        pageMeta.addTrail().addContent(T_workflow_trail);
 		}
 		else
@@ -274,7 +258,6 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 	 * Add a submission progress list to the current div for this step. 
 	 * 
 	 * @param div The division to add the list to.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
 	 */
 	public void addSubmissionProgressList(Division div) throws WingException
 	{
@@ -320,7 +303,6 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
      * @param stepAndPage
      *          The step and page (a double of the form 'step.page', e.g. 1.2)
      *          which this button will jump back to
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void addJumpButton(List list, Message buttonText, StepAndPage stepAndPage)
         throws WingException
@@ -336,9 +318,9 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
     }
     
     /**
-     * Adds the "{@literal <-Previous}", "{@literal Save/Cancel}" and
-     * "{@literal Next->}" buttons to a given form.  This method ensures that
-     * the same default control/paging buttons appear on each submission page.
+     * Adds the "<-Previous", "Save/Cancel" and "Next->" buttons 
+     * to a given form.  This method ensures that the same
+     * default control/paging buttons appear on each submission page.
      * <P>
      * Note: A given step may define its own buttons as necessary,
      * and not call this method (since it must be explicitly invoked by
@@ -346,7 +328,6 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
      *
      * @param controls
      *          The List which will contain all control buttons
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void addControlButtons(List controls)
         throws WingException
@@ -449,8 +430,6 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
      * Find the maximum step and page that the user has 
      * reached in the submission processes. 
      * If this submission is a workflow then return max-int.
-     * @return the maximum step and page reached.
-     * @throws java.sql.SQLException passed through.
      */
     public StepAndPage getMaxStepAndPageReached() throws SQLException {
 
@@ -481,12 +460,11 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
 	 * Retrieve error fields from the list of parameters
 	 * and return a List of all fields which had errors
 	 *
-     * @param parameters the list to search for error fields.
-	 * @return {@link java.util.List} of field names with errors
+	 * @return java.util.List of field names with errors
 	 */
 	public java.util.List<String> getErrorFields(Parameters parameters)
 	{
-		java.util.List<String> fields = new ArrayList<>();
+		java.util.List<String> fields = new ArrayList<String>();
 		
 		String errors = parameters.getParameter("error_fields","");
 		
@@ -543,7 +521,10 @@ public abstract class AbstractStep extends AbstractDSpaceTransformer
         }  
 	}
 	
-    @Override
+	
+	/**
+	 * Recycle
+	 */
 	public void recycle() 
 	{
 		this.id = null;

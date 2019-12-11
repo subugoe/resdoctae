@@ -24,7 +24,7 @@ import java.util.Map;
  */
 public class FieldMergeModifier extends AbstractModifier
 {
-    protected Map<String, List<String>> mergeFieldMap;
+    private Map<String, List<String>> mergeFieldMap;
 
     public FieldMergeModifier()
     {

@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.item;
 
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.dspace.app.util.AuthorizeUtil;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
@@ -20,13 +19,10 @@ import org.dspace.app.xmlui.wing.element.Division;
 import org.dspace.app.xmlui.wing.element.List;
 import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 
 /**
@@ -79,9 +75,6 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
     private static final Message T_label_public = message("xmlui.administrative.item.EditItemStatusForm.label_public");
     private static final Message T_submit_private = message("xmlui.administrative.item.EditItemStatusForm.submit_private");
     private static final Message T_submit_public = message("xmlui.administrative.item.EditItemStatusForm.submit_public");
-
-	protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
 	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
 	{
@@ -95,8 +88,8 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
 	public void addBody(Body body) throws SQLException, WingException
 	{
 		// Get our parameters and state
-		UUID itemID = UUID.fromString(parameters.getParameter("itemID", null));
-		Item item = itemService.find(context, itemID);
+		int itemID = parameters.getParameterAsInteger("itemID",-1);
+		Item item = Item.find(context, itemID);
 		String baseURL = contextPath+"/admin/item?administrative-continue="+knot.getId();
 		
 	
@@ -140,9 +133,9 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
 		itemInfo.addLabel(T_label_in);
 		
 		List subList = itemInfo.addList("collections", List.TYPE_SIMPLE);
-		java.util.List<Collection> collections = item.getCollections();
+		Collection[] collections = item.getCollections();
 		for(Collection collection : collections) {
-			subList.addItem(collection.getName());
+			subList.addItem(collection.getMetadata("name"));
 		}
 		
 		itemInfo.addLabel(T_label_page);
@@ -151,7 +144,7 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
 		}
 		else
 		{
-			itemInfo.addItem().addXref(DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("dspace.url") + "/handle/" + item.getHandle(),DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("dspace.url") + "/handle/" + item.getHandle());
+			itemInfo.addItem().addXref(ConfigurationManager.getProperty("dspace.url") + "/handle/" + item.getHandle(),ConfigurationManager.getProperty("dspace.url") + "/handle/" + item.getHandle());		
 		}
 		
 		itemInfo.addLabel(T_label_auth);
@@ -201,7 +194,7 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
 
 
 		itemInfo.addLabel(T_label_delete);
-		if (authorizeService.authorizeActionBoolean(context, item, Constants.DELETE))
+		if (AuthorizeManager.authorizeActionBoolean(context, item, Constants.DELETE))
 		{
 			itemInfo.addItem().addButton("submit_delete").setValue(T_submit_delete);
 		}
@@ -223,8 +216,8 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
         if(item.isDiscoverable())
         {
             itemInfo.addLabel(T_label_private);
-			if (authorizeService.authorizeActionBoolean(context, item,
-                    Constants.WRITE))
+			if (AuthorizeManager.authorizeActionBoolean(context, item,
+					Constants.WRITE)) 
 			{
 				itemInfo.addItem().addButton("submit_private")
 						.setValue(T_submit_private);
@@ -238,7 +231,7 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
         else
         {
             itemInfo.addLabel(T_label_public);
-            if (authorizeService.authorizeActionBoolean(context, item, Constants.WRITE))
+            if (AuthorizeManager.authorizeActionBoolean(context, item, Constants.WRITE))
             {
                 itemInfo.addItem().addButton("submit_public").setValue(T_submit_public);
             }
@@ -271,7 +264,7 @@ public class EditItemStatusForm extends AbstractDSpaceTransformer {
 		button.setValue(buttonLabel);
 
 
-		if (!authorizeService.isAdmin(context, collection))
+		if (!AuthorizeManager.isAdmin(context, collection))
 		{
 			// Only admins can create or delete
 			button.setDisabled();

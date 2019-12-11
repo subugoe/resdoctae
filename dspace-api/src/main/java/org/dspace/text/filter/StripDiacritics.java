@@ -15,13 +15,11 @@ package org.dspace.text.filter;
  */
 public class StripDiacritics implements TextFilter
 {
-    @Override
     public String filter(String str)
     {
         return str.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
     }
 
-    @Override
     public String filter(String str, String lang)
     {
         return str.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");

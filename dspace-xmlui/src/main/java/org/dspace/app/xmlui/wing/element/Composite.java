@@ -7,20 +7,21 @@
  */
 package org.dspace.app.xmlui.wing.element;
 
-import org.dspace.app.xmlui.wing.WingContext;
-import org.dspace.app.xmlui.wing.WingException;
-
 /**
  * A class representing a composite input control. The composite input control
- * enables multiple input controls to be combined together into a single control.
+ * enables multiple input conrols to be combined together into a single control.
  * Some example uses would be names, that are broken up into both a first and
  * last name. Together they represent a single value but the user can interacts
  * two separate text boxes for each part of the name.
  * 
  * @author Scott Phillips
  */
+import org.dspace.app.xmlui.wing.WingContext;
+import org.dspace.app.xmlui.wing.WingException;
+
 public class Composite extends Field
 {
+
     /**
      * Construct a new field.
      * 
@@ -36,7 +37,6 @@ public class Composite extends Field
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Composite(WingContext context, String name, String rend)
             throws WingException
@@ -49,7 +49,6 @@ public class Composite extends Field
      * Enable the add operation for this field. When this is enabled the
      * front end will add a button to add more items to the field.
      * 
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void enableAddOperation() throws WingException
     {
@@ -61,7 +60,6 @@ public class Composite extends Field
      * the front end will provide a way for the user to select fields (probably
      * checkboxes) along with a submit button to delete the selected fields.
      * 
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void enableDeleteOperation()throws WingException
     {
@@ -83,7 +81,6 @@ public class Composite extends Field
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return a new checkbox field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public CheckBox addCheckBox(String name, String rend) throws WingException
     {
@@ -104,7 +101,6 @@ public class Composite extends Field
      *            This is the name of the field use when data is submitted back
      *            to the server.
      * @return A new checkbox field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public CheckBox addCheckBox(String name) throws WingException
     {
@@ -126,7 +122,6 @@ public class Composite extends Field
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return a new radio field.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Radio addRadio(String name, String rend) throws WingException
     {
@@ -148,7 +143,6 @@ public class Composite extends Field
      *            to the server.
      * 
      * @return a new radio field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Radio addRadio(String name) throws WingException
     {
@@ -168,7 +162,6 @@ public class Composite extends Field
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return a new select field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Select addSelect(String name, String rend) throws WingException
     {
@@ -187,7 +180,6 @@ public class Composite extends Field
      *            This is the name of the field use when data is submitted back
      *            to the server.
      * @return a new select field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Select addSelect(String name) throws WingException
     {
@@ -206,7 +198,6 @@ public class Composite extends Field
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return A new text field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Text addText(String name, String rend) throws WingException
     {
@@ -225,7 +216,6 @@ public class Composite extends Field
      *            This is the name of the field use when data is submitted back
      *            to the server.
      * @return a new text field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Text addText(String name) throws WingException
     {
@@ -244,7 +234,6 @@ public class Composite extends Field
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return a new text area field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public TextArea addTextArea(String name, String rend) throws WingException
     {
@@ -262,7 +251,6 @@ public class Composite extends Field
      *            This is the name of the field use when data is submitted back
      *            to the server.
      * @return a new text area field
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public TextArea addTextArea(String name) throws WingException
     {
@@ -272,7 +260,6 @@ public class Composite extends Field
     /**
      * Add a field instance
      * @return instance
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Instance addInstance() throws WingException
     {

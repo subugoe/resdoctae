@@ -26,8 +26,6 @@ import org.dspace.app.xmlui.wing.element.Select;
 import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.app.xmlui.wing.element.TextArea;
 import org.dspace.content.BitstreamFormat;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
 
 /**
  * Enable the user to edit a bitstream format's metadata. 
@@ -86,9 +84,8 @@ public class EditBitstreamFormat extends AbstractDSpaceTransformer
 		message("xmlui.general.save");
 	private static final Message T_submit_cancel =
 		message("xmlui.general.cancel");
-
-	protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-
+	
+	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
         pageMeta.addMetadata("title").addContent(T_title);
@@ -106,7 +103,7 @@ public class EditBitstreamFormat extends AbstractDSpaceTransformer
 		
 		if (formatID >= 0)
         {
-            format = bitstreamFormatService.find(context, formatID);
+            format = BitstreamFormat.find(context, formatID);
         }
 	
 		String errorString = parameters.getParameter("errors",null);
@@ -125,14 +122,15 @@ public class EditBitstreamFormat extends AbstractDSpaceTransformer
         String descriptionValue = request.getParameter("description");
         String supportLevelValue = request.getParameter("support_level");
         String internalValue = request.getParameter("internal");
-        java.util.List<String> extensionValues = RequestUtils.getFieldValues(request, "extensions");
-
+        java.util.List<String> extensionsList = RequestUtils.getFieldValues(request, "extensions");
+        String[] extensionValues = extensionsList.toArray(new String[extensionsList.size()]);
+        
         // Remove leading periods from file extensions.
-        for (int i = 0; i < extensionValues.size(); i++)
+        for (int i = 0; i < extensionValues.length; i++)
         {
-        	if (extensionValues.get(i).startsWith("."))
+        	if (extensionValues[i].startsWith("."))
             {
-                extensionValues.set(i, extensionValues.get(i).substring(1));
+                extensionValues[i] = extensionValues[i].substring(1);
             }
         }
         

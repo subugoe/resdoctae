@@ -93,7 +93,6 @@ public class DCSeriesNumber
 
     /**
      * Get the series name - guaranteed non-null
-     * @return name
      */
     public String getSeries()
     {
@@ -102,7 +101,6 @@ public class DCSeriesNumber
 
     /**
      * Get the number - guaranteed non-null
-     * @return number
      */
     public String getNumber()
     {

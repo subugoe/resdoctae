@@ -7,21 +7,17 @@
  */
 package org.dspace.content;
 
-import org.apache.log4j.Logger;
-import org.dspace.AbstractUnitTest;
-import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.List;
 
+import org.dspace.AbstractUnitTest;
+import org.apache.log4j.Logger;
+import org.dspace.authorize.AuthorizeException;
+import org.dspace.core.Constants;
+import org.junit.*;
+import static org.junit.Assert.* ;
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
 
 /**
  * Unit Tests for class MetadataValue
@@ -36,12 +32,7 @@ public class MetadataValueTest extends AbstractUnitTest
     /**
      * MetadataValue instance for the tests
      */
-    private MetadataValue mv = null;
-
-    private Collection collection;
-    private Community owningCommunity;
-    private Item it;
-
+    private MetadataValue mv;
 
     /**
      * MetadataField instance for the tests
@@ -58,13 +49,6 @@ public class MetadataValueTest extends AbstractUnitTest
      */
     private String qualifier = "author";
 
-    private MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-    private MetadataValueService metadataValueService = ContentServiceFactory.getInstance().getMetadataValueService();
-    protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-    protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected WorkspaceItemService workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
-    protected InstallItemService installItemService = ContentServiceFactory.getInstance().getInstallItemService();
-
     /**
      * This method will be run before every test as per @Before. It will
      * initialize resources required for the tests.
@@ -80,14 +64,12 @@ public class MetadataValueTest extends AbstractUnitTest
         try
         {
             context.turnOffAuthorisationSystem();
-            this.owningCommunity = communityService.create(null, context);
-            this.collection = collectionService.create(context, owningCommunity);
-            WorkspaceItem workspaceItem = workspaceItemService.create(context, collection, false);
-            this.it = installItemService.installItem(context, workspaceItem);
-
-            this.mf = metadataFieldService.findByElement(context,
-                    MetadataSchema.DC_SCHEMA, element, qualifier);
-            this.mv = metadataValueService.create(context, it , mf);
+            this.mf = MetadataField.findByElement(context,
+                    MetadataSchema.DC_SCHEMA_ID, element, qualifier);
+            this.mv = new MetadataValue(mf);
+            this.mv.setResourceId(Item.create(context).getID());
+            this.mv.setResourceTypeId(Constants.ITEM);
+            context.commit();
             context.restoreAuthSystemState();
         }
         catch (AuthorizeException ex)
@@ -113,16 +95,6 @@ public class MetadataValueTest extends AbstractUnitTest
     @Override
     public void destroy()
     {
-        try {
-            context.turnOffAuthorisationSystem();
-            communityService.delete(context, owningCommunity);
-        } catch (SQLException | AuthorizeException | IOException ex) {
-            log.error("Error in destroy", ex);
-            fail("Error in destroy: " + ex.getMessage());
-        }finally {
-            context.restoreAuthSystemState();
-        }
-
         mf = null;
         mv = null;
         super.destroy();
@@ -135,18 +107,41 @@ public class MetadataValueTest extends AbstractUnitTest
     public void testGetFieldId()
     {
         MetadataValue instance = new MetadataValue();
-        assertThat("testGetFieldId 0", instance.getID(), equalTo(0));
+        assertThat("testGetFieldId 0", instance.getFieldId(), equalTo(0));
 
-        assertThat("testGetFieldId 1", mv.getMetadataField().getID(), equalTo(mf.getID()));
+        assertThat("testGetFieldId 1", mv.getFieldId(), equalTo(mf.getFieldID()));
+    }
+
+    /**
+     * Test of setFieldId method, of class MetadataValue.
+     */
+    @Test
+    public void testSetFieldId()
+    {
+        int fieldId = 66;
+        mv.setFieldId(fieldId);
+        assertThat("testSetFieldId 0", mv.getFieldId(), equalTo(fieldId));
     }
 
     /**
      * Test of getItemId method, of class MetadataValue.
      */
     @Test
-    public void testGetDSpaceObject()
+    public void testGetItemId() 
     {
-        assertTrue("testGetItemId 0", mv.getDSpaceObject().equals(it));
+        assertTrue("testGetItemId 0", mv.getResourceId() >= 0);
+    }
+
+    /**
+     * Test of setItemId method, of class MetadataValue.
+     */
+    @Test
+    public void testSetItemId()
+    {
+        int itemId = 55;
+        mv.setResourceId(itemId);
+        mv.setResourceTypeId(Constants.ITEM);
+        assertThat("testSetItemId 0", mv.getResourceId(), equalTo(itemId));
     }
 
     /**
@@ -195,7 +190,7 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testGetValueId() 
     {
-        assertThat("testGetValueId 0",mv.getID(), notNullValue());
+        assertThat("testGetValueId 0",mv.getValueId(), equalTo(0));
     }
 
     /**
@@ -244,7 +239,7 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testGetConfidence() 
     {
-        assertThat("testGetConfidence 0",mv.getConfidence(), equalTo(-1));
+        assertThat("testGetConfidence 0",mv.getConfidence(), equalTo(0));
     }
 
     /**
@@ -264,7 +259,7 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testCreate() throws Exception
     {
-        metadataValueService.create(context, it, mf);
+        mv.create(context);
     }
 
     /**
@@ -273,11 +268,11 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testFind() throws Exception 
     {
-        metadataValueService.create(context, it, mf);
-        int id = mv.getID();
-        MetadataValue found = metadataValueService.find(context, id);
+        mv.create(context);
+        int id = mv.getValueId();
+        MetadataValue found = MetadataValue.find(context, id);
         assertThat("testFind 0",found, notNullValue());
-        assertThat("testFind 1",found.getID(), equalTo(id));
+        assertThat("testFind 1",found.getValueId(), equalTo(id));
     }
 
     /**
@@ -286,8 +281,9 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testFindByField() throws Exception
     {
-        metadataValueService.create(context, it, mf);
-        List<MetadataValue> found = metadataValueService.findByField(context, mf);
+        mv.create(context);
+        int fieldId = mv.getFieldId();
+        List<MetadataValue> found = MetadataValue.findByField(context, fieldId);
         assertThat("testFind 0",found, notNullValue());
         assertTrue("testFind 1",found.size() >= 1);        
     }
@@ -298,9 +294,21 @@ public class MetadataValueTest extends AbstractUnitTest
     @Test
     public void testUpdate() throws Exception
     {
-        metadataValueService.create(context, it, mf);
-        metadataValueService.update(context, mv);
+        mv.create(context);
+        mv.update(context);
     }
 
+    /**
+     * Test of delete method, of class MetadataValue.
+     */
+    @Test
+    public void testDelete() throws Exception
+    {
+        mv.create(context);
+        int id = mv.getValueId();
+        mv.delete(context);
+        MetadataValue found = MetadataValue.find(context, id);
+        assertThat("testDelete 0",found, nullValue());
+    }
 
 }

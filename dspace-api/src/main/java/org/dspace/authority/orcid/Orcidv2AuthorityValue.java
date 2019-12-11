@@ -11,7 +11,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.solr.common.SolrDocument;
 import org.apache.solr.common.SolrInputDocument;
 import org.dspace.authority.AuthorityValue;
-import org.dspace.authority.AuthorityValueServiceImpl;
+import org.dspace.authority.AuthorityValueGenerator;
 import org.dspace.authority.PersonAuthorityValue;
 import org.dspace.utils.DSpace;
 import org.orcid.jaxb.model.common_v2.ExternalId;
@@ -245,11 +245,11 @@ public class Orcidv2AuthorityValue extends PersonAuthorityValue {
 
     /**
      * Provides a string that will allow this AuthorityType to be recognized and provides information to create a new instance to be created using public Orcidv2AuthorityValue newInstance(String info).
-     * @return see {@link org.dspace.authority.service.AuthorityValueService#GENERATE AuthorityValueService.GENERATE}
+     * @return see {@link org.dspace.authority.AuthorityValueGenerator#GENERATE AuthorityValueGenerator.GENERATE}
      */
     @Override
     public String generateString() {
-        String generateString = AuthorityValueServiceImpl.GENERATE + getAuthorityType() + AuthorityValueServiceImpl.SPLIT;
+        String generateString = AuthorityValueGenerator.GENERATE + getAuthorityType() + AuthorityValueGenerator.SPLIT;
         if (StringUtils.isNotBlank(getOrcid_id())) {
             generateString += getOrcid_id();
         }

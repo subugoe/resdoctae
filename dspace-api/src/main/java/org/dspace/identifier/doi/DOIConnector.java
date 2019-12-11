@@ -17,10 +17,9 @@ import org.dspace.core.Context;
  * A DOIConnector should care about rules of the registration agency. For
  * example, if the registration agency wants us to reserve a DOI before we can
  * register it, the DOIConnector should check if a DOI is reserved. Use a
- * {@link org.dspace.identifier.doi.DOIIdentifierException#DOIIdentifierException DOIIdentifierException}.
- * and set its error code in case of any errors.
+ * {@link DOIIdenfierException} and set its error code in case of any errors.
  * For the given example you should use
- * {@code DOIIdentifierException.RESERVE_FIRST} as error code.
+ * {@code DOIIdentifierException.RESERVER_FIRST} as error code.
  *
  * @author Pascal-Nicolas Becker
  */
@@ -28,9 +27,15 @@ public interface DOIConnector {
     public boolean isDOIReserved(Context context, String doi)
             throws DOIIdentifierException;
     
+    public boolean isDOIReserved(Context context, DSpaceObject dso, String doi)
+            throws DOIIdentifierException;
+    
     public boolean isDOIRegistered(Context context, String doi)
             throws DOIIdentifierException;
     
+    public boolean isDOIRegistered(Context context, DSpaceObject dso, String doi)
+            throws DOIIdentifierException;
+
     /**
      * Sends the DELETE-Request to the DOI registry.
      * 
@@ -41,7 +46,8 @@ public interface DOIConnector {
      * 
      * @param context
      * @param doi
-     * @throws DOIIdentifierException if DOI error
+     * @return
+     * @throws DOIIdentifierException 
      */
     public void deleteDOI(Context context, String doi)
             throws DOIIdentifierException;
@@ -50,15 +56,15 @@ public interface DOIConnector {
      * Sends a request to the DOI registry to reserve a DOI.
      * 
      * The DOIConnector should check weather this DOI is reserved for another
-     * object already. In this case it should throw an 
-     * {@link org.dspace.identifier.doi.DOIIdentifierException#DOIIdentifierException DOIIdentifierException}.
+     * object already. In this case it should throw an {@link 
      * DOIIdentifierException} and set the error code to {@code 
      * DOIIdentifierException.DOI_ALREADY_EXISTS}.
      *
      * @param context
      * @param dso
      * @param doi
-     * @throws DOIIdentifierException if DOI error
+     * @return
+     * @throws DOIIdentifierException 
      */
     public void reserveDOI(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException;
@@ -68,15 +74,14 @@ public interface DOIConnector {
      * The DOIConnector ensures compliance with the workflow of the registration
      * agency. For example, if a DOI has to be reserved before it can be
      * registered the DOIConnector has to check if it is reserved. In this case
-     * you can throw an 
-     * {@link org.dspace.identifier.doi.DOIIdentifierException#DOIIdentifierException DOIIdentifierException}.
-     * and set the error code to 
-     * {@code DOIIdentifierException.RESERVE_FIRST}.
+     * you can throw an DOIIdentifierExcpetion and set the error code to 
+     * {@link DOIIdentifierException.RESERVE_FIRST}.
      * 
      * @param context
      * @param dso
      * @param doi
-     * @throws DOIIdentifierException if DOI error
+     * @return
+     * @throws DOIIdentifierException 
      */
     public void registerDOI(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException;
@@ -90,7 +95,8 @@ public interface DOIConnector {
      * @param context
      * @param dso
      * @param doi
-     * @throws DOIIdentifierException if DOI error
+     * @return
+     * @throws IdentifierException 
      */
     public void updateMetadata(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException;

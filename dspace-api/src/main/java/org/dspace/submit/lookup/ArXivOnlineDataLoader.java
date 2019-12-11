@@ -27,9 +27,9 @@ import org.dspace.core.Context;
  */
 public class ArXivOnlineDataLoader extends NetworkSubmissionLookupDataLoader
 {
-    protected ArXivService arXivService = new ArXivService();
+    private ArXivService arXivService = new ArXivService();
 
-    protected boolean searchProvider = true;
+    private boolean searchProvider = true;
 
     public void setArXivService(ArXivService arXivService)
     {

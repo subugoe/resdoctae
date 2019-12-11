@@ -22,7 +22,6 @@ public class PassiveUsageEventListener extends AbstractUsageEventListener
 	/**
      * Do nothing and return. Effectively, the event is discarded.
      */
-	@Override
 	public void receiveEvent(Event event) {
 		return;
 	}

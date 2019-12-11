@@ -40,22 +40,22 @@ public class Table extends AbstractWingElement implements StructuralElement
     public static final String A_COLS = "cols";
 
     /** The name assigned to this table */
-    private final String name;
+    private String name;
 
     /** Special rendering instructions for this table */
-    private final String rend;
+    private String rend;
 
     /** The number of rows in the table */
-    private final int rows;
+    private int rows;
 
     /** The number of cols in the table */
-    private final int cols;
+    private int cols;
 
     /** The table's head */
     private Head head;
 
     /** the rows contained in the table */
-    private List<AbstractWingElement> contents = new ArrayList<>();
+    private List<AbstractWingElement> contents = new ArrayList<AbstractWingElement>();
 
     /**
      * Construct a new row.
@@ -75,7 +75,6 @@ public class Table extends AbstractWingElement implements StructuralElement
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Table(WingContext context, String name, int rows, int cols,
             String rend) throws WingException
@@ -93,8 +92,6 @@ public class Table extends AbstractWingElement implements StructuralElement
 
     /**
      * Set the head element which is the label associated with this table.
-     * @return the new head.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Head setHead() throws WingException
     {
@@ -108,12 +105,11 @@ public class Table extends AbstractWingElement implements StructuralElement
      * 
      * @param characters
      *            (May be null) Unprocessed characters to be included
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void setHead(String characters) throws WingException
     {
-        Head newHead = this.setHead();
-        newHead.addContent(characters);
+        Head head = this.setHead();
+        head.addContent(characters);
 
     }
 
@@ -123,12 +119,11 @@ public class Table extends AbstractWingElement implements StructuralElement
      * @param message
      *            (Required) A key into the i18n catalogue for translation into
      *            the user's preferred language.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void setHead(Message message) throws WingException
     {
-        Head newHead = this.setHead();
-        newHead.addContent(message);
+        Head head = this.setHead();
+        head.addContent(message);
     }
 
     /**
@@ -148,7 +143,6 @@ public class Table extends AbstractWingElement implements StructuralElement
      *            display of the element.
      * 
      * @return a new table row
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Row addRow(String name, String role, String rend)
             throws WingException
@@ -168,7 +162,6 @@ public class Table extends AbstractWingElement implements StructuralElement
      *            carries, either header or data. See row.ROLES
      * 
      * @return a new table row
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Row addRow(String role) throws WingException
     {
@@ -180,7 +173,6 @@ public class Table extends AbstractWingElement implements StructuralElement
      * and serves as a container of cell elements.
      * 
      * @return a new table row
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Row addRow() throws WingException
     {
@@ -200,9 +192,8 @@ public class Table extends AbstractWingElement implements StructuralElement
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
+
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler, 
             NamespaceSupport namespaces) throws SAXException
     {
@@ -228,7 +219,9 @@ public class Table extends AbstractWingElement implements StructuralElement
         endElement(contentHandler, namespaces, E_TABLE);
     }
 
-    @Override
+    /**
+     * dispose
+     */
     public void dispose()
     {
         if (head != null)

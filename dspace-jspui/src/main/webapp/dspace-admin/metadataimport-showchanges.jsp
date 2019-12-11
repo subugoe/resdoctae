@@ -16,9 +16,9 @@
 <%@ page import="org.dspace.app.bulkedit.BulkEditChange" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="org.dspace.content.Item" %>
+<%@ page import="org.dspace.content.Metadatum" %>
 <%@ page import="org.dspace.content.Collection" %>
 <%@ page import="java.util.List" %>
-<%@ page import="org.dspace.app.bulkedit.BulkEditMetadataValue" %>
 
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
 
@@ -72,8 +72,8 @@
             for (BulkEditChange change : changes)
             {
                 // Get the changes
-                List<BulkEditMetadataValue> adds = change.getAdds();
-                List<BulkEditMetadataValue> removes = change.getRemoves();
+                List<Metadatum> adds = change.getAdds();
+                List<Metadatum> removes = change.getRemoves();
                 List<Collection> newCollections = change.getNewMappedCollections();
                 List<Collection> oldCollections = change.getOldMappedCollections();
                 boolean first = false;
@@ -256,16 +256,16 @@
                 }
 
                 // Show additions
-                for (BulkEditMetadataValue dcv : adds)
+                for (Metadatum dcv : adds)
                 {
-                    String md = dcv.getSchema() + "." + dcv.getElement();
-                    if (dcv.getQualifier() != null)
+                    String md = dcv.schema + "." + dcv.element;
+                    if (dcv.qualifier != null)
                     {
-                        md += "." + dcv.getQualifier();
+                        md += "." + dcv.qualifier;
                     }
-                    if (dcv.getLanguage() != null)
+                    if (dcv.language != null)
                     {
-                        md += "[" + dcv.getLanguage() + "]";
+                        md += "[" + dcv.language + "]";
                     }
                     if (!first)
                     {
@@ -277,25 +277,25 @@
                     }
                     if (!changed)
                     {
-                        %><td bgcolor="#4E9258" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.add"/> (<%= md %>)</td><td bgcolor="#4E9258" style="font-size:10pt"><%= dcv.getValue() %></td></tr><%
+                        %><td bgcolor="#4E9258" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.add"/> (<%= md %>)</td><td bgcolor="#4E9258" style="font-size:10pt"><%= dcv.value %></td></tr><%
                     }
                     else
                     {
-                        %><td bgcolor="#4E9258" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.added"/> (<%= md %>)</td><td bgcolor="#4E9258" style="font-size:10pt"><%= dcv.getValue() %></td></tr><%
+                        %><td bgcolor="#4E9258" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.added"/> (<%= md %>)</td><td bgcolor="#4E9258" style="font-size:10pt"><%= dcv.value %></td></tr><%
                     }
                 }
 
                 // Show removals
-                for (BulkEditMetadataValue dcv : removes)
+                for (Metadatum dcv : removes)
                 {
-                    String md = dcv.getSchema() + "." + dcv.getElement();
-                    if (dcv.getQualifier() != null)
+                    String md = dcv.schema + "." + dcv.element;
+                    if (dcv.qualifier != null)
                     {
-                        md += "." + dcv.getQualifier();
+                        md += "." + dcv.qualifier;
                     }
-                    if (dcv.getLanguage() != null)
+                    if (dcv.language != null)
                     {
-                        md += "[" + dcv.getLanguage() + "]";
+                        md += "[" + dcv.language + "]";
                     }
                     if (!first)
                     {
@@ -307,11 +307,11 @@
                     }
                     if (!changed)
                     {
-                        %><td bgcolor="#98AFC7" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.remove"/> (<%= md %>)</td><td bgcolor="#98AFC7" style="font-size:10pt"><%= dcv.getValue() %></td></tr><%
+                        %><td bgcolor="#98AFC7" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.remove"/> (<%= md %>)</td><td bgcolor="#98AFC7" style="font-size:10pt"><%= dcv.value %></td></tr><%
                     }
                     else
                     {
-                        %><td bgcolor="#98AFC7" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.removed"/> (<%= md %>)</td><td bgcolor="#98AFC7" style="font-size:10pt"><%= dcv.getValue() %></td></tr><%
+                        %><td bgcolor="#98AFC7" style="font-size:10pt"><fmt:message key="jsp.dspace-admin.metadataimport.removed"/> (<%= md %>)</td><td bgcolor="#98AFC7" style="font-size:10pt"><%= dcv.value %></td></tr><%
                     }
                 }
             }

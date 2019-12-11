@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -26,13 +25,11 @@ import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 /**
- * This servlet uses the SHERPASubmitService to build an html page with the
+ * This servlet use the SHERPASubmitService to build an html page with the
  * publisher policy for the journal referred in the specified Item
  * 
  * @author Andrea Bollini
@@ -40,25 +37,21 @@ import org.dspace.services.factory.DSpaceServicesFactory;
  */
 public class SHERPAPublisherPolicyServlet extends DSpaceServlet
 {
-    private final transient SHERPASubmitService sherpaSubmitService 
-            = DSpaceServicesFactory.getInstance().getServiceManager().getServiceByName(
+    private SHERPASubmitService sherpaSubmitService = new DSpace()
+            .getServiceManager().getServiceByName(
                     SHERPASubmitService.class.getCanonicalName(),
                     SHERPASubmitService.class);
 
-    private final transient ItemService itemService
-             = ContentServiceFactory.getInstance().getItemService();
-    
     /** log4j logger */
-    private static final Logger log = Logger
+    private static Logger log = Logger
             .getLogger(SHERPAPublisherPolicyServlet.class);
-    
-    @Override
+
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
     {
-        UUID itemID = UIUtil.getUUIDParameter(request, "item_id");
-        Item item = itemService.find(context, itemID);
+        int itemID = UIUtil.getIntParameter(request, "item_id");
+        Item item = Item.find(context, itemID);
         if (item == null)
         {
             return;
@@ -67,7 +60,7 @@ public class SHERPAPublisherPolicyServlet extends DSpaceServlet
                 context, item);
         if (shresp.isError())
         {
-            request.setAttribute("error", Boolean.TRUE);
+            request.setAttribute("error", new Boolean(true));
         }
         else
         {
@@ -99,7 +92,6 @@ public class SHERPAPublisherPolicyServlet extends DSpaceServlet
         JSPManager.showJSP(request, response, "/sherpa/sherpa-policy.jsp");
     }
 
-    @Override
     protected void doDSPost(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException

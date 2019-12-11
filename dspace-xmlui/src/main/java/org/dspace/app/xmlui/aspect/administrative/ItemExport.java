@@ -12,7 +12,6 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.avalon.framework.parameters.Parameters;
 import org.apache.cocoon.ProcessingException;
@@ -24,8 +23,6 @@ import org.apache.cocoon.environment.SourceResolver;
 import org.apache.cocoon.util.HashUtil;
 import org.apache.excalibur.source.SourceValidity;
 import org.apache.excalibur.source.impl.validity.NOPValidity;
-import org.dspace.app.itemexport.factory.ItemExportServiceFactory;
-import org.dspace.app.itemexport.service.ItemExportService;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.utils.DSpaceValidity;
 import org.dspace.app.xmlui.utils.UIException;
@@ -39,13 +36,7 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
-import org.dspace.content.service.ItemService;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 import org.xml.sax.SAXException;
 
 /**
@@ -95,13 +86,6 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 	/** Cached validity object */
 	private SourceValidity validity;
 
-	protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-	protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-	protected ItemExportService itemExportService = ItemExportServiceFactory.getInstance().getItemExportService();
-
-	protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-
 	@Override
 	public void setup(SourceResolver resolver, Map objectModel, String src,
 			Parameters parameters) throws ProcessingException, SAXException,
@@ -115,7 +99,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 		if (request.getParameter("itemID") != null) {
 			Item item = null;
 			try {
-				item = itemService.find(context, UUID.fromString(request
+				item = Item.find(context, Integer.parseInt(request
 						.getParameter("itemID")));
 			} catch (Exception e) {
 				errors.add(T_export_bad_item_id);
@@ -125,7 +109,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 				errors.add(T_export_item_not_found);
 			} else {
 				try {
-					itemExportService
+					org.dspace.app.itemexport.ItemExport
 							.createDownloadableExport(item, context, false);
 				} catch (Exception e) {
 					errors.add(message(e.getMessage()));
@@ -138,7 +122,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 		} else if (request.getParameter("collectionID") != null) {
 			Collection col = null;
 			try {
-				col = collectionService.find(context, UUID.fromString(request
+				col = Collection.find(context, Integer.parseInt(request
 						.getParameter("collectionID")));
 			} catch (Exception e) {
 				errors.add(T_export_bad_col_id);
@@ -148,7 +132,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 				errors.add(T_export_col_not_found);
 			} else {
 				try {
-					itemExportService
+					org.dspace.app.itemexport.ItemExport
 							.createDownloadableExport(col, context, false);
 				} catch (Exception e) {
 					errors.add(message(e.getMessage()));
@@ -161,7 +145,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 		} else if (request.getParameter("communityID") != null) {
 			Community com = null;
 			try {
-				com = communityService.find(context, UUID.fromString(request
+				com = Community.find(context, Integer.parseInt(request
 						.getParameter("communityID")));
 			} catch (Exception e) {
 				errors.add(T_export_bad_community_id);
@@ -171,7 +155,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 				errors.add(T_export_community_not_found);
 			} else {
 				try {
-					itemExportService
+					org.dspace.app.itemexport.ItemExport
 							.createDownloadableExport(com, context, false);
 				} catch (Exception e) {
 					errors.add(message(e.getMessage()));
@@ -184,7 +168,7 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 		}
         
         try {
-			availableExports = itemExportService
+			availableExports = org.dspace.app.itemexport.ItemExport
 					.getExportsAvailable(context.getCurrentUser());
 		} catch (Exception e) {
 			// nothing to do
@@ -244,11 +228,11 @@ public class ItemExport extends AbstractDSpaceTransformer implements
 				try {
 					DSpaceValidity validity = new DSpaceValidity();
 
-					validity.add(context, eperson);
+					validity.add(eperson);
 
-					java.util.Set<Group> groups = groupService.allMemberGroupsSet(context, eperson);
+					Group[] groups = Group.allMemberGroups(context, eperson);
 					for (Group group : groups) {
-						validity.add(context, group);
+						validity.add(group);
 					}
 
 					this.validity = validity.complete();

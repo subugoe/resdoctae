@@ -13,13 +13,12 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 import org.apache.commons.fileupload.FileUploadBase.FileSizeLimitExceededException;
+
 import org.apache.log4j.Logger;
 import org.dspace.app.util.AuthorizeUtil;
 import org.dspace.app.webui.servlet.DSpaceServlet;
@@ -27,28 +26,19 @@ import org.dspace.app.webui.util.FileUploadRequest;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Bitstream;
 import org.dspace.content.BitstreamFormat;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
+import org.dspace.content.FormatIdentifier;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
+import org.dspace.harvest.HarvestedCollection;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
-import org.dspace.harvest.HarvestedCollection;
-import org.dspace.harvest.factory.HarvestServiceFactory;
-import org.dspace.harvest.service.HarvestedCollectionService;
 
 /**
  * Servlet for editing communities and collections, including deletion,
@@ -77,43 +67,21 @@ public class EditCommunitiesServlet extends DSpaceServlet
     /** User wants to create a collection */
     public static final int START_CREATE_COLLECTION = 6;
 
-    /** User committed community edit or creation */
+    /** User commited community edit or creation */
     public static final int CONFIRM_EDIT_COMMUNITY = 7;
 
     /** User confirmed community deletion */
     public static final int CONFIRM_DELETE_COMMUNITY = 8;
 
-    /** User committed collection edit or creation */
+    /** User commited collection edit or creation */
     public static final int CONFIRM_EDIT_COLLECTION = 9;
 
     /** User wants to delete a collection */
     public static final int CONFIRM_DELETE_COLLECTION = 10;
 
     /** Logger */
-    private static final Logger log = Logger.getLogger(EditCommunitiesServlet.class);
+    private static Logger log = Logger.getLogger(EditCommunitiesServlet.class);
 
-    private final transient CommunityService communityService
-             = ContentServiceFactory.getInstance().getCommunityService();
-    
-    private static final transient CollectionService collectionService
-             = ContentServiceFactory.getInstance().getCollectionService();
-    
-    private final transient BitstreamFormatService bitstreamFormatService
-             = ContentServiceFactory.getInstance().getBitstreamFormatService();
-    
-    private final transient BitstreamService bitstreamService
-             = ContentServiceFactory.getInstance().getBitstreamService();
-    
-    private final transient HarvestedCollectionService harvestedCollectionService
-             = HarvestServiceFactory.getInstance().getHarvestedCollectionService();
-
-    private static final transient AuthorizeService myAuthorizeService
-            = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    
-    private final transient GroupService groupService
-             = EPersonServiceFactory.getInstance().getGroupService();
-    
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -122,7 +90,6 @@ public class EditCommunitiesServlet extends DSpaceServlet
         showControls(context, request, response);
     }
 
-    @Override
     protected void doDSPost(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -150,12 +117,12 @@ public class EditCommunitiesServlet extends DSpaceServlet
          * get null if we try and find something with ID -1, we'll just try and
          * find both here to save hassle later on
          */
-        Community community = communityService.find(context, UIUtil.getUUIDParameter(
+        Community community = Community.find(context, UIUtil.getIntParameter(
                 request, "community_id"));
-        Community parentCommunity = communityService.find(context, UIUtil
-                .getUUIDParameter(request, "parent_community_id"));
-        Collection collection = collectionService.find(context, UIUtil
-                .getUUIDParameter(request, "collection_id"));
+        Community parentCommunity = Community.find(context, UIUtil
+                .getIntParameter(request, "parent_community_id"));
+        Collection collection = Collection.find(context, UIUtil
+                .getIntParameter(request, "collection_id"));
 
         // Just about every JSP will need the values we received
         request.setAttribute("community", community);
@@ -203,7 +170,9 @@ public class EditCommunitiesServlet extends DSpaceServlet
             break;
 
         case START_EDIT_COLLECTION:
-        	HarvestedCollection hc = harvestedCollectionService.find(context, collection);
+        	
+        	HarvestedCollection hc = HarvestedCollection.find(context, UIUtil.
+            		getIntParameter(request, "collection_id"));
         	request.setAttribute("harvestInstance", hc);
         	
         	storeAuthorizeAttributeCollectionEdit(context, request, collection);
@@ -241,10 +210,10 @@ public class EditCommunitiesServlet extends DSpaceServlet
         case CONFIRM_DELETE_COMMUNITY:
 
             // remember the parent community, if any
-            Community parent = (Community) communityService.getParentObject(context, community);
+            Community parent = community.getParentCommunity();
 
             // Delete the community
-            communityService.delete(context, community);
+            community.delete();
 
             // if community was top-level, redirect to community-list page
             if (parent == null)
@@ -279,7 +248,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         case CONFIRM_DELETE_COLLECTION:
 
             // Delete the collection
-            communityService.removeCollection(context, community, collection);
+            community.removeCollection(collection);
             // remove the collection object from the request, so that the user
             // will be redirected on the community home page
             request.removeAttribute("collection");
@@ -330,7 +299,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
             request.setAttribute("admin_remove_button", Boolean.FALSE);
         }
         
-        if (myAuthorizeService.authorizeActionBoolean(context, community, Constants.DELETE))
+        if (AuthorizeManager.authorizeActionBoolean(context, community, Constants.DELETE))
         {
             request.setAttribute("delete_button", Boolean.TRUE);
         }
@@ -347,7 +316,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         catch (AuthorizeException authex) {
             request.setAttribute("policy_button", Boolean.FALSE);
         }
-        if (myAuthorizeService.isAdmin(context, community))
+        if (AuthorizeManager.isAdmin(context, community))
         {
             request.setAttribute("admin_community", Boolean.TRUE);
         }
@@ -370,7 +339,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
     static void storeAuthorizeAttributeCollectionEdit(Context context,
             HttpServletRequest request, Collection collection) throws SQLException
     {
-        if (myAuthorizeService.isAdmin(context, collection))
+        if (AuthorizeManager.isAdmin(context, collection))
         {
             request.setAttribute("admin_collection", Boolean.TRUE);
         }
@@ -424,7 +393,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
             request.setAttribute("template_button", Boolean.FALSE);
         }
         
-        if (myAuthorizeService.authorizeActionBoolean(context, collectionService.getParentObject(context, collection), Constants.REMOVE))
+        if (AuthorizeManager.authorizeActionBoolean(context, collection.getParentObject(), Constants.REMOVE))
         {
             request.setAttribute("delete_button", Boolean.TRUE);
         }
@@ -517,21 +486,21 @@ public class EditCommunitiesServlet extends DSpaceServlet
         {
             // if there is a parent community id specified, create community
             // as its child; otherwise, create it as a top-level community
-            UUID parentCommunityID = UIUtil.getUUIDParameter(request,
+            int parentCommunityID = UIUtil.getIntParameter(request,
                     "parent_community_id");
 
-            if (parentCommunityID != null)
+            if (parentCommunityID != -1)
             {
-                Community parent = communityService.find(context, parentCommunityID);
+                Community parent = Community.find(context, parentCommunityID);
 
                 if (parent != null)
                 {
-                    community = communityService.createSubcommunity(context, parent);
+                    community = parent.createSubcommunity();
                 }
             }
             else
             {
-                community = communityService.create(null, context);
+                community = Community.create(null, context);
             }
 
             // Set attribute
@@ -540,8 +509,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
 
         storeAuthorizeAttributeCommunityEdit(context, request, community);
         
-        communityService.setMetadata(context, community, "name", request.getParameter("name"));
-        communityService.setMetadata(context, community, "short_description", request
+        community.setMetadata("name", request.getParameter("name"));
+        community.setMetadata("short_description", request
                 .getParameter("short_description"));
 
         String intro = request.getParameter("introductory_text");
@@ -565,10 +534,10 @@ public class EditCommunitiesServlet extends DSpaceServlet
             side = null;
         }
 
-        communityService.setMetadata(context, community, "introductory_text", intro);
-        communityService.setMetadata(context, community,"copyright_text", copy);
-        communityService.setMetadata(context, community,"side_bar_text", side);
-        communityService.update(context, community);
+        community.setMetadata("introductory_text", intro);
+        community.setMetadata("copyright_text", copy);
+        community.setMetadata("side_bar_text", side);
+        community.update();
 
         // Which button was pressed?
         String button = UIUtil.getSubmitButton(request, "submit");
@@ -576,8 +545,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         if (button.equals("submit_set_logo"))
         {
             // Change the logo - delete any that might be there first
-            communityService.setLogo(context, community, null);
-            communityService.update(context, community);
+            community.setLogo(null);
+            community.update();
 
             // Display "upload logo" page. Necessary attributes already set by
             // doDSPost()
@@ -587,8 +556,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_delete_logo"))
         {
             // Simply delete logo
-            communityService.setLogo(context, community, null);
-            communityService.update(context, community);
+            community.setLogo(null);
+            community.update();
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-community.jsp");
@@ -612,8 +581,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_admins_create"))
         {
             // Create new group
-            Group newGroup = communityService.createAdministrators(context, community);
-            communityService.update(context, community);
+            Group newGroup = community.createAdministrators();
+            community.update();
 
             // Forward to group edit page
             response.sendRedirect(response.encodeRedirectURL(request
@@ -623,9 +592,9 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_admins_remove"))
         {
             Group g = community.getAdministrators(); 
-            communityService.removeAdministrators(context, community);
-            communityService.update(context, community);
-            groupService.delete(context, g);
+            community.removeAdministrators();
+            community.update();
+            g.delete();
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-community.jsp");
         }   
@@ -670,15 +639,15 @@ public class EditCommunitiesServlet extends DSpaceServlet
         if (request.getParameter("create").equals("true"))
         {
             // We need to create a new community
-            collection = collectionService.create(context, community);
+            collection = community.createCollection();
             request.setAttribute("collection", collection);
         }
         
         storeAuthorizeAttributeCollectionEdit(context, request, collection);
 
         // Update the basic metadata
-        collectionService.setMetadata(context, collection, "name", request.getParameter("name"));
-        collectionService.setMetadata(context, collection, "short_description", request
+        collection.setMetadata("name", request.getParameter("name"));
+        collection.setMetadata("short_description", request
                 .getParameter("short_description"));
 
         String intro = request.getParameter("introductory_text");
@@ -716,18 +685,18 @@ public class EditCommunitiesServlet extends DSpaceServlet
             provenance = null;
         }
 
-        collectionService.setMetadata(context, collection, "introductory_text", intro);
-        collectionService.setMetadata(context, collection, "copyright_text", copy);
-        collectionService.setMetadata(context, collection, "side_bar_text", side);
-        collectionService.setMetadata(context, collection, "license", license);
-        collectionService.setMetadata(context, collection, "provenance_description", provenance);
+        collection.setMetadata("introductory_text", intro);
+        collection.setMetadata("copyright_text", copy);
+        collection.setMetadata("side_bar_text", side);
+        collection.setMetadata("license", license);
+        collection.setMetadata("provenance_description", provenance);
         
         
         
         
         // Set the harvesting settings
         
-        HarvestedCollection hc = harvestedCollectionService.find(context, collection);
+        HarvestedCollection hc = HarvestedCollection.find(context, collection.getID());
 		String contentSource = request.getParameter("source");
 
 		// First, if this is not a harvested collection (anymore), set the harvest type to 0; wipe harvest settings  
@@ -735,14 +704,14 @@ public class EditCommunitiesServlet extends DSpaceServlet
 		{
 			if (hc != null)
             {
-                harvestedCollectionService.delete(context, hc);
+                hc.delete();
             }
 		}
 		else 
 		{
 			// create a new harvest instance if all the settings check out
 			if (hc == null) {
-				hc = harvestedCollectionService.create(context, collection);
+				hc = HarvestedCollection.create(context, collection.getID());
 			}
 			
 			String oaiProvider = request.getParameter("oai_provider");
@@ -753,7 +722,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
 			hc.setHarvestParams(Integer.parseInt(harvestType), oaiProvider, oaiSetId, metadataKey);
 			hc.setHarvestStatus(HarvestedCollection.STATUS_READY);
 			
-			harvestedCollectionService.update(context, hc);
+			hc.update();
 		}
         
         
@@ -764,7 +733,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         if (button.equals("submit_set_logo"))
         {
             // Change the logo - delete any that might be there first
-            collectionService.setLogo(context, collection, null);
+            collection.setLogo(null);
 
             // Display "upload logo" page. Necessary attributes already set by
             // doDSPost()
@@ -774,7 +743,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_delete_logo"))
         {
             // Simply delete logo
-            collectionService.setLogo(context, collection, null);
+            collection.setLogo(null);
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-collection.jsp");
@@ -784,8 +753,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
             int step = Integer.parseInt(button.substring(17));
 
             // Create new group
-            Group newGroup = collectionService.createWorkflowGroup(context, collection, step);
-            collectionService.update(context, collection);
+            Group newGroup = collection.createWorkflowGroup(step);
+            collection.update();
 
             // Forward to group edit page
             response.sendRedirect(response.encodeRedirectURL(request
@@ -795,8 +764,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_admins_create"))
         {
             // Create new group
-            Group newGroup = collectionService.createAdministrators(context, collection);
-            collectionService.update(context, collection);
+            Group newGroup = collection.createAdministrators();
+            collection.update();
             
             // Forward to group edit page
             response.sendRedirect(response.encodeRedirectURL(request
@@ -807,9 +776,9 @@ public class EditCommunitiesServlet extends DSpaceServlet
         {
         	// Remove the administrators group.
         	Group g = collection.getAdministrators();
-        	collectionService.removeAdministrators(context, collection);
-            collectionService.update(context, collection);
-            groupService.delete(context, g);
+        	collection.removeAdministrators();
+            collection.update();
+            g.delete();
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-collection.jsp");
@@ -817,8 +786,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_submitters_create"))
         {
             // Create new group
-            Group newGroup = collectionService.createSubmitters(context, collection);
-            collectionService.update(context, collection);
+            Group newGroup = collection.createSubmitters();
+            collection.update();
             
             // Forward to group edit page
             response.sendRedirect(response.encodeRedirectURL(request
@@ -829,9 +798,9 @@ public class EditCommunitiesServlet extends DSpaceServlet
         {
         	// Remove the administrators group.
         	Group g = collection.getSubmitters();
-        	collectionService.removeSubmitters(context, collection);
-            collectionService.update(context, collection);
-            groupService.delete(context, g);
+        	collection.removeSubmitters();
+            collection.update();
+            g.delete();
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-collection.jsp");
@@ -857,7 +826,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
             int step = Integer.parseInt(button.substring(15));
 
             // Edit workflow group
-            Group g = collectionService.getWorkflowGroup(collection, step);
+            Group g = collection.getWorkflowGroup(step);
             response.sendRedirect(response.encodeRedirectURL(request
                     .getContextPath()
                     + "/tools/group-edit?group_id=" + g.getID()));
@@ -883,12 +852,12 @@ public class EditCommunitiesServlet extends DSpaceServlet
             // Delete workflow group
             int step = Integer.parseInt(button.substring(17));
 
-            Group g = collectionService.getWorkflowGroup(collection, step);
-            collection.setWorkflowGroup(context, step, null);
+            Group g = collection.getWorkflowGroup(step);
+            collection.setWorkflowGroup(step, null);
 
             // Have to update to avoid ref. integrity error
-            collectionService.update(context, collection);
-            groupService.delete(context, g);
+            collection.update();
+            g.delete();
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-collection.jsp");
@@ -896,13 +865,13 @@ public class EditCommunitiesServlet extends DSpaceServlet
         else if (button.equals("submit_create_template"))
         {
             // Create a template item
-            collectionService.createTemplateItem(context, collection);
+            collection.createTemplateItem();
 
             // Forward to edit page for new template item
             Item i = collection.getTemplateItem();            
 
             // save the changes
-            collectionService.update(context, collection);
+            collection.update();
             context.complete();
             response.sendRedirect(response.encodeRedirectURL(request
                     .getContextPath()
@@ -920,7 +889,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         }
         else if (button.equals("submit_delete_template"))
         {
-            collectionService.removeTemplateItem(context, collection);
+            collection.removeTemplateItem();
 
             // Show edit page again - attributes set in doDSPost()
             JSPManager.showJSP(request, response, "/tools/edit-collection.jsp");
@@ -932,7 +901,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
         }
 
         // Commit changes to DB
-        collectionService.update(context, collection);
+        collection.update();
         context.complete();
     }
 
@@ -953,8 +922,8 @@ public class EditCommunitiesServlet extends DSpaceServlet
         try {
             // Wrap multipart request to get the submission info
             FileUploadRequest wrapper = new FileUploadRequest(request);
-            Community community = communityService.find(context, UIUtil.getUUIDParameter(wrapper, "community_id"));
-            Collection collection = collectionService.find(context, UIUtil.getUUIDParameter(wrapper, "collection_id"));
+            Community community = Community.find(context, UIUtil.getIntParameter(wrapper, "community_id"));
+            Collection collection = Collection.find(context, UIUtil.getIntParameter(wrapper, "collection_id"));
             File temp = wrapper.getFile("file");
 
             // Read the temp file as logo
@@ -963,11 +932,11 @@ public class EditCommunitiesServlet extends DSpaceServlet
 
             if (collection == null)
             {
-                logoBS = communityService.setLogo(context, community, is);
+                logoBS = community.setLogo(is);
             }
             else
             {
-                logoBS = collectionService.setLogo(context, collection, is);
+                logoBS = collection.setLogo(is);
             }
 
             // Strip all but the last filename. It would be nice
@@ -984,20 +953,20 @@ public class EditCommunitiesServlet extends DSpaceServlet
                 noPath = noPath.substring(noPath.indexOf('\\') + 1);
             }
 
-            logoBS.setName(context, noPath);
-            logoBS.setSource(context, wrapper.getFilesystemName("file"));
+            logoBS.setName(noPath);
+            logoBS.setSource(wrapper.getFilesystemName("file"));
 
             // Identify the format
-            BitstreamFormat bf = bitstreamFormatService.guessFormat(context, logoBS);
-            logoBS.setFormat(context, bf);
-            myAuthorizeService.addPolicy(context, logoBS, Constants.WRITE, context.getCurrentUser());
-            bitstreamService.update(context, logoBS);
+            BitstreamFormat bf = FormatIdentifier.guessFormat(context, logoBS);
+            logoBS.setFormat(bf);
+            AuthorizeManager.addPolicy(context, logoBS, Constants.WRITE, context.getCurrentUser());
+            logoBS.update();
 
             String jsp;
             DSpaceObject dso;
             if (collection == null)
             {
-                communityService.update(context, community);
+                community.update();
 
                 // Show community edit page
                 request.setAttribute("community", community);
@@ -1007,7 +976,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
             } 
             else
             {
-                collectionService.update(context, collection);
+                collection.update();
 
                 // Show collection edit page
                 request.setAttribute("collection", collection);
@@ -1017,7 +986,7 @@ public class EditCommunitiesServlet extends DSpaceServlet
                 jsp = "/tools/edit-collection.jsp";
             }
             
-            if (myAuthorizeService.isAdmin(context, dso))
+            if (AuthorizeManager.isAdmin(context, dso))
             {
                 // set a variable to show all buttons
                 request.setAttribute("admin_button", Boolean.TRUE);

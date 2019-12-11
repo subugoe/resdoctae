@@ -17,18 +17,10 @@ public class BitstreamFilterException extends Exception
 	private static final long serialVersionUID = 1L;
 	
 	public BitstreamFilterException() {}
-        /**
-         * 
-         * @param msg exception message
-         */
 	public BitstreamFilterException(String msg)
 	{
 		super(msg);
 	}
-        /**
-         * 
-         * @param e exception
-         */
 	public BitstreamFilterException(Exception e)
 	{
 		super(e);

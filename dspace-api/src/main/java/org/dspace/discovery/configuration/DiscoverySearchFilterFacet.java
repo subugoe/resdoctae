@@ -18,8 +18,7 @@ public class DiscoverySearchFilterFacet extends DiscoverySearchFilter {
 
     private static final int DEFAULT_FACET_LIMIT = 10;
     private int facetLimit = -1;
-    private DiscoveryConfigurationParameters.SORT sortOrderSidebar = DiscoveryConfigurationParameters.SORT.COUNT;
-    private DiscoveryConfigurationParameters.SORT sortOrderFilterPage = DiscoveryConfigurationParameters.SORT.COUNT;
+    private DiscoveryConfigurationParameters.SORT sortOrder = DiscoveryConfigurationParameters.SORT.COUNT;
     public static final String FILTER_TYPE_FACET = "facet";
 
 
@@ -37,24 +36,14 @@ public class DiscoverySearchFilterFacet extends DiscoverySearchFilter {
         this.facetLimit = facetLimit;
     }
 
-    public DiscoveryConfigurationParameters.SORT getSortOrderFilterPage()
+    public DiscoveryConfigurationParameters.SORT getSortOrder()
     {
-        return sortOrderFilterPage;
+        return sortOrder;
     }
 
-    public void setSortOrderFilterPage(DiscoveryConfigurationParameters.SORT sortOrderFilterPage)
+    public void setSortOrder(DiscoveryConfigurationParameters.SORT sortOrder)
     {
-        this.sortOrderFilterPage = sortOrderFilterPage;
-    }
-
-    public DiscoveryConfigurationParameters.SORT getSortOrderSidebar()
-    {
-        return sortOrderSidebar;
-    }
-
-    public void setSortOrderSidebar(DiscoveryConfigurationParameters.SORT sortOrderSidebar)
-    {
-        this.sortOrderSidebar = sortOrderSidebar;
+        this.sortOrder = sortOrder;
     }
 
     @Override

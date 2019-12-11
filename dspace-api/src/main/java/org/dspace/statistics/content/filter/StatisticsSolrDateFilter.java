@@ -7,7 +7,7 @@
  */
 package org.dspace.statistics.content.filter;
 
-import org.dspace.statistics.SolrLoggerServiceImpl;
+import org.dspace.statistics.SolrLogger;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -65,7 +65,6 @@ public class StatisticsSolrDateFilter implements StatisticsFilter {
     /** Convert the date range to a filter expression.
      * @return Solr date filter expression
      */
-    @Override
     public String toQuery() {
         if(startDate == null || endDate == null){
             // We have got strings instead of dates so calculate our dates out
@@ -118,7 +117,7 @@ public class StatisticsSolrDateFilter implements StatisticsFilter {
         }
 
         //Parse the dates
-        SimpleDateFormat formatter = new SimpleDateFormat(SolrLoggerServiceImpl.DATE_FORMAT_8601);
+        SimpleDateFormat formatter = new SimpleDateFormat(SolrLogger.DATE_FORMAT_8601);
         String startDateParsed = formatter.format(startDate);
         String endDateParsed = formatter.format(endDate);
 

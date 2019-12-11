@@ -7,31 +7,26 @@
  */
 package org.dspace.app.webui.jsptag;
 
-import java.io.IOException;
-import java.sql.SQLException;
+import org.apache.commons.lang.time.DateFormatUtils;
+import org.apache.log4j.Logger;
+import org.dspace.app.util.SubmissionInfo;
+import org.dspace.app.webui.util.UIUtil;
+import org.dspace.authorize.AuthorizeManager;
+import org.dspace.authorize.ResourcePolicy;
+import org.dspace.content.DSpaceObject;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.core.Context;
+import org.dspace.eperson.Group;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
-
+import java.io.IOException;
+import java.sql.SQLException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.jstl.fmt.LocaleSupport;
 import javax.servlet.jsp.tagext.TagSupport;
-
-import org.apache.commons.lang.time.DateFormatUtils;
-import org.apache.log4j.Logger;
-import org.dspace.app.util.SubmissionInfo;
-import org.dspace.app.webui.util.UIUtil;
-import org.dspace.authorize.ResourcePolicy;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
-import org.dspace.content.DSpaceObject;
-import org.dspace.core.ConfigurationManager;
-import org.dspace.core.Context;
-import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 
 /**
  * Tag to display embargo settings
@@ -42,7 +37,7 @@ import org.dspace.eperson.service.GroupService;
 public class AccessSettingTag extends TagSupport
 {
 	/** log4j category */
-    private static final Logger log = Logger.getLogger(AccessSettingTag.class);
+    private static Logger log = Logger.getLogger(AccessSettingTag.class);
 
     /** is advanced form enabled? */
     private static final boolean advanced = ConfigurationManager.getBooleanProperty("webui.submission.restrictstep.enableAdvancedForm", false);
@@ -50,7 +45,7 @@ public class AccessSettingTag extends TagSupport
     /** Name of the restricted group */
     private static final String restrictedGroup = ConfigurationManager.getProperty("webui.submission.restrictstep.groups");
 
-    /** the SubmissionInfo */
+    /** the SubmittionInfo */
     private transient SubmissionInfo subInfo = null;
 
     /** the target DSpaceObject */
@@ -67,22 +62,16 @@ public class AccessSettingTag extends TagSupport
 
     /** add the policy button */
     private boolean addpolicy = false;
-    
-    private final transient AuthorizeService authorizeService
-            = AuthorizeServiceFactory.getInstance().getAuthorizeService();
 
-    private final transient GroupService groupService
-            = EPersonServiceFactory.getInstance().getGroupService();
 
     public AccessSettingTag()
     {
         super();
     }
 
-    @Override
     public int doStartTag() throws JspException
     {
-//        String legend = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.access-setting.legend");
+        String legend = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.access-setting.legend");
         String label_name = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.access-setting.label_name");
         String label_group = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.access-setting.label_group");
         String label_embargo = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.access-setting.label_embargo");
@@ -108,16 +97,16 @@ public class AccessSettingTag extends TagSupport
             List<ResourcePolicy> policies = null;
             if (!advanced && dso != null)
             {
-                policies = authorizeService.findPoliciesByDSOAndType(context, dso, ResourcePolicy.TYPE_CUSTOM);
+                policies = AuthorizeManager.findPoliciesByDSOAndType(context, dso, ResourcePolicy.TYPE_CUSTOM);
             }
             else if (rp != null)
             {
-                policies = new ArrayList<>();
+                policies = new ArrayList<ResourcePolicy>();
                 policies.add(rp);
             }
 
             String name = "";
-            UUID group_id = null; 
+            int group_id = 0; 
             String startDate = "";
             String reason = "";
             String radio0Checked = " checked=\"checked\"";
@@ -157,7 +146,7 @@ public class AccessSettingTag extends TagSupport
                 sb.append(label_group).append("\n");
                 sb.append("<select class=\"form-control\" name=\"group_id\" id=\"select_group\">\n");
 
-                List<Group> groups = getGroups(context, hrq, subInfo);
+                Group[] groups = getGroups(context, hrq, subInfo);
                 if (groups != null)
                 {
                     for (Group group : groups)
@@ -189,7 +178,7 @@ public class AccessSettingTag extends TagSupport
             // Embargo Date
             if (hidden)
             {
-                sb.append("<input name=\"embargo_until_date\" id=\"embargo_until_date_hidden\" type=\"hidden\" value=\"").append(startDate).append("\" />\n");
+                sb.append("<input name=\"embargo_until_date\" id=\"embargo_until_date_hidden\" type=\"hidden\" value=\"").append(startDate).append("\" />\n");;
                 sb.append("<input name=\"reason\" id=\"reason_hidden\" type=\"hidden\" value=\"").append(reason).append("\" />\n");
             }
             else
@@ -253,10 +242,10 @@ public class AccessSettingTag extends TagSupport
     }
 
     /**
-     * Set the subInfo (SubmissionInfo)
+     * Set the browseInfo
      *
-     * @param subInfo
-     *            the subInfo
+     * @param browseInfo
+     *            the browseInfo
      */
     public void setSubInfo(SubmissionInfo subInfo)
     {
@@ -276,7 +265,7 @@ public class AccessSettingTag extends TagSupport
     /**
      * Set the the dso
      *
-     * @param dso
+     * @param the dso
      *            the dso
      */
     public void setDso(DSpaceObject dso)
@@ -297,7 +286,7 @@ public class AccessSettingTag extends TagSupport
     /**
      * Set the the rp
      *
-     * @param rp
+     * @param the rp
      *            the rp
      */
     public void setRp(ResourcePolicy rp)
@@ -368,7 +357,6 @@ public class AccessSettingTag extends TagSupport
         return addpolicy;
     }
 
-    @Override
     public void release()
     {
         dso = null;
@@ -379,22 +367,22 @@ public class AccessSettingTag extends TagSupport
         addpolicy = false;
     }
 
-    private List<Group> getGroups(Context context, HttpServletRequest request, SubmissionInfo subInfo)
+    private Group[] getGroups(Context context, HttpServletRequest request, SubmissionInfo subInfo)
         throws SQLException
     {
-        List<Group> groups = null;
+        Group[] groups = null;
         // retrieve groups
         if (restrictedGroup != null)
         {
-            Group uiGroup = groupService.findByName(context, restrictedGroup);
+            Group uiGroup = Group.findByName(context, restrictedGroup);
             if (uiGroup != null)
             {
                 groups = uiGroup.getMemberGroups();
             }
         }
 
-        if (groups == null || groups.size() == 0){
-            groups = groupService.findAll(context, null);
+        if (groups == null || groups.length == 0){
+            groups = Group.findAll(context, Group.NAME);
         }
 
         return groups;

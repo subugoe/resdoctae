@@ -7,14 +7,10 @@
  */
 package org.dspace.app.itemupdate;
 
-import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.List;
 
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.MetadataField;
-import org.dspace.content.MetadataSchema;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
 import org.dspace.core.Context;
 
@@ -28,25 +24,24 @@ public class DeleteMetadataAction extends UpdateMetadataAction {
 	/**
 	 *   Delete metadata from item
 	 * 
-	 * @param context DSpace Context
-	 * @param itarch Item Archive
-	 * @param isTest test flag
-	 * @param suppressUndo undo flag
-	 * @throws SQLException if database error
-         * @throws AuthorizeException if authorization error
-         * @throws ParseException if parse error
+	 *  @param context
+	 *  @param itarch
+	 *  @param isTest
+	 *  @param suppressUndo
+	 *  @throws ParseException
+	 *  @throws AuthorizeException
 	 */
-	@Override
-    public void execute(Context context, ItemArchive itarch, boolean isTest,
-            boolean suppressUndo) throws AuthorizeException, ParseException, SQLException {
+	public void execute(Context context, ItemArchive itarch, boolean isTest,
+            boolean suppressUndo) throws AuthorizeException, ParseException 
+	{
 		Item item = itarch.getItem();
 		for (String f : targetFields)
 		{
 			DtoMetadata dummy = DtoMetadata.create(f, Item.ANY, "");
-			List<MetadataValue> ardcv = itemService.getMetadataByMetadataString(item, f);
+			Metadatum[] ardcv = item.getMetadataByMetadataString(f);
 
 			ItemUpdate.pr("Metadata to be deleted: ");
-			for (MetadataValue dcv : ardcv)
+			for (Metadatum dcv : ardcv)
 			{
 				ItemUpdate.pr("  " + MetadataUtilities.getDCValueString(dcv));
 			}
@@ -55,16 +50,14 @@ public class DeleteMetadataAction extends UpdateMetadataAction {
 			{
 				if (!suppressUndo)
 				{
-					for (MetadataValue dcv : ardcv)
+					for (Metadatum dcv : ardcv)
 					{
-                        MetadataField metadataField = dcv.getMetadataField();
-                        MetadataSchema metadataSchema = metadataField.getMetadataSchema();
-                        itarch.addUndoMetadataField(DtoMetadata.create(metadataSchema.getName(), metadataField.getElement(),
-                                metadataField.getQualifier(), dcv.getLanguage(), dcv.getValue()));
+						itarch.addUndoMetadataField(DtoMetadata.create(dcv.schema, dcv.element, 
+								dcv.qualifier, dcv.language, dcv.value));					
 					}
 				}
 				
-                itemService.clearMetadata(context, item, dummy.schema, dummy.element, dummy.qualifier, Item.ANY);
+				item.clearMetadata(dummy.schema, dummy.element, dummy.qualifier, Item.ANY);	
 			}
 		}
 	}

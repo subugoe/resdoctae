@@ -7,10 +7,9 @@
  */
 package org.dspace.rest.common;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.dspace.eperson.EPerson;
-import org.dspace.eperson.Group;
 import java.util.Date;
+
+import org.codehaus.jackson.annotate.JsonIgnore;
 
 import javax.xml.bind.annotation.XmlRootElement;
 
@@ -23,9 +22,9 @@ public class ResourcePolicy{
 	
 	private Integer id;
 	private Action action;
-	private String epersonId;   //UUID
-	private String groupId;     //UUID
-	private String resourceId;  //UUID
+	private Integer epersonId;
+	private Integer groupId;
+	private Integer resourceId;
 	private String resourceType;
 	private String rpDescription;
 	private String rpName;
@@ -49,24 +48,17 @@ public class ResourcePolicy{
 			this.action = Action.DELETE;
 			break;
 		}
-
-                EPerson ePerson = dspacePolicy.getEPerson();
-                if(ePerson != null) {
-                    this.epersonId = ePerson.getID().toString();
-                }
-
-                Group group = dspacePolicy.getGroup();
-                if(group != null) {
-                    this.groupId = group.getID().toString();
-                }
-
-		this.resourceId = dspacePolicy.getdSpaceObject().getID().toString();
+		
+		this.epersonId = dspacePolicy.getEPersonID();
+		this.groupId = dspacePolicy.getGroupID();
+		this.resourceId = dspacePolicy.getResourceID();
 		this.rpDescription = dspacePolicy.getRpDescription();
 		this.rpName = dspacePolicy.getRpName();
 		this.rpType = dspacePolicy.getRpType();
 		this.startDate = dspacePolicy.getStartDate();
 		this.endDate = dspacePolicy.getEndDate();
-		switch(dspacePolicy.getdSpaceObject().getType()) {
+		
+		switch(dspacePolicy.getResourceType()) {
 		case org.dspace.core.Constants.BITSTREAM:
 			this.resourceType = "bitstream";
 			break;
@@ -117,27 +109,27 @@ public class ResourcePolicy{
 		this.action = action;
 	}
 
-	public String getEpersonId() {
+	public Integer getEpersonId() {
 		return epersonId;
 	}
 
-	public void setEpersonId(String epersonId) {
+	public void setEpersonId(Integer epersonId) {
 		this.epersonId = epersonId;
 	}
 
-	public String getGroupId() {
+	public Integer getGroupId() {
 		return groupId;
 	}
 
-	public void setGroupId(String groupId) {
+	public void setGroupId(Integer groupId) {
 		this.groupId = groupId;
 	}
 
-	public String getResourceId() {
+	public Integer getResourceId() {
 		return resourceId;
 	}
 
-	public void setResourceId(String resourceId) {
+	public void setResourceId(Integer resourceId) {
 		this.resourceId = resourceId;
 	}
 

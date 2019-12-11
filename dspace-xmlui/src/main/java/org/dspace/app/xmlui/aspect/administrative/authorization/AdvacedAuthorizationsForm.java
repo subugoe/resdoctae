@@ -7,6 +7,10 @@
  */
 package org.dspace.app.xmlui.aspect.administrative.authorization;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+
 import org.apache.cocoon.environment.ObjectModelHelper;
 import org.apache.cocoon.environment.Request;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
@@ -14,16 +18,8 @@ import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.content.Collection;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
 import org.dspace.core.Constants;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
-
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
 
 /**
  * @author Alexey Maslov
@@ -87,9 +83,7 @@ public class AdvacedAuthorizationsForm extends AbstractDSpaceTransformer
     private static final Message T_error_date_format = message("xmlui.administrative.authorization.AdvancedAuthorizationsForm.error_date_format");
     private static final Message T_error_start_date_greater_than_end_date = message("xmlui.administrative.authorization.AdvancedAuthorizationsForm.error_start_date_greater_than_end_date");
 	
-	protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-	protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-
+	
 	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
@@ -145,12 +139,12 @@ public class AdvacedAuthorizationsForm extends AbstractDSpaceTransformer
         if (errors.contains("groupIDs")){
             groupSelect.addError(T_error_groupIds);
         }
-        for (Group group : groupService.findAll(context, null))
+        for (Group group : Group.findAll(context, Group.NAME))
         {
-            if(wasElementSelected(group.getID().toString(), groupIDs)){
-                groupSelect.addOption(true, group.getID().toString(), group.getName());
+            if(wasElementSelected(group.getID(), groupIDs)){
+                groupSelect.addOption(true, group.getID(), group.getName());
             }else{
-                groupSelect.addOption(false, group.getID().toString(), group.getName());
+                groupSelect.addOption(false, group.getID(), group.getName());
             }
         }
         
@@ -188,12 +182,12 @@ public class AdvacedAuthorizationsForm extends AbstractDSpaceTransformer
         if (errors.contains("collectionIDs")){
             collectionsSelect.addError(T_error_collectionIds);
         }
-        for (Collection collection : collectionService.findAll(context))
+        for (Collection collection : Collection.findAll(context))
         {
-            if(wasElementSelected(collection.getID().toString(), collectionIDs)){
-                collectionsSelect.addOption(true, collection.getID().toString(), collectionService.getMetadata(collection, "name"));
+            if(wasElementSelected(collection.getID(), collectionIDs)){
+                collectionsSelect.addOption(true, collection.getID(), collection.getMetadata("name"));
             }else{
-                collectionsSelect.addOption(false, collection.getID().toString(), collectionService.getMetadata(collection, "name"));
+                collectionsSelect.addOption(false, collection.getID(), collection.getMetadata("name"));
             }
         }
 
@@ -233,11 +227,11 @@ public class AdvacedAuthorizationsForm extends AbstractDSpaceTransformer
     }
 
 
-    private boolean wasElementSelected(String element, String[] elements){
+    private boolean wasElementSelected(int element, String[] elements){
 
         if(elements!=null){
             for(String s : elements){
-                if(s.equals(element))
+                if(Integer.parseInt(s) == element)
                     return true;
             }
         }

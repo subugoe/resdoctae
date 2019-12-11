@@ -21,27 +21,24 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+import org.dspace.app.util.Util;
 import org.dspace.app.webui.servlet.DSpaceServlet;
 import org.dspace.app.webui.util.CurateTaskResult;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
-import org.dspace.content.service.ItemService;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.I18nUtil;
-import org.dspace.core.LogManager;
 import org.dspace.curate.Curator;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.LogManager;
+import org.dspace.handle.HandleManager;
 
 /**
  *
@@ -50,23 +47,22 @@ import org.dspace.services.factory.DSpaceServicesFactory;
 public class CurateServlet extends DSpaceServlet
 {
     // Name of queue used when tasks queued in Admin UI
-    private final String TASK_QUEUE_NAME;
+    private static final String TASK_QUEUE_NAME = ConfigurationManager.getProperty("curate", "ui.queuename");
 
     // curation status codes in Admin UI: key=status code, value=localized name
-    private final Map<String, String> statusMessages = new HashMap<>();
+    private static final Map<String, String> statusMessages = new HashMap<String, String>();
 
     // curation tasks to appear in admin UI: key=taskID, value=friendly name
-    private Map<String, String> allTasks = new LinkedHashMap<>();
+    private static Map<String, String> allTasks = new LinkedHashMap<String, String>();
 
     // named groups which display together in admin UI: key=groupID, value=friendly group name
-    private Map<String, String> taskGroups = new LinkedHashMap<>();
+    private static Map<String, String> taskGroups = new LinkedHashMap<String, String>();
 
     // group membership: key=groupID, value=array of taskID
-    private Map<String, String[]> groupedTasks = new LinkedHashMap<>();
-
-    public CurateServlet()
+    private static Map<String, String[]> groupedTasks = new LinkedHashMap<String, String[]>();
+    
+    static
     {
-        TASK_QUEUE_NAME = configurationService.getProperty("curate.ui.queuename");
         try
         {
             setStatusMessages();
@@ -81,24 +77,8 @@ public class CurateServlet extends DSpaceServlet
     }
 
     /** Logger */
-    private static final Logger log = Logger.getLogger(CurateServlet.class);
+    private static Logger log = Logger.getLogger(CurateServlet.class);
 
-    private final transient CommunityService communityService
-             = ContentServiceFactory.getInstance().getCommunityService();
-    
-    private final transient CollectionService collectionService
-             = ContentServiceFactory.getInstance().getCollectionService();
-    
-    private final transient ItemService itemService
-             = ContentServiceFactory.getInstance().getItemService();
-    
-    private final transient HandleService handleService
-             = HandleServiceFactory.getInstance().getHandleService();
-    
-    private final transient ConfigurationService configurationService
-             = DSpaceServicesFactory.getInstance().getConfigurationService();
-    
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -106,7 +86,6 @@ public class CurateServlet extends DSpaceServlet
         doDSPost(context, request, response);
     }
 
-    @Override
     protected void doDSPost(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -137,11 +116,11 @@ public class CurateServlet extends DSpaceServlet
 
         if (button.startsWith("submit_community_"))
         {
-            Community community = communityService.find(context, 
-                UIUtil.getUUIDParameter(request, "community_id"));
+            Community community = Community.find(context, 
+                UIUtil.getIntParameter(request, "community_id"));
             request.setAttribute("community", community);
 
-            if (!authorizeService.isAdmin(context, community))
+            if (!AuthorizeManager.isAdmin(context, community))
             {
                 throw new AuthorizeException("Only community admins are allowed to perform curation tasks");
             }
@@ -159,11 +138,11 @@ public class CurateServlet extends DSpaceServlet
         }
         else if (button.startsWith("submit_collection_"))
         {
-            Collection collection = collectionService.find(context, 
-                UIUtil.getUUIDParameter(request, "collection_id"));
+            Collection collection = Collection.find(context, 
+                UIUtil.getIntParameter(request, "collection_id"));
             request.setAttribute("collection", collection);
 
-            if (!authorizeService.isAdmin(context, collection))
+            if (!AuthorizeManager.isAdmin(context, collection))
             {
                 throw new AuthorizeException("Only collection admins are allowed to perform curation tasks");
             }
@@ -181,11 +160,11 @@ public class CurateServlet extends DSpaceServlet
         }
         else if (button.startsWith("submit_item_"))
         {
-            Item item = itemService.find(context, 
-                UIUtil.getUUIDParameter(request, "item_id"));
+            Item item = Item.find(context, 
+                UIUtil.getIntParameter(request, "item_id"));
             request.setAttribute("item", item);
 
-            if (!authorizeService.isAdmin(context, item))
+            if (!AuthorizeManager.isAdmin(context, item))
             {
                 throw new AuthorizeException("Only item admins are allowed to perform curation tasks");
             }
@@ -208,15 +187,15 @@ public class CurateServlet extends DSpaceServlet
             {
                 if (handle.endsWith("/0"))
                 {
-                    if (!authorizeService.isAdmin(context))
+                    if (!AuthorizeManager.isAdmin(context))
                     {
                         throw new AuthorizeException("Only system admins are allowed to perform curation tasks over the site");
                     } 
                 }
                 else
                 {
-                    DSpaceObject dso = handleService.resolveToObject(context, handle);
-                    if (!authorizeService.isAdmin(context, dso))
+                    DSpaceObject dso = HandleManager.resolveToObject(context, handle);
+                    if (!AuthorizeManager.isAdmin(context, dso))
                     {
                         throw new AuthorizeException("Only object (hdl:"+handle+") admins are allowed to perform curation tasks");
                     }
@@ -323,10 +302,10 @@ public class CurateServlet extends DSpaceServlet
         return curator;
     }
     
-    private void setStatusMessages() throws UnsupportedEncodingException
+    private static void setStatusMessages() throws UnsupportedEncodingException
     {
-        String[] statusCodes = configurationService.getArrayProperty("curate.ui.statusmessages");
-        for (String property : statusCodes)
+        String statusCodes = ConfigurationManager.getProperty("curate", "ui.statusmessages");
+        for (String property : statusCodes.split(","))
         {
             String[] keyValuePair = property.split("=");
             statusMessages.put(URLDecoder.decode(keyValuePair[0].trim(), "UTF-8"),
@@ -334,10 +313,10 @@ public class CurateServlet extends DSpaceServlet
         }
     }
 
-    private void setAllTasks() throws UnsupportedEncodingException
+    private static void setAllTasks() throws UnsupportedEncodingException
     {
-        String[] properties = configurationService.getArrayProperty("curate.ui.tasknames");
-        for (String property : properties)
+        String properties = ConfigurationManager.getProperty("curate", "ui.tasknames");
+        for (String property : properties.split(","))
         {
             String[] keyValuePair = property.split("=");
             allTasks.put(URLDecoder.decode(keyValuePair[0].trim(), "UTF-8"),
@@ -345,12 +324,12 @@ public class CurateServlet extends DSpaceServlet
         }
     }
     
-    private void setTaskGroups() throws UnsupportedEncodingException
+    private static void setTaskGroups() throws UnsupportedEncodingException
     {
-        String[] groups = configurationService.getArrayProperty("curate.ui.taskgroups");
+        String groups = ConfigurationManager.getProperty("curate", "ui.taskgroups");
         if (groups != null)
         {
-            for (String property : groups)
+            for (String property : groups.split(","))
             {
                 String[] keyValuePair = property.split("=");
                 taskGroups.put(URLDecoder.decode(keyValuePair[0].trim(), "UTF-8"),
@@ -359,7 +338,7 @@ public class CurateServlet extends DSpaceServlet
         }
     }
     
-    private void setGroupedTasks() throws UnsupportedEncodingException
+    private static void setGroupedTasks() throws UnsupportedEncodingException
     {
         if (!taskGroups.isEmpty())
         {
@@ -367,7 +346,8 @@ public class CurateServlet extends DSpaceServlet
             while (iterator.hasNext())
             {
                 String groupID = iterator.next();
-                String[] members = configurationService.getArrayProperty("curate.ui.taskgroup" + "." + groupID);
+                String memberList = ConfigurationManager.getProperty("curate", "ui.taskgroup" + "." + groupID);
+                String[] members  = memberList.split(",");
                 groupedTasks.put(URLDecoder.decode(groupID, "UTF-8"), members);
             }
         }
@@ -405,7 +385,7 @@ public class CurateServlet extends DSpaceServlet
      * @param group the short name / identifier for the group
      * @return the string of the html option elements
      */
-    private String getTaskSelectOptions(String group)
+    private static String getTaskSelectOptions(String group)
     {
         StringBuilder sb = new StringBuilder();
         if (groupedTasks.isEmpty())

@@ -10,12 +10,12 @@ package org.dspace.content.license;
 import java.util.Formattable;
 import java.util.Formatter;
 
-import org.dspace.core.factory.CoreServiceFactory;
+import org.dspace.core.PluginManager;
 
 /**
  * Wrapper class to make formattable any argument used in the license template.
  * The formatter behavior is delegated to a specific class on "type" basis
- * using the PluginService
+ * using the PluginManager
  * 
  * @see Formattable
  * @see LicenseArgumentFormatter
@@ -34,11 +34,10 @@ public class FormattableArgument implements Formattable
         this.object = object;
     }
 
-    @Override
     public void formatTo(Formatter formatter, int flags, int width,
             int precision)
     {
-        LicenseArgumentFormatter laf = (LicenseArgumentFormatter) CoreServiceFactory.getInstance().getPluginService()
+        LicenseArgumentFormatter laf = (LicenseArgumentFormatter) PluginManager
                 .getNamedPlugin(LicenseArgumentFormatter.class, type);
         if (laf != null)
         {

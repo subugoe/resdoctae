@@ -10,12 +10,11 @@ package org.dspace.xmlworkflow.state.actions.userassignment;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.*;
 import org.dspace.eperson.EPerson;
-import org.dspace.xmlworkflow.factory.XmlWorkflowServiceFactory;
-import org.dspace.xmlworkflow.service.XmlWorkflowService;
 import org.dspace.xmlworkflow.state.Step;
 import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
 import org.dspace.xmlworkflow.*;
 import org.dspace.xmlworkflow.state.actions.ActionResult;
+import org.dspace.xmlworkflow.XmlWorkflowManager;
 
 import javax.mail.MessagingException;
 import javax.servlet.http.HttpServletRequest;
@@ -33,7 +32,6 @@ import java.util.ArrayList;
  * @author Mark Diggory (markd at atmire dot com)
  */
 public class ClaimAction extends UserSelectionAction {
-
     @Override
     public void activate(Context context, XmlWorkflowItem wfItem) throws SQLException, IOException, AuthorizeException {
         Step owningStep = getParent().getStep();
@@ -41,7 +39,7 @@ public class ClaimAction extends UserSelectionAction {
         RoleMembers allroleMembers = getParent().getStep().getRole().getMembers(context, wfItem);
         // Create pooled tasks for each member of our group
         if(allroleMembers != null && (allroleMembers.getGroups().size() > 0 || allroleMembers.getEPersons().size() > 0)){
-            XmlWorkflowServiceFactory.getInstance().getXmlWorkflowService().createPoolTasks(context, wfItem, allroleMembers, owningStep, getParent());
+            XmlWorkflowManager.createPoolTasks(context, wfItem, allroleMembers, owningStep, getParent());
             alertUsersOnActivation(context, wfItem, allroleMembers);
         }
         else
@@ -55,7 +53,7 @@ public class ClaimAction extends UserSelectionAction {
         //Check if we are accept this task, or accepting multiple tasks
         if(request.getParameter("submit_take_task") != null || request.getParameter("submit_take_tasks") != null){
             //Add a claimed user to our task
-            XmlWorkflowServiceFactory.getInstance().getWorkflowRequirementsService().addClaimedUser(c, wfi, step, c.getCurrentUser());
+            WorkflowRequirementsManager.addClaimedUser(c, wfi, step, c.getCurrentUser());
 
             return new ActionResult(ActionResult.TYPE.TYPE_OUTCOME, ActionResult.OUTCOME_COMPLETE);
         }else{
@@ -66,15 +64,14 @@ public class ClaimAction extends UserSelectionAction {
     @Override
     public void alertUsersOnActivation(Context c, XmlWorkflowItem wfi, RoleMembers roleMembers) throws IOException, SQLException {
         try{
-            XmlWorkflowService xmlWorkflowService = XmlWorkflowServiceFactory.getInstance().getXmlWorkflowService();
-            xmlWorkflowService.alertUsersOnTaskActivation(c, wfi, "submit_task", roleMembers.getAllUniqueMembers(c),
+            XmlWorkflowManager.alertUsersOnTaskActivation(c, wfi, "submit_task", roleMembers.getAllUniqueMembers(c),
                     //The arguments
                     wfi.getItem().getName(),
                     wfi.getCollection().getName(),
                     wfi.getSubmitter().getFullName(),
                     //TODO: message
                     "New task available.",
-                    xmlWorkflowService.getMyDSpaceLink()
+                    XmlWorkflowManager.getMyDSpaceLink()
             );
         } catch (MessagingException e) {
             log.info(LogManager.getHeader(c, "error emailing user(s) for claimed task", "step: " + getParent().getStep().getId() + " workflowitem: " + wfi.getID()));
@@ -83,16 +80,10 @@ public class ClaimAction extends UserSelectionAction {
 
     }
 
-    @Override
-    public void regenerateTasks(Context c, XmlWorkflowItem wfi, RoleMembers roleMembers) throws SQLException, AuthorizeException, IOException {
+    public void regenerateTasks(Context c, XmlWorkflowItem wfi, RoleMembers roleMembers) throws SQLException, AuthorizeException {
         if(roleMembers != null && (roleMembers.getEPersons().size() > 0 || roleMembers.getGroups().size() >0)){
             //Create task for the users left
-            XmlWorkflowServiceFactory.getInstance().getXmlWorkflowService().createPoolTasks(c, wfi, roleMembers, getParent().getStep(), getParent());
-            if(ConfigurationManager.getBooleanProperty("workflow", "notify.returned.tasks", true))
-            {
-                alertUsersOnActivation(c, wfi, roleMembers);
-            }
-
+            XmlWorkflowManager.createPoolTasks(c, wfi, roleMembers, getParent().getStep(), getParent());
         }
         else
             log.info(LogManager.getHeader(c, "warning while activating claim action", "No group or person was found for the following roleid: " + getParent().getStep().getId()));
@@ -104,7 +95,6 @@ public class ClaimAction extends UserSelectionAction {
         return false;
     }
 
-    @Override
     public boolean isValidUserSelection(Context context, XmlWorkflowItem wfi, boolean hasUI) throws WorkflowConfigurationException, SQLException {
         //A user claim action always needs to have a UI, since somebody needs to be able to claim it
         if(hasUI){

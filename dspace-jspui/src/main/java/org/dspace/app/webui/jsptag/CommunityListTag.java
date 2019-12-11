@@ -8,7 +8,6 @@
 package org.dspace.app.webui.jsptag;
 
 import java.io.IOException;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspException;
@@ -16,6 +15,7 @@ import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.jstl.fmt.LocaleSupport;
 import javax.servlet.jsp.tagext.TagSupport;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.dspace.content.Community;
 
 /**
@@ -27,7 +27,7 @@ import org.dspace.content.Community;
 public class CommunityListTag extends TagSupport
 {
     /** Communities to display */
-    private List<Community> communities;
+    private transient Community[] communities;
 
     private static final long serialVersionUID = 5788338729470292501L;
 
@@ -36,7 +36,6 @@ public class CommunityListTag extends TagSupport
         super();
     }
 
-    @Override
     public int doStartTag() throws JspException
     {
         JspWriter out = pageContext.getOut();
@@ -54,10 +53,10 @@ public class CommunityListTag extends TagSupport
             // Row: toggles between Odd and Even
             String row = "even";
 
-            for (Community com : communities)
+            for (int i = 0; i < communities.length; i++)
             {
                 // name
-                String name = com.getName();
+                String name = communities[i].getMetadata("name");
 
                 // first and only column is 'name'
                 out.print("<tr><td headers=\"t5\" class=\"" + row + "RowEvenCol\">");
@@ -66,7 +65,7 @@ public class CommunityListTag extends TagSupport
                 HttpServletRequest hrq = (HttpServletRequest) pageContext
                         .getRequest();
                 out.print(hrq.getContextPath() + "/handle/");
-                out.print(com.getHandle());
+                out.print(communities[i].getHandle());
                 out.print("\">");
                 out.print(name);
                 out.print("</a>");
@@ -91,9 +90,9 @@ public class CommunityListTag extends TagSupport
      * 
      * @return the communities
      */
-    public List<Community> getCommunities()
+    public Community[] getCommunities()
     {
-        return communities;
+        return (Community[]) ArrayUtils.clone(communities);
     }
 
     /**
@@ -102,12 +101,11 @@ public class CommunityListTag extends TagSupport
      * @param communitiesIn
      *            the communities
      */
-    public void setCommunities(List<Community> communitiesIn)
+    public void setCommunities(Community[] communitiesIn)
     {
-        communities = communitiesIn;
+        communities = (Community[]) ArrayUtils.clone(communitiesIn);
     }
 
-    @Override
     public void release()
     {
         communities = null;

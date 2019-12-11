@@ -26,7 +26,6 @@ public class LoggerUsageEventListener extends AbstractUsageEventListener{
     private static Logger log = Logger
             .getLogger(LoggerUsageEventListener.class);
     
-	@Override
 	public void receiveEvent(Event event) {
 		
         //Search events are already logged

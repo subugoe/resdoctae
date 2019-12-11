@@ -15,8 +15,6 @@ import java.util.ArrayList;
 import javax.xml.parsers.SAXParserFactory;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.ParserConfigurationException;
-
-import org.dspace.content.Collection;
 import org.xml.sax.XMLReader;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.DefaultHandler;
@@ -64,13 +62,13 @@ public class LCNameAuthority implements ChoiceAuthority
     private static final Logger log = Logger.getLogger(LCNameAuthority.class);
 
     // get these from configuration
-    protected static String url = null;
+    private static String url = null;
 
     // NS URI for SRU respones
-    protected static final String NS_SRU = "http://www.loc.gov/zing/srw/";
+    private static final String NS_SRU = "http://www.loc.gov/zing/srw/";
 
     // NS URI for MARC/XML
-    protected static final String NS_MX = "http://www.loc.gov/MARC21/slim";
+    private static final String NS_MX = "http://www.loc.gov/MARC21/slim";
 
     // constructor does static init too..
     public LCNameAuthority()
@@ -89,7 +87,7 @@ public class LCNameAuthority implements ChoiceAuthority
 
     // punt!  this is a poor implementation..
     @Override
-    public Choices getBestMatch(String field, String text, Collection collection, String locale)
+    public Choices getBestMatch(String field, String text, int collection, String locale)
     {
         return getMatches(field, text, collection, 0, 2, locale);
     }
@@ -99,7 +97,7 @@ public class LCNameAuthority implements ChoiceAuthority
      * Value is assumed to be in "Lastname, Firstname" format.
      */
     @Override
-    public Choices getMatches(String field, String text, Collection collection, int start, int limit, String locale)
+    public Choices getMatches(String field, String text, int collection, int start, int limit, String locale)
     {
         Choices result = queryPerson(text, start, limit);
         if (result == null)

@@ -16,7 +16,7 @@ import javax.naming.NamingException;
 import org.dspace.kernel.mixins.InitializedService;
 import org.dspace.services.ConfigurationService;
 import org.dspace.services.EmailService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,10 +39,7 @@ public class EmailServiceImpl
 
     private ConfigurationService cfg = null;
 
-    /**
-     * Inject/set the ConfigurationService
-     * @param cfg the configurationService object
-     */
+    /** Inject the ConfigurationService */
     @Autowired
     @Required
     public void setCfg(ConfigurationService cfg)
@@ -100,11 +97,12 @@ public class EmailServiceImpl
                 props.put("mail.smtp.port", port);
             }
             // Set extra configuration properties
-            String[] extras = cfg.getArrayProperty("mail.extraproperties");
-            if (extras != null)
+            String extras = cfg.getProperty("mail.extraproperties");
+            if ((extras != null) && (!"".equals(extras.trim())))
             {
+                String arguments[] = extras.split(",");
                 String key, value;
-                for (String argument : extras)
+                for (String argument : arguments)
                 {
                     key = argument.substring(0, argument.indexOf('=')).trim();
                     value = argument.substring(argument.indexOf('=') + 1).trim();
@@ -130,7 +128,7 @@ public class EmailServiceImpl
     {
         if (null == cfg)
         {
-            cfg = DSpaceServicesFactory.getInstance().getConfigurationService();
+            cfg = new DSpace().getConfigurationService();
         }
 
         return new PasswordAuthentication(

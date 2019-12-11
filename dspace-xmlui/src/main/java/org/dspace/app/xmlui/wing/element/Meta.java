@@ -55,7 +55,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      * Set a new user oriented metadata set.
      * 
      * @return The user oriented metadata set.
-     * @throws org.dspace.app.xmlui.wing.WingException never.
      */
     public UserMeta setUserMeta() throws WingException
     {
@@ -66,7 +65,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      * Set a new page oriented metadata set.
      * 
      * @return The page oriented metadata set.
-     * @throws org.dspace.app.xmlui.wing.WingException never.
      */
     public PageMeta setPageMeta() throws WingException
     {
@@ -77,7 +75,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      * Set a new repository oriented metadata set.
      * 
      * @return The repository oriented metadata set.
-     * @throws org.dspace.app.xmlui.wing.WingException never.
      */
     public RepositoryMeta setRepositoryMeta() throws WingException
     {
@@ -97,7 +94,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      *            The element's attributes
      * @return True if this WingElement is equivalent to the given SAX Event.
      */
-    @Override
     public boolean mergeEqual(String namespace, String localName, String qName,
             Attributes attributes) throws SAXException, WingException
     {
@@ -106,7 +102,12 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
             return false;
         }
 
-        return E_META.equals(localName);
+        if (!E_META.equals(localName))
+        {
+            return false;
+        }
+        
+        return true;
     }
 
     /**
@@ -122,7 +123,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      *            The element's attributes
      * @return The child element
      */
-    @Override
     public WingMergeableElement mergeChild(String namespace, String localName,
             String qName, Attributes attributes) throws SAXException,
             WingException
@@ -132,9 +132,9 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
                 && this.userMeta.mergeEqual(namespace, localName, qName,
                         attributes))
         {
-            UserMeta thisUserMeta = this.userMeta;
+            UserMeta userMeta = this.userMeta;
             this.userMeta = null;
-            return thisUserMeta;
+            return userMeta;
         }
 
         // page
@@ -142,9 +142,9 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
                 && this.pageMeta.mergeEqual(namespace, localName, qName,
                         attributes))
         {
-            PageMeta thisPageMeta = this.pageMeta;
+            PageMeta pageMeta = this.pageMeta;
             this.pageMeta = null;
-            return thisPageMeta;
+            return pageMeta;
         }
         
         // repository
@@ -152,9 +152,9 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
                 && this.repositoryMeta.mergeEqual(namespace, localName, qName,
                         attributes))
         {
-            RepositoryMeta thisRepositoryMeta = this.repositoryMeta;
+            RepositoryMeta repositoryMeta = this.repositoryMeta;
             this.repositoryMeta = null;
-            return thisRepositoryMeta;
+            return repositoryMeta;
         }
         
         return null;
@@ -165,7 +165,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      * 
      * @return The attributes for this merged element
      */
-    @Override
     public Attributes merge(Attributes attributes) throws SAXException,
             WingException
     {
@@ -186,7 +185,6 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler, 
             NamespaceSupport namespaces) throws SAXException
     {
@@ -214,7 +212,9 @@ public class Meta extends AbstractWingElement implements WingMergeableElement
         }
     }
 
-    @Override
+    /**
+     * dispose
+     */
     public void dispose()
     {
         if (this.userMeta != null)

@@ -19,15 +19,17 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
+import org.dspace.content.Bitstream;
+import org.dspace.content.Bundle;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.curate.AbstractCurationTask;
 import org.dspace.curate.Curator;
 import org.dspace.curate.Suspendable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**  ClamScan.java
  *
@@ -42,42 +44,40 @@ import org.slf4j.LoggerFactory;
 @Suspendable(invoked= Curator.Invoked.INTERACTIVE)
 public class ClamScan extends AbstractCurationTask
 {
-    protected final int DEFAULT_CHUNK_SIZE = 4096;//2048
-    protected final byte[] INSTREAM   = "zINSTREAM\0".getBytes();
-    protected final byte[] PING            = "zPING\0".getBytes();
-    protected final byte[] STATS          = "nSTATS\n".getBytes();//prefix with z
-    protected final byte[] IDSESSION = "zIDSESSION\0".getBytes();
-    protected final byte[] END = "zEND\0".getBytes();
-    protected final String PLUGIN_PREFIX = "clamav";
-    protected final String INFECTED_MESSAGE = "had virus detected.";
-    protected final String CLEAN_MESSAGE = "had no viruses detected.";
-    protected final String CONNECT_FAIL_MESSAGE = "Unable to connect to virus service - check setup";
-    protected final String SCAN_FAIL_MESSAGE = "Error encountered using virus service - check setup";
-    protected final String NEW_ITEM_HANDLE = "in workflow";
+    private static final int DEFAULT_CHUNK_SIZE = 4096;//2048
+    private static final byte[] INSTREAM   = "zINSTREAM\0".getBytes();
+    private static final byte[] PING            = "zPING\0".getBytes();
+    private static final byte[] STATS          = "nSTATS\n".getBytes();//prefix with z
+    private static final byte[] IDSESSION = "zIDSESSION\0".getBytes();
+    private static final byte[] END = "zEND\0".getBytes();
+    private static final String PLUGIN_PREFIX = "clamav";
+    private static final String INFECTED_MESSAGE = "had virus detected.";
+    private static final String CLEAN_MESSAGE = "had no viruses detected.";
+    private static final String CONNECT_FAIL_MESSAGE = "Unable to connect to virus service - check setup";
+    private static final String SCAN_FAIL_MESSAGE = "Error encountered using virus service - check setup";
+    private static final String NEW_ITEM_HANDLE = "in workflow";
 
-    private static final Logger log = LoggerFactory.getLogger(ClamScan.class);
+    private static Logger log = Logger.getLogger(ClamScan.class);
     
-    protected String host = null;
-    protected int  port = 0;
-    protected int timeout = 0;
-    protected boolean failfast = true;
+    private static String host = null;
+    private static int  port = 0;
+    private static int timeout = 0;
+    private static boolean failfast = true;
     
-    protected int status = Curator.CURATE_UNSET;
-    protected List<String> results = null;
+    private int status = Curator.CURATE_UNSET;
+    private List<String> results = null;
 
-    protected Socket socket = null;
-    protected DataOutputStream dataOutputStream = null;
-    protected BitstreamService bitstreamService;
+    private Socket socket = null;
+    private DataOutputStream dataOutputStream = null;
 
     @Override
     public void init(Curator curator, String taskId) throws IOException
     {
         super.init(curator, taskId);
-        host = configurationService.getProperty(PLUGIN_PREFIX + ".service.host");
-        port = configurationService.getIntProperty(PLUGIN_PREFIX + ".service.port");
-        timeout = configurationService.getIntProperty(PLUGIN_PREFIX + ".socket.timeout");
-        failfast = configurationService.getBooleanProperty(PLUGIN_PREFIX + ".scan.failfast");
-        bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
+        host = ConfigurationManager.getProperty(PLUGIN_PREFIX, "service.host");
+        port = ConfigurationManager.getIntProperty(PLUGIN_PREFIX, "service.port");
+        timeout = ConfigurationManager.getIntProperty(PLUGIN_PREFIX, "socket.timeout");
+        failfast = ConfigurationManager.getBooleanProperty(PLUGIN_PREFIX, "scan.failfast");
     }
 
     @Override
@@ -103,11 +103,11 @@ public class ClamScan extends AbstractCurationTask
             
             try
             {
-                Bundle bundle = itemService.getBundles(item, "ORIGINAL").get(0);
+                Bundle bundle = item.getBundles("ORIGINAL")[0];
                 results = new ArrayList<String>();
                 for (Bitstream bitstream : bundle.getBitstreams())
                 {
-                    InputStream inputstream = bitstreamService.retrieve(Curator.curationContext(), bitstream);
+                    InputStream inputstream = bitstream.retrieve();
                     logDebugMessage("Scanning " + bitstream.getName() + " . . . ");
                     int bstatus = scan(bitstream, inputstream, getItemHandle(item));
                     inputstream.close();
@@ -158,7 +158,7 @@ public class ClamScan extends AbstractCurationTask
      * This method opens a session.
      */
 
-    protected void openSession() throws IOException
+    private void openSession() throws IOException
     {
         socket = new Socket();
         try
@@ -207,7 +207,7 @@ public class ClamScan extends AbstractCurationTask
      *
      *
      */
-    protected void closeSession()
+    private void closeSession()
     {
         if (dataOutputStream != null)
         {
@@ -231,19 +231,19 @@ public class ClamScan extends AbstractCurationTask
         }
     }
 
-    /** A buffer to hold chunks of an input stream to be scanned for viruses. */
-    final byte[] buffer = new byte[DEFAULT_CHUNK_SIZE];
-
-    /**
-     * Issue the INSTREAM command and return the response to
-     * and from the clamav daemon.
+    /** scan
      *
-     * @param bitstream the bitstream for reporting results
-     * @param inputstream the InputStream to read
-     * @param itemHandle the item handle for reporting results
+     * Issue the INSTREAM command and return the response to
+     * and from the clamav daemon
+     *
+     * @param the bitstream for reporting results
+     * @param the InputStream to read
+     * @param the item handle for reporting results
      * @return a ScanResult representing the server response
+     * @throws IOException
      */
-    protected int scan(Bitstream bitstream, InputStream inputstream, String itemHandle)
+    final static byte[] buffer = new byte[DEFAULT_CHUNK_SIZE];;
+    private int scan(Bitstream bitstream, InputStream inputstream, String itemHandle)
     {
         try
         {
@@ -251,7 +251,7 @@ public class ClamScan extends AbstractCurationTask
         }
         catch (IOException e)
         {
-            log.error("Error writing INSTREAM command", e);
+            log.error("Error writing INSTREAM command . . .");
             return Curator.CURATE_ERROR;
         }
         int read = DEFAULT_CHUNK_SIZE;
@@ -263,7 +263,7 @@ public class ClamScan extends AbstractCurationTask
             }
             catch (IOException e)
             {
-                log.error("Failed attempting to read the InputStream", e);
+                log.error("Failed attempting to read the InputStream . . . ");
                 return Curator.CURATE_ERROR;
             }
             if (read == -1)
@@ -277,7 +277,7 @@ public class ClamScan extends AbstractCurationTask
             }
             catch (IOException e)
             {
-                log.error("Could not write to the socket", e);
+                log.error("Could not write to the socket . . . ");
                 return Curator.CURATE_ERROR;
             }
         }
@@ -288,7 +288,7 @@ public class ClamScan extends AbstractCurationTask
         }
         catch (IOException e)
         {
-            log.error("Error writing zero-length chunk to socket", e) ;
+            log.error("Error writing zero-length chunk to socket") ;
             return Curator.CURATE_ERROR;
         }
         try
@@ -298,7 +298,7 @@ public class ClamScan extends AbstractCurationTask
         }
         catch (IOException e)
         {
-            log.error( "Error reading result from socket", e);
+            log.error( "Error reading result from socket");
             return Curator.CURATE_ERROR;
         }
         
@@ -306,7 +306,7 @@ public class ClamScan extends AbstractCurationTask
         {
             String response = new String(buffer, 0, read);
             logDebugMessage("Response: " + response);
-            if (response.contains("FOUND"))
+            if (response.indexOf("FOUND") != -1)
             {
                 String itemMsg = "item - " + itemHandle + ": ";
                 String bsMsg = "bitstream - " + bitstream.getName() +
@@ -323,7 +323,7 @@ public class ClamScan extends AbstractCurationTask
          return Curator.CURATE_ERROR;
     }
 
-    protected void formatResults(Item item) throws IOException
+    private void formatResults(Item item) throws IOException
     {
         StringBuilder sb = new StringBuilder();
         sb.append("Item: ").append(getItemHandle(item)).append(" ");
@@ -346,14 +346,14 @@ public class ClamScan extends AbstractCurationTask
         setResult(sb.toString());
     }
 
-    protected String getItemHandle(Item item)
+    private static String getItemHandle(Item item)
     {
         String handle = item.getHandle();
         return (handle != null) ? handle: NEW_ITEM_HANDLE;
     }
 
 
-    protected void logDebugMessage(String message)
+    private void logDebugMessage(String message)
     {
         if (log.isDebugEnabled())
         {

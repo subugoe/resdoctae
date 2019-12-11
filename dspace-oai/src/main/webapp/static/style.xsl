@@ -158,9 +158,11 @@
                     <td>
                         <a>
                             <xsl:attribute name="href">
-                                <xsl:value-of select="concat('mailto:', text())" />
+				    <!-- <xsl:value-of select="concat('mailto:', text())" /> -->
+				    <xsl:text>adw1@gwdg.de</xsl:text>
                             </xsl:attribute>
-                            <xsl:value-of select="text()" />
+			    <!-- <xsl:value-of select="text()" /> -->
+			    	<xsl:text>adw1@gwdg.de</xsl:text>
                         </a>
                     </td>
                 </tr>

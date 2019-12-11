@@ -8,6 +8,7 @@
 package org.dspace.app.webui.jsptag;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 
 import javax.servlet.jsp.JspException;
@@ -18,8 +19,6 @@ import javax.servlet.jsp.tagext.TagSupport;
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.apache.log4j.Logger;
 import org.dspace.authorize.ResourcePolicy;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.ResourcePolicyService;
 
 /**
  * Tag to display embargo settings
@@ -30,21 +29,17 @@ import org.dspace.authorize.service.ResourcePolicyService;
 public class PoliciesListTag extends TagSupport
 {
 	/** log4j category */
-    private static final Logger log = Logger.getLogger(PoliciesListTag.class);
+    private static Logger log = Logger.getLogger(PoliciesListTag.class);
 
     /** Groups to make options list */
     private transient List<ResourcePolicy> policies = null;
-    private boolean showButton = true;
+    private transient boolean showButton = true;
     
-    private final transient ResourcePolicyService policyService
-            = AuthorizeServiceFactory.getInstance().getResourcePolicyService();
-
     public PoliciesListTag()
     {
         super();
     }
 
-    @Override
     public int doStartTag() throws JspException
     {
         String label_name = LocaleSupport.getLocalizedMessage(pageContext, "org.dspace.app.webui.jsptag.policies-list.label_name");
@@ -89,7 +84,7 @@ public class PoliciesListTag extends TagSupport
 
                     sb.append("<tr>\n");
                     sb.append("<td class=\"access").append(column1).append("\">").append(rpName).append("</td>\n");
-                    sb.append("<td class=\"access").append(column2).append("\">").append(policyService.getActionText(policy)).append("</td>\n");
+                    sb.append("<td class=\"access").append(column2).append("\">").append(policy.getActionText()).append("</td>\n");
                     sb.append("<td class=\"access").append(column1).append("\">").append(policy.getGroup().getName()).append("</td>\n");
                     sb.append("<td class=\"access").append(column2).append("\">").append(startDate).append("</td>\n");
                     sb.append("<td class=\"access").append(column1).append("\">").append(endDate).append("</td>\n");
@@ -113,6 +108,10 @@ public class PoliciesListTag extends TagSupport
         {
             throw new JspException(ie);
         }
+        catch (SQLException e)
+        {
+        	throw new JspException(e);
+        }
 
         return SKIP_BODY;
     }
@@ -130,7 +129,7 @@ public class PoliciesListTag extends TagSupport
     /**
      * Set the policies to list
      *
-     * @param policies
+     * @param itemsIn
      *            the policies
      */
     public void setPolicies(List<ResourcePolicy> policies)
@@ -139,7 +138,6 @@ public class PoliciesListTag extends TagSupport
     }
 
 
-    @Override
     public void release()
     {
         policies = null;

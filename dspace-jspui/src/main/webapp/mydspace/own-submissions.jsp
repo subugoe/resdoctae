@@ -25,11 +25,10 @@
 
 <%@ page import="org.dspace.content.Item" %>
 <%@ page import="org.dspace.eperson.EPerson" %>
-<%@ page import="java.util.List" %>
 
 <%
     EPerson eperson = (EPerson) request.getAttribute("user");
-    List<Item> items = (List<Item>) request.getAttribute("items");
+    Item[] items = (Item[]) request.getAttribute("items");
 %>
 
 <dspace:layout style="submission" locbar="link"
@@ -41,7 +40,7 @@
     <h2><fmt:message key="jsp.mydspace.own-submissions.title"/></h2>
     
 <%
-    if (items.size() == 0)
+    if (items.length == 0)
     {
 %>
     <%-- <p>There are no items in the main archive that have been submitted by you.</p> --%>
@@ -55,7 +54,7 @@
     the archive.</p> --%>
 	<p><fmt:message key="jsp.mydspace.own-submissions.text2"/></p>
 <%
-        if (items.size() == 1)
+        if (items.length == 1)
         {
 %>
     <%-- <p>There is <strong>1</strong> item in the main archive that was submitted by you.</p> --%>
@@ -67,7 +66,7 @@
 %>
     <%-- <p>There are <strong><%= items.length %></strong> items in the main archive that were submitted by you.</p> --%>
 	<p><fmt:message key="jsp.mydspace.own-submissions.text4">
-        <fmt:param><%= items.size() %></fmt:param>
+        <fmt:param><%= items.length %></fmt:param>
     </fmt:message></p>
 <%
         }

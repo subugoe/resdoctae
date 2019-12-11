@@ -42,14 +42,11 @@ public class Trail extends TextContainer
 
     /**
      * Construct a new trail
-     *
-     * @param context
-     *            document context.
+     * 
      * @param target
      *            (May be null) The trail's target
      * @param rend
      *            (May be null) Special rendering instructions.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Trail(WingContext context, String target, String rend)
             throws WingException
@@ -71,9 +68,7 @@ public class Trail extends TextContainer
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler,
             NamespaceSupport namespaces) throws SAXException
     {

@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.Enumeration;
-import java.util.UUID;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,16 +18,18 @@ import java.util.Map;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
 import org.apache.commons.lang.StringUtils;
-
 import org.apache.log4j.Logger;
-
 import org.dspace.app.util.SubmissionInfo;
 import org.dspace.app.util.Util;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
+import org.dspace.content.Bitstream;
+import org.dspace.content.BitstreamFormat;
+import org.dspace.content.Bundle;
+import org.dspace.content.FormatIdentifier;
+import org.dspace.content.Item;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.curate.Curator;
 import org.dspace.submit.AbstractProcessingStep;
@@ -46,6 +47,7 @@ import org.dspace.submit.AbstractProcessingStep;
  * @see org.dspace.submit.AbstractProcessingStep
  * 
  * @author Tim Donohue
+ * @version $Revision$
  */
 public class UploadStep extends AbstractProcessingStep
 {
@@ -93,13 +95,11 @@ public class UploadStep extends AbstractProcessingStep
     public static final int STATUS_EDIT_COMPLETE = 25;
 
     /** log4j logger */
-    private static final Logger log = Logger.getLogger(UploadStep.class);
+    private static Logger log = Logger.getLogger(UploadStep.class);
 
     /** is the upload required? */
-    protected boolean fileRequired = configurationService.getBooleanProperty("webui.submit.upload.required", true);
-
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-
+    protected boolean fileRequired = ConfigurationManager.getBooleanProperty("webui.submit.upload.required", true);
+    
     /**
      * Do any processing of the information input by the user, and/or perform
      * step processing (if no user interaction required)
@@ -123,7 +123,6 @@ public class UploadStep extends AbstractProcessingStep
      *         doPostProcessing() below! (if STATUS_COMPLETE or 0 is returned,
      *         no errors occurred!)
      */
-    @Override
     public int doProcessing(Context context, HttpServletRequest request,
             HttpServletResponse response, SubmissionInfo subInfo)
             throws ServletException, IOException, SQLException,
@@ -161,7 +160,7 @@ public class UploadStep extends AbstractProcessingStep
         		buttonPressed.startsWith(PREVIOUS_BUTTON))
         {
             // check if a file is required to be uploaded
-            if (fileRequired && !itemService.hasUploadedFiles(item))
+            if (fileRequired && !item.hasUploadedFiles())
             {
                 return STATUS_NO_FILES_ERROR;
             }
@@ -190,8 +189,8 @@ public class UploadStep extends AbstractProcessingStep
             else
             {
                 // load info for bitstream we are editing
-                Bitstream b = bitstreamService.find(context, Util.getUUIDParameter(request,
-                        "bitstream_id"));
+                Bitstream b = Bitstream.find(context, Integer.parseInt(request
+                        .getParameter("bitstream_id")));
 
                 // save bitstream to submission info
                 subInfo.setBitstream(b);
@@ -203,8 +202,8 @@ public class UploadStep extends AbstractProcessingStep
             String bitstreamID = buttonPressed.substring("submit_edit_"
                     .length());
 
-            Bitstream b = bitstreamService
-                    .find(context, UUID.fromString(bitstreamID));
+            Bitstream b = Bitstream
+                    .find(context, Integer.parseInt(bitstreamID));
 
             // save bitstream to submission info
             subInfo.setBitstream(b);
@@ -230,7 +229,7 @@ public class UploadStep extends AbstractProcessingStep
                 // remove each file in the list
                 for (int i = 0; i < removeIDs.length; i++)
                 {
-                    UUID id = UUID.fromString(removeIDs[i]);
+                    int id = Integer.parseInt(removeIDs[i]);
 
                     int status = processRemoveFile(context, item, id);
 
@@ -249,7 +248,7 @@ public class UploadStep extends AbstractProcessingStep
         {
             // A single file "remove" button must have been pressed
 
-            UUID id = UUID.fromString(buttonPressed.substring(14));
+            int id = Integer.parseInt(buttonPressed.substring(14));
             int status = processRemoveFile(context, item, id);
 
             // if error occurred, return immediately
@@ -269,7 +268,7 @@ public class UploadStep extends AbstractProcessingStep
         // and from users using the simple upload.
         // Beginning with the resumable ones.
         Enumeration<String> parameterNames = request.getParameterNames();
-        Map<String, String> descriptions = new HashMap<>();
+        Map<String, String> descriptions = new HashMap<String, String>();
         while (parameterNames.hasMoreElements())
         {
             String name = parameterNames.nextElement();
@@ -285,16 +284,16 @@ public class UploadStep extends AbstractProcessingStep
             // we got descriptions from the resumable upload
             if (item != null)
             {
-                List<Bundle> bundles = itemService.getBundles(item, "ORIGINAL");
+                Bundle[] bundles = item.getBundles("ORIGINAL");
                 for (Bundle bundle : bundles)
                 {
-                    List<Bitstream> bitstreams = bundle.getBitstreams();
+                    Bitstream[] bitstreams = bundle.getBitstreams();
                     for (Bitstream bitstream : bitstreams)
                     {
                         if (descriptions.containsKey(bitstream.getName()))
                         {
-                            bitstream.setDescription(context, descriptions.get(bitstream.getName()));
-                            bitstreamService.update(context, bitstream);
+                            bitstream.setDescription(descriptions.get(bitstream.getName()));
+                            bitstream.update();
                         }
                     }
                 }
@@ -345,12 +344,12 @@ public class UploadStep extends AbstractProcessingStep
         // -------------------------------------------------
         if (request.getParameter("primary_bitstream_id") != null)
         {
-            List<Bundle> bundles = itemService.getBundles(item, "ORIGINAL");
-            if (bundles.size() > 0)
+            Bundle[] bundles = item.getBundles("ORIGINAL");
+            if (bundles.length > 0)
             {
-            	bundles.get(0).setPrimaryBitstreamID(bitstreamService.find(context, Util.getUUIDParameter(request,
-                        "primary_bitstream_id")));
-            	bundleService.update(context, bundles.get(0));
+            	bundles[0].setPrimaryBitstreamID(Integer.valueOf(request
+                    .getParameter("primary_bitstream_id")).intValue());
+            	bundles[0].update();
             }
         }
 
@@ -359,13 +358,14 @@ public class UploadStep extends AbstractProcessingStep
         // files have been uploaded.
         // ---------------------------------------------------
         //check if a file is required to be uploaded
-        if (fileRequired && !itemService.hasUploadedFiles(item)
+        if (fileRequired && !item.hasUploadedFiles()
                 && !buttonPressed.equals(SUBMIT_MORE_BUTTON))
         {
             return STATUS_NO_FILES_ERROR;
         }
 
-        context.dispatchEvents();
+        // commit all changes to database
+        context.commit();
 
         return STATUS_COMPLETE;
     }
@@ -392,7 +392,6 @@ public class UploadStep extends AbstractProcessingStep
      * 
      * @return the number of pages in this step
      */
-    @Override
     public int getNumberOfPages(HttpServletRequest request,
             SubmissionInfo subInfo) throws ServletException
     {
@@ -420,7 +419,7 @@ public class UploadStep extends AbstractProcessingStep
      *         UI-related code! (if STATUS_COMPLETE or 0 is returned,
      *         no errors occurred!)
      */
-    protected int processRemoveFile(Context context, Item item, UUID bitstreamID)
+    protected int processRemoveFile(Context context, Item item, int bitstreamID)
             throws IOException, SQLException, AuthorizeException
     {
         Bitstream bitstream;
@@ -428,7 +427,7 @@ public class UploadStep extends AbstractProcessingStep
         // Try to find bitstream
         try
         {
-            bitstream = bitstreamService.find(context, bitstreamID);
+            bitstream = Bitstream.find(context, bitstreamID);
         }
         catch (NumberFormatException nfe)
         {
@@ -444,18 +443,17 @@ public class UploadStep extends AbstractProcessingStep
 
         // remove bitstream from bundle..
         // delete bundle if it's now empty
-        List<Bundle> bundles = bitstream.getBundles();
+        Bundle[] bundles = bitstream.getBundles();
 
-        Bundle bundle = bundles.get(0);
-        bundleService.removeBitstream(context, bundle, bitstream);
+        bundles[0].removeBitstream(bitstream);
 
-        List<Bitstream> bitstreams = bundle.getBitstreams();
+        Bitstream[] bitstreams = bundles[0].getBitstreams();
 
         // remove bundle if it's now empty
-        if (bitstreams.size() < 1)
+        if (bitstreams.length < 1)
         {
-            itemService.removeBundle(context, item, bundle);
-            itemService.update(context, item);
+            item.removeBundle(bundles[0]);
+            item.update();
         }
 
         // no errors occurred
@@ -537,17 +535,17 @@ public class UploadStep extends AbstractProcessingStep
                 Item item = subInfo.getSubmissionItem().getItem();
 
                 // do we already have a bundle?
-                List<Bundle> bundles = itemService.getBundles(item, "ORIGINAL");
+                Bundle[] bundles = item.getBundles("ORIGINAL");
 
-                if (bundles.size() < 1)
+                if (bundles.length < 1)
                 {
                     // set bundle's name to ORIGINAL
-                    b = itemService.createSingleBitstream(context, fileInputStream, item, "ORIGINAL");
+                    b = item.createSingleBitstream(fileInputStream, "ORIGINAL");
                 }
                 else
                 {
                     // we have a bundle already, just add bitstream
-                    b = bitstreamService.create(context, bundles.get(0), fileInputStream);
+                    b = bundles[0].createBitstream(fileInputStream);
                 }
 
                 // Strip all but the last filename. It would be nice
@@ -564,46 +562,48 @@ public class UploadStep extends AbstractProcessingStep
                     noPath = noPath.substring(noPath.indexOf('\\') + 1);
                 }
 
-                b.setName(context, noPath);
-                b.setSource(context, filePath);
-                b.setDescription(context, fileDescription);
+                b.setName(noPath);
+                b.setSource(filePath);
+                b.setDescription(fileDescription);
 
                 // Identify the format
-                bf = bitstreamFormatService.guessFormat(context, b);
-                b.setFormat(context, bf);
+                bf = FormatIdentifier.guessFormat(context, b);
+                b.setFormat(bf);
 
                 // Update to DB
-                bitstreamService.update(context, b);
-                itemService.update(context, item);
+                b.update();
+                item.update();
 
                 if ((bf != null) && (bf.isInternal()))
                 {
                     log.warn("Attempt to upload file format marked as internal system use only");
-                    backoutBitstream(context, subInfo, b, item);
+                    backoutBitstream(subInfo, b, item);
                     return STATUS_UPLOAD_ERROR;
                 }
 
                 // Check for virus
-                if (configurationService.getBooleanProperty("submission-curation.virus-scan"))
+                if (ConfigurationManager.getBooleanProperty("submission-curation", "virus-scan"))
                 {
                     Curator curator = new Curator();
-                    curator.addTask("vscan").curate(context, item);
+                    curator.addTask("vscan").curate(item);
                     int status = curator.getStatus("vscan");
                     if (status == Curator.CURATE_ERROR)
                     {
-                        backoutBitstream(context, subInfo, b, item);
+                        backoutBitstream(subInfo, b, item);
                         return STATUS_VIRUS_CHECKER_UNAVAILABLE;
                     }
                     else if (status == Curator.CURATE_FAIL)
                     {
-                        backoutBitstream(context, subInfo, b, item);
+                        backoutBitstream(subInfo, b, item);
                         return STATUS_CONTAINS_VIRUS;
                     }
                 }
 
                 // If we got this far then everything is more or less ok.
 
-                context.dispatchEvents();
+                // Comment - not sure if this is the right place for a commit here
+                // but I'm not brave enough to remove it - Robin.
+                context.commit();
 
                 // save this bitstream to the submission info, as the
                 // bitstream we're currently working with
@@ -625,30 +625,24 @@ public class UploadStep extends AbstractProcessingStep
     }
 
     /*
-     * If we created a new Bitstream but now realise there is a problem then remove it.
+      If we created a new Bitstream but now realised there is a problem then remove it.
      */
-    protected void backoutBitstream(Context context, SubmissionInfo subInfo, Bitstream b, Item item)
-            throws SQLException, AuthorizeException, IOException
+    protected void backoutBitstream(SubmissionInfo subInfo, Bitstream b, Item item) throws SQLException, AuthorizeException, IOException
     {
         // remove bitstream from bundle..
-        List<Bundle> bundles = b.getBundles();
-        if (bundles.isEmpty())
-            throw new SQLException("Bitstream is not in any Bundles.");
+        // delete bundle if it's now empty
+        Bundle[] bnd = b.getBundles();
 
-        Bundle firstBundle = bundles.get(0);
+        bnd[0].removeBitstream(b);
 
-        bundleService.removeBitstream(context, firstBundle, b);
-
-        List<Bitstream> bitstreams = firstBundle.getBitstreams();
+        Bitstream[] bitstreams = bnd[0].getBitstreams();
 
         // remove bundle if it's now empty
-        if (bitstreams.isEmpty())
+        if (bitstreams.length < 1)
         {
-            itemService.removeBundle(context, item, firstBundle);
-            itemService.update(context, item);
+            item.removeBundle(bnd[0]);
+            item.update();
         }
-        else
-            bundleService.update(context, firstBundle);
 
         subInfo.setBitstream(null);
     }
@@ -679,21 +673,21 @@ public class UploadStep extends AbstractProcessingStep
             // Did the user select a format?
             int typeID = Util.getIntParameter(request, "format");
 
-            BitstreamFormat format = bitstreamFormatService.find(context, typeID);
+            BitstreamFormat format = BitstreamFormat.find(context, typeID);
 
             if (format != null)
             {
-                subInfo.getBitstream().setFormat(context, format);
+                subInfo.getBitstream().setFormat(format);
             }
             else
             {
                 String userDesc = request.getParameter("format_description");
 
-                subInfo.getBitstream().setUserFormatDescription(context, userDesc);
+                subInfo.getBitstream().setUserFormatDescription(userDesc);
             }
 
             // update database
-            bitstreamService.update(context, subInfo.getBitstream());
+            subInfo.getBitstream().update();
         }
         else
         {
@@ -726,11 +720,11 @@ public class UploadStep extends AbstractProcessingStep
     {
         if (subInfo.getBitstream() != null)
         {
-            subInfo.getBitstream().setDescription(context,
+            subInfo.getBitstream().setDescription(
                     request.getParameter("description"));
-            bitstreamService.update(context, subInfo.getBitstream());
+            subInfo.getBitstream().update();
 
-            context.dispatchEvents();
+            context.commit();
         }
         else
         {

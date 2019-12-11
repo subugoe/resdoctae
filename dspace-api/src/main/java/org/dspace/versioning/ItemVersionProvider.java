@@ -7,7 +7,6 @@
  */
 package org.dspace.versioning;
 
-import java.sql.SQLException;
 import org.dspace.content.Item;
 import org.dspace.core.Context;
 
@@ -20,6 +19,6 @@ import org.dspace.core.Context;
  */
 public interface ItemVersionProvider {
     public Item createNewItemAndAddItInWorkspace(Context c, Item item);
-    public void deleteVersionedItem(Context c, Version versionToDelete, VersionHistory history) throws SQLException;
+    public void deleteVersionedItem(Context c, Version versionToDelete, VersionHistory history);
     public Item updateItemState(Context c, Item itemNew, Item previousItem);
 }

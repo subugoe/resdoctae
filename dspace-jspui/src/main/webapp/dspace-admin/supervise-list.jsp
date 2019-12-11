@@ -21,17 +21,16 @@
     prefix="fmt" %>
 
 <%@page import="javax.servlet.jsp.jstl.fmt.LocaleSupport"%>
+<%@ page import="org.dspace.content.Metadatum" %>
 <%@ page import="org.dspace.content.Item" %>
+<%@ page import="org.dspace.content.SupervisedItem" %>
 <%@ page import="org.dspace.eperson.EPerson" %>
 <%@ page import="org.dspace.eperson.Group" %>
 <%@ page import="org.dspace.core.Utils" %>
-<%@ page import="org.dspace.content.WorkspaceItem" %>
-<%@ page import="java.util.List" %>
-<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%
     // get the object array out of the request
-    List<WorkspaceItem> supervisedItems = (List<WorkspaceItem>) request.getAttribute("supervised");
+    SupervisedItem[] supervisedItems = (SupervisedItem[]) request.getAttribute("supervised");
     request.setAttribute("LanguageSwitch", "hide");
 %>
 
@@ -71,16 +70,16 @@
 <%
     String row = "even";
 
-    for (int i = 0; i < supervisedItems.size(); i++)
+    for (int i = 0; i < supervisedItems.length; i++)
     {
         // get title (or "untitled" if not set), author, and supervisors of 
         // the supervised item
-        String title = supervisedItems.get(i).getItem().getName();
+        Metadatum[] titleArray = supervisedItems[i].getItem().getDC("title", null, Item.ANY);
 //        String title = (titleArray.length > 0 ? titleArray[0].value : "Untitled");
-        EPerson submitter = supervisedItems.get(i).getItem().getSubmitter();
-        List<Group> supervisors = supervisedItems.get(i).getSupervisorGroups();
+        EPerson submitter = supervisedItems[i].getItem().getSubmitter();
+        Group[] supervisors = supervisedItems[i].getSupervisorGroups();
 
-        for (int j = 0; j < supervisors.size(); j++)
+        for (int j = 0; j < supervisors.length; j++)
         {
 %>
 
@@ -88,22 +87,22 @@
         <td class="<%= row %>RowOddCol">
             <%-- form to navigate to the item policies --%>
             <form action="<%= request.getContextPath() %>/tools/authorize" method="post">
-                <input type="hidden" name="item_id" value="<%=supervisedItems.get(i).getItem().getID() %>"/>
+                <input type="hidden" name="item_id" value="<%=supervisedItems[i].getItem().getID() %>"/>
                 <input class="btn btn-info" type="submit" name="submit_item_select" value="<fmt:message key="jsp.dspace-admin.supervise-list.policies.button"/>"/>
             </form>
         </td>
         <td class="<%= row %>RowEvenCol">
-            <%= supervisors.get(j).getName() %>
+            <%= supervisors[j].getName() %>
         </td>
         <td class="<%= row %>RowOddCol">
             <a href="mailto:<%= submitter.getEmail() %>"><%= Utils.addEntities(submitter.getFullName()) %></a>
         </td>
         <td class="<%= row %>RowEvenCol">
 <%
-		if (StringUtils.isNotBlank(title))
+		if (titleArray.length > 0)
 		{
 %>
-			<%= title %>
+			<%= titleArray[0].value %>
 <%
 		}
 		else
@@ -117,8 +116,8 @@
         <td class="<%= row %>RowOddCol">
             <%-- form to request removal of supervisory linking --%>
             <form method="post" action="">
-            <input type="hidden" name="gID" value="<%= supervisors.get(j).getID() %>"/>
-            <input type="hidden" name="siID" value="<%= supervisedItems.get(i).getID() %>"/>
+            <input type="hidden" name="gID" value="<%= supervisors[j].getID() %>"/>
+            <input type="hidden" name="siID" value="<%= supervisedItems[i].getID() %>"/>
             <input class="btn btn-danger" type="submit" name="submit_remove" value="<fmt:message key="jsp.dspace-admin.general.remove"/>"/>
             </form>
         </td>

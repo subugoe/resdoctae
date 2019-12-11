@@ -7,21 +7,24 @@
  */
 package org.dspace.checker;
 
-import org.apache.commons.cli.*;
-import org.apache.log4j.Logger;
-import org.dspace.checker.factory.CheckerServiceFactory;
-import org.dspace.checker.service.SimpleReporterService;
-import org.dspace.core.ConfigurationManager;
-import org.dspace.core.Context;
-import org.dspace.core.Email;
-
-import javax.mail.MessagingException;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import javax.mail.MessagingException;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
+import org.apache.log4j.Logger;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.core.Context;
+import org.dspace.core.Email;
 
 /**
  * <p>
@@ -56,8 +59,10 @@ public class DailyReportEmailer
      * @param numberOfBitstreams
      *            the number of bitstreams reported
      * 
-     * @throws IOException if IO exception occurs
-     * @throws MessagingException if message cannot be sent.
+     * @throws IOException
+     *             if IO exception occurs
+     * @throws javax.mail.MessagingException
+     *             if message cannot be sent.
      */
     public void sendReport(File attachment, int numberOfBitstreams) 
             throws IOException, javax.mail.MessagingException 
@@ -160,7 +165,7 @@ public class DailyReportEmailer
         }
 
         // create a new simple reporter
-        SimpleReporterService reporter = CheckerServiceFactory.getInstance().getSimpleReporterService();
+        SimpleReporter reporter = new SimpleReporterImpl();
 
         DailyReportEmailer emailer = new DailyReportEmailer();
 
@@ -179,13 +184,12 @@ public class DailyReportEmailer
 
         try
         {
-            context = new Context(Context.Mode.READ_ONLY);
-
+            context = new Context();
             // the number of bitstreams in report
             int numBitstreams = 0;
 
             // create a temporary file in the log directory
-            String dirLocation = ConfigurationManager.getProperty("log.report.dir");
+            String dirLocation = ConfigurationManager.getProperty("log.dir");
             File directory = new File(dirLocation);
 
             if (directory.exists() && directory.isDirectory())
@@ -205,19 +209,19 @@ public class DailyReportEmailer
             {
                 writer
                         .write("\n--------------------------------- Begin Reporting ------------------------\n\n");
-                numBitstreams += reporter.getDeletedBitstreamReport(context, yesterday,
+                numBitstreams += reporter.getDeletedBitstreamReport(yesterday,
                         tomorrow, writer);
                 writer
                         .write("\n--------------------------------- Report Spacer ---------------------------\n\n");
-                numBitstreams += reporter.getChangedChecksumReport(context, yesterday,
+                numBitstreams += reporter.getChangedChecksumReport(yesterday,
                         tomorrow, writer);
                 writer
                         .write("\n--------------------------------- Report Spacer ---------------------------\n\n");
-                numBitstreams += reporter.getBitstreamNotFoundReport(context, yesterday,
+                numBitstreams += reporter.getBitstreamNotFoundReport(yesterday,
                         tomorrow, writer);
                 writer
                         .write("\n--------------------------------- Report Spacer ---------------------------\n\n");
-                numBitstreams += reporter.getNotToBeProcessedReport(context, yesterday,
+                numBitstreams += reporter.getNotToBeProcessedReport(yesterday,
                         tomorrow, writer);
                 writer
                         .write("\n--------------------------------- Report Spacer ---------------------------\n\n");
@@ -234,7 +238,7 @@ public class DailyReportEmailer
                 {
                     writer
                             .write("\n--------------------------------- Begin Reporting ------------------------\n\n");
-                    numBitstreams += reporter.getDeletedBitstreamReport(context,
+                    numBitstreams += reporter.getDeletedBitstreamReport(
                             yesterday, tomorrow, writer);
                     writer.flush();
                     writer.close();
@@ -245,7 +249,7 @@ public class DailyReportEmailer
                 {
                     writer
                             .write("\n--------------------------------- Begin Reporting ------------------------\n\n");
-                    numBitstreams += reporter.getBitstreamNotFoundReport(context,
+                    numBitstreams += reporter.getBitstreamNotFoundReport(
                             yesterday, tomorrow, writer);
                     writer.flush();
                     writer.close();
@@ -256,7 +260,7 @@ public class DailyReportEmailer
                 {
                     writer
                             .write("\n--------------------------------- Begin Reporting ------------------------\n\n");
-                    numBitstreams += reporter.getChangedChecksumReport(context,
+                    numBitstreams += reporter.getChangedChecksumReport(
                             yesterday, tomorrow, writer);
                     writer.flush();
                     writer.close();
@@ -267,7 +271,7 @@ public class DailyReportEmailer
                 {
                     writer
                             .write("\n--------------------------------- Begin Reporting ------------------------\n\n");
-                    numBitstreams += reporter.getNotToBeProcessedReport(context,
+                    numBitstreams += reporter.getNotToBeProcessedReport(
                             yesterday, tomorrow, writer);
                     writer.flush();
                     writer.close();
@@ -286,8 +290,14 @@ public class DailyReportEmailer
                 }
             }
         }
-        catch (MessagingException | SQLException | IOException e)
+        catch (MessagingException e)
         {
+            log.fatal(e);
+        }
+        catch (IOException e)
+        {
+            log.fatal(e);
+        } catch (SQLException e) {
             log.fatal(e);
         } finally
         {

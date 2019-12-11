@@ -20,6 +20,7 @@ import org.dspace.content.Item;
 import org.dspace.core.Constants;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
+import org.dspace.license.CreativeCommons;
 
 import edu.harvard.hul.ois.mets.Agent;
 import edu.harvard.hul.ois.mets.Mets;
@@ -32,7 +33,7 @@ import edu.harvard.hul.ois.mets.helper.PCData;
 
 /**
  * Packager plugin to produce a
- * METS (Metadata Encoding and Transmission Standard) package
+ * METS (Metadata Encoding & Transmission Standard) package
  * that is accepted as a DSpace METS SIP (Submission Information Package).
  * See <a href="http://www.loc.gov/standards/mets/">http://www.loc.gov/standards/mets/</a>
  * for more information on METS.
@@ -56,19 +57,19 @@ public class DSpaceMETSDisseminator
      * Profile.  Though not strictly true, there is no DIP standard yet
      * so it's the most meaningful label we can apply.
      */
-    protected static final String PROFILE_LABEL = "DSpace METS SIP Profile 1.0";
+    private static final String PROFILE_LABEL = "DSpace METS SIP Profile 1.0";
 
     // MDTYPE value for deposit license -- "magic string"
     // NOTE: format is  <label-for-METS>:<DSpace-crosswalk-name>
-    protected static final String DSPACE_DEPOSIT_LICENSE_MDTYPE = "DSpaceDepositLicense:DSPACE_DEPLICENSE";
+    private static final String DSPACE_DEPOSIT_LICENSE_MDTYPE = "DSpaceDepositLicense:DSPACE_DEPLICENSE";
 
     // MDTYPE value for CC license in RDF -- "magic string"
     // NOTE: format is  <label-for-METS>:<DSpace-crosswalk-name>
-    protected static final String CREATIVE_COMMONS_RDF_MDTYPE = "CreativeCommonsRDF:DSPACE_CCRDF";
+    private static final String CREATIVE_COMMONS_RDF_MDTYPE = "CreativeCommonsRDF:DSPACE_CCRDF";
 
     // MDTYPE value for CC license in Text -- "magic string"
     // NOTE: format is  <label-for-METS>:<DSpace-crosswalk-name>
-    protected static final String CREATIVE_COMMONS_TEXT_MDTYPE = "CreativeCommonsText:DSPACE_CCTXT";
+    private static final String CREATIVE_COMMONS_TEXT_MDTYPE = "CreativeCommonsText:DSPACE_CCTXT";
 
     /**
      * Return identifier string for the profile this produces.
@@ -104,7 +105,6 @@ public class DSpaceMETSDisseminator
 
     /**
      * Create metsHdr element - separate so subclasses can override.
-     * @return mets header
      */
     @Override
     public MetsHdr makeMetsHdr(Context context, DSpaceObject dso,
@@ -135,10 +135,6 @@ public class DSpaceMETSDisseminator
      * params may contain one or more values for "dmd"; each of those is
      * the name of a crosswalk plugin, optionally followed by colon and
      * its METS MDTYPE name.
-     * @return array of DMD types
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
     public String [] getDmdTypes(Context context, DSpaceObject dso, PackageParameters params)
@@ -164,10 +160,6 @@ public class DSpaceMETSDisseminator
      * Get name of technical metadata crosswalk for Bitstreams.
      * Default is PREMIS.  This is both the name of the crosswalk plugin
      * and the METS MDTYPE.
-     * @return array of TechMD types
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error 
      */
     @Override
     public String[] getTechMdTypes(Context context, DSpaceObject dso, PackageParameters params)
@@ -202,10 +194,6 @@ public class DSpaceMETSDisseminator
     /**
      * Add rights MD (licenses) for DSpace item.  These
      * may include a deposit license, and Creative Commons.
-     * @return array of RightsMD types
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
     public String[] getRightsMdTypes(Context context, DSpaceObject dso, PackageParameters params)
@@ -221,11 +209,11 @@ public class DSpaceMETSDisseminator
                 result.add(DSPACE_DEPOSIT_LICENSE_MDTYPE);
             }
 
-            if (creativeCommonsService.getLicenseRdfBitstream(item) != null)
+            if (CreativeCommons.getLicenseRdfBitstream(item) != null)
             {
                 result.add(CREATIVE_COMMONS_RDF_MDTYPE);
             }
-            else if (creativeCommonsService.getLicenseTextBitstream(item) != null)
+            else if (CreativeCommons.getLicenseTextBitstream(item) != null)
             {
                 result.add(CREATIVE_COMMONS_TEXT_MDTYPE);
             }

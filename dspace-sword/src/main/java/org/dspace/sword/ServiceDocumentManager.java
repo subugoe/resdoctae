@@ -7,9 +7,6 @@
  */
 package org.dspace.sword;
 
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
 import org.purl.sword.base.ServiceDocument;
 import org.purl.sword.base.SWORDErrorException;
 import org.purl.sword.base.Service;
@@ -26,170 +23,145 @@ import java.util.List;
 
 public class ServiceDocumentManager
 {
-    protected CollectionService collectionService = ContentServiceFactory
-            .getInstance().getCollectionService();
+	private SWORDService swordService;
 
-    protected CommunityService communityService = ContentServiceFactory
-            .getInstance().getCommunityService();
+	private SWORDAuthenticator swordAuth;
 
-    private SWORDService swordService;
+	public ServiceDocumentManager(SWORDService service)
+	{
+		this.swordService = service;
+		this.swordAuth = new SWORDAuthenticator();
+	}
 
-    private SWORDAuthenticator swordAuth;
+	/**
+	 * Obtain the service document for the repository based on the
+	 * DSpace context and the SWORD context which must be set for
+	 * this object prior to calling this method.
+	 *
+	 * @return	The service document based on the context of the request
+	 * @throws DSpaceSWORDException
+	 */
+	public ServiceDocument getServiceDocument()
+		throws DSpaceSWORDException, SWORDErrorException
+	{
+		return this.getServiceDocument(null);
+	}
 
-    public ServiceDocumentManager(SWORDService service)
-    {
-        this.swordService = service;
-        this.swordAuth = new SWORDAuthenticator();
-    }
+	public ServiceDocument getServiceDocument(String url)
+		throws DSpaceSWORDException, SWORDErrorException
+	{
+		// extract the things we need from the service
+		Context context = swordService.getContext();
+		SWORDContext swordContext = swordService.getSwordContext();
+		SWORDConfiguration swordConfig = swordService.getSwordConfig();
+		SWORDUrlManager urlManager = swordService.getUrlManager();
 
-    /**
-     * Obtain the service document for the repository based on the
-     * DSpace context and the SWORD context which must be set for
-     * this object prior to calling this method.
-     *
-     * @return The service document based on the context of the request
-     * @throws DSpaceSWORDException
-     */
-    public ServiceDocument getServiceDocument()
-            throws DSpaceSWORDException, SWORDErrorException
-    {
-        return this.getServiceDocument(null);
-    }
+		// construct the ATOM collection generators that we might use
+		ATOMCollectionGenerator comGen = new CommunityCollectionGenerator(swordService);
+		ATOMCollectionGenerator colGen = new CollectionCollectionGenerator(swordService);
+		ATOMCollectionGenerator itemGen = new ItemCollectionGenerator(swordService);
 
-    public ServiceDocument getServiceDocument(String url)
-            throws DSpaceSWORDException, SWORDErrorException
-    {
-        // extract the things we need from the service
-        Context context = swordService.getContext();
-        SWORDContext swordContext = swordService.getSwordContext();
-        SWORDConfiguration swordConfig = swordService.getSwordConfig();
-        SWORDUrlManager urlManager = swordService.getUrlManager();
+		// first check that the context and sword context have
+		// been set
+		if (context == null)
+		{
+			throw new DSpaceSWORDException("The Context is null; please set it before calling getServiceDocument");
+		}
 
-        // construct the ATOM collection generators that we might use
-        ATOMCollectionGenerator comGen = new CommunityCollectionGenerator(
-                swordService);
-        ATOMCollectionGenerator colGen = new CollectionCollectionGenerator(
-                swordService);
-        ATOMCollectionGenerator itemGen = new ItemCollectionGenerator(
-                swordService);
+		if (swordContext == null)
+		{
+			throw new DSpaceSWORDException("The SWORD Context is null; please set it before calling getServiceDocument");
+		}
 
-        // first check that the context and sword context have
-        // been set
-        if (context == null)
-        {
-            throw new DSpaceSWORDException(
-                    "The Context is null; please set it before calling getServiceDocument");
-        }
+		// construct a new service document
+		Service service = new Service(SWORDProperties.VERSION, swordConfig.isNoOp(), swordConfig.isVerbose());
 
-        if (swordContext == null)
-        {
-            throw new DSpaceSWORDException(
-                    "The SWORD Context is null; please set it before calling getServiceDocument");
-        }
-
-        // construct a new service document
-        Service service = new Service(SWORDProperties.VERSION,
-                swordConfig.isNoOp(), swordConfig.isVerbose());
-
-        // set the max upload size
-        service.setMaxUploadSize(swordConfig.getMaxUploadSize());
+		// set the max upload size
+		service.setMaxUploadSize(swordConfig.getMaxUploadSize());
 
         // Set the generator
         this.addGenerator(service);
 
-        //
-        if (url == null || urlManager.isBaseServiceDocumentUrl(url))
-        {
-            // we are dealing with the default service document
+		//
+		if (url == null || urlManager.isBaseServiceDocumentUrl(url))
+		{
+			// we are dealing with the default service document
 
-            // set the title of the workspace as per the name of the DSpace installation
-            String ws = ConfigurationManager.getProperty("dspace.name");
-            Workspace workspace = new Workspace();
-            workspace.setTitle(ws);
+			// set the title of the workspace as per the name of the DSpace installation
+			String ws = ConfigurationManager.getProperty("dspace.name");
+			Workspace workspace = new Workspace();
+			workspace.setTitle(ws);
 
-            // next thing to do is determine whether the default is communities or collections
-            boolean swordCommunities = ConfigurationManager
-                    .getBooleanProperty("sword-server", "expose-communities");
+			// next thing to do is determine whether the default is communities or collections
+			boolean swordCommunities = ConfigurationManager.getBooleanProperty("sword-server", "expose-communities");
 
-            if (swordCommunities)
-            {
-                List<Community> comms = swordAuth
-                        .getAllowedCommunities(swordContext);
-                for (Community comm : comms)
-                {
-                    org.purl.sword.base.Collection scol = comGen
-                            .buildCollection(comm);
-                    workspace.addCollection(scol);
-                }
-            }
-            else
-            {
-                List<Collection> cols = swordAuth
-                        .getAllowedCollections(swordContext);
-                for (Collection col : cols)
-                {
-                    org.purl.sword.base.Collection scol = colGen
-                            .buildCollection(col);
-                    workspace.addCollection(scol);
-                }
-            }
+			if (swordCommunities)
+			{
+				List<Community> comms = swordAuth.getAllowedCommunities(swordContext);
+				for (Community comm : comms)
+				{
+					org.purl.sword.base.Collection scol = comGen.buildCollection(comm);
+					workspace.addCollection(scol);
+				}
+			}
+			else
+			{
+				List<Collection> cols = swordAuth.getAllowedCollections(swordContext);
+				for (Collection col : cols)
+				{
+					org.purl.sword.base.Collection scol = colGen.buildCollection(col);
+					workspace.addCollection(scol);
+				}
+			}
 
-            service.addWorkspace(workspace);
-        }
-        else
-        {
-            // we are dealing with a partial or sub-service document
-            DSpaceObject dso = urlManager.extractDSpaceObject(url);
+			service.addWorkspace(workspace);
+		}
+		else
+		{
+			// we are dealing with a partial or sub-service document
+			DSpaceObject dso = urlManager.extractDSpaceObject(url);
 
-            if (dso instanceof Collection)
-            {
-                Collection collection = (Collection) dso;
-                Workspace workspace = new Workspace();
-                workspace.setTitle(
-                        collectionService.getMetadata(collection, "name"));
+			if (dso instanceof Collection)
+			{
+				Collection collection = (Collection) dso;
+				Workspace workspace = new Workspace();
+				workspace.setTitle(collection.getMetadata("name"));
 
-                List<Item> items = swordAuth
-                        .getAllowedItems(swordContext, collection);
-                for (Item item : items)
-                {
-                    org.purl.sword.base.Collection scol = itemGen
-                            .buildCollection(item);
-                    workspace.addCollection(scol);
-                }
+				List<Item> items = swordAuth.getAllowedItems(swordContext, collection);
+				for (Item item : items)
+				{
+					org.purl.sword.base.Collection scol = itemGen.buildCollection(item);
+					workspace.addCollection(scol);
+				}
 
-                service.addWorkspace(workspace);
-            }
-            else if (dso instanceof Community)
-            {
-                Community community = (Community) dso;
-                Workspace workspace = new Workspace();
-                workspace.setTitle(
-                        communityService.getMetadata(community, "name"));
+				service.addWorkspace(workspace);
+			}
+			else if (dso instanceof Community)
+			{
+				Community community = (Community) dso;
+				Workspace workspace = new Workspace();
+				workspace.setTitle(community.getMetadata("name"));
 
-                List<Collection> collections = swordAuth
-                        .getAllowedCollections(swordContext, community);
-                for (Collection collection : collections)
-                {
-                    org.purl.sword.base.Collection scol = colGen
-                            .buildCollection(collection);
-                    workspace.addCollection(scol);
-                }
+				List<Collection> collections = swordAuth.getAllowedCollections(swordContext, community);
+				for (Collection collection : collections)
+				{
+					org.purl.sword.base.Collection scol = colGen.buildCollection(collection);
+					workspace.addCollection(scol);
+				}
 
-                List<Community> communities = swordAuth
-                        .getCommunities(swordContext, community);
-                for (Community comm : communities)
-                {
-                    org.purl.sword.base.Collection scol = comGen
-                            .buildCollection(comm);
-                    workspace.addCollection(scol);
-                }
+				List<Community> communities = swordAuth.getCommunities(swordContext, community);
+				for (Community comm : communities)
+				{
+					org.purl.sword.base.Collection scol = comGen.buildCollection(comm);
+					workspace.addCollection(scol);
+				}
 
-                service.addWorkspace(workspace);
-            }
-        }
+				service.addWorkspace(workspace);
+			}
+		}
 
         return new ServiceDocument(service);
-    }
+	}
 
     /**
      * Add the generator field content
@@ -198,8 +170,7 @@ public class ServiceDocumentManager
      */
     private void addGenerator(Service service)
     {
-        boolean identify = ConfigurationManager
-                .getBooleanProperty("sword-server", "identify-version", false);
+        boolean identify = ConfigurationManager.getBooleanProperty("sword-server", "identify-version", false);
         SWORDUrlManager urlManager = swordService.getUrlManager();
         String softwareUri = urlManager.getGeneratorUrl();
         if (identify)

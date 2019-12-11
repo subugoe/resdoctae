@@ -22,10 +22,11 @@ import org.dspace.authorize.AuthorizeException;
 import org.xml.sax.SAXException;
 
 /**
+ * 
  * The WingTransformer is a simple framework for dealing with DSpace based SAX
- * events. The implementing class is responsible for catching the appropriate
+ * events. The implementing class is responsable for catching the approprate
  * events and filtering them into these method calls. This allows implementors
- * to have easy access to the document without dealing with the messiness of the
+ * to have easy access to the document without dealing with the messyness of the
  * sax event system.
  * 
  * @author Scott Phillips
@@ -33,59 +34,25 @@ import org.xml.sax.SAXException;
 public interface DSpaceTransformer extends WingTransformer
 {
 
-    /** What to add at the end of the body
-     * @throws org.xml.sax.SAXException whenever.
-     * @throws org.dspace.app.xmlui.wing.WingException whenever.
-     * @throws org.dspace.app.xmlui.utils.UIException whenever.
-     * @throws java.sql.SQLException whenever.
-     * @throws java.io.IOException whenever.
-     * @throws org.dspace.authorize.AuthorizeException whenever.
-     * @throws org.apache.cocoon.ProcessingException whenever.
-     */
-    @Override
+    /** What to add at the end of the body */
     public void addBody(Body body) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException, ProcessingException;
 
-    /** What to add to the options list
-     * @throws org.xml.sax.SAXException whenever.
-     * @throws org.dspace.app.xmlui.wing.WingException whenever.
-     * @throws org.dspace.app.xmlui.utils.UIException whenever.
-     * @throws java.sql.SQLException whenever.
-     * @throws java.io.IOException whenever.
-     * @throws org.dspace.authorize.AuthorizeException whenever.
-     */
-    @Override
+    /** What to add to the options list */
     public void addOptions(Options options) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException;
 
-    /** What user metadata to add to the document
-     * @throws org.xml.sax.SAXException whenever.
-     * @throws org.dspace.app.xmlui.wing.WingException whenever.
-     * @throws org.dspace.app.xmlui.utils.UIException whenever.
-     * @throws java.sql.SQLException whenever.
-     * @throws java.io.IOException whenever.
-     * @throws org.dspace.authorize.AuthorizeException whenever.
-     */
-    @Override
+    /** What user metadata to add to the document */
     public void addUserMeta(UserMeta userMeta) throws SAXException,
             WingException, UIException, SQLException, IOException,
             AuthorizeException;
 
-    /** What page metadata to add to the document
-     * @throws org.xml.sax.SAXException whenever.
-     * @throws org.dspace.app.xmlui.wing.WingException whenever.
-     * @throws org.dspace.app.xmlui.utils.UIException whenever.
-     * @throws java.sql.SQLException whenever.
-     * @throws java.io.IOException whenever.
-     * @throws org.dspace.authorize.AuthorizeException whenever.
-     */
-    @Override
+    /** What page metadata to add to the document */
     public void addPageMeta(PageMeta pageMeta) throws SAXException,
             WingException, UIException, SQLException, IOException,
             AuthorizeException;
 
     /** What is a unique name for this component? */
-    @Override
     public String getComponentName();
 
 }

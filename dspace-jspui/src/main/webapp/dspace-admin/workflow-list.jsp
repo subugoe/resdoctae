@@ -26,18 +26,15 @@
 
 <%@ page import="javax.servlet.jsp.jstl.fmt.LocaleSupport" %>
 
+<%@ page import="org.dspace.administer.DCType" %>
 <%@ page import="org.dspace.content.Collection" %>
 <%@ page import="org.dspace.core.Utils" %>
-<%@ page import="org.dspace.workflowbasic.BasicWorkflowServiceImpl" %>
-<%@ page import="org.dspace.workflowbasic.BasicWorkflowItem" %>
-<%@ page import="java.util.List" %>
-<%@ page import="org.dspace.workflowbasic.factory.BasicWorkflowServiceFactory" %>
-<%@ page import="org.dspace.workflowbasic.service.BasicWorkflowService" %>
+<%@ page import="org.dspace.workflow.WorkflowManager" %>
+<%@ page import="org.dspace.workflow.WorkflowItem" %>
 
 <%
-    BasicWorkflowService basicWorkflowService = BasicWorkflowServiceFactory.getInstance().getBasicWorkflowService();
-    List<BasicWorkflowItem> workflows =
-        (List<BasicWorkflowItem>) request.getAttribute("workflows");
+    WorkflowItem[] workflows =
+        (WorkflowItem[]) request.getAttribute("workflows");
 %>
 
 <dspace:layout style="submission" 
@@ -60,23 +57,23 @@
        </tr>
 <%
     String row = "even";
-    for (int i = 0; i < workflows.size(); i++)
+    for (int i = 0; i < workflows.length; i++)
     {
 %>
         <tr>
-            <td class="<%= row %>RowOddCol"><%= workflows.get(i).getID() %></td>
+            <td class="<%= row %>RowOddCol"><%= workflows[i].getID() %></td>
             <td class="<%= row %>RowEvenCol">
-                    <%= workflows.get(i).getCollection().getName() %>
+                    <%= workflows[i].getCollection().getMetadata("name") %>
             </td>
             <td class="<%= row %>RowOddCol">
-                    <%= basicWorkflowService.getSubmitterName(workflows.get(i))   %>
+                    <%= WorkflowManager.getSubmitterName(workflows[i])   %>
             </td>
             <td class="<%= row %>RowEvenCol">
-                    <%= Utils.addEntities(basicWorkflowService.getItemTitle(workflows.get(i)))  %>
+                    <%= Utils.addEntities(WorkflowManager.getItemTitle(workflows[i]))  %>
             </td>
             <td class="<%= row %>RowOddCol">
                <form method="post" action="">
-                   <input type="hidden" name="workflow_id" value="<%= workflows.get(i).getID() %>"/>
+                   <input type="hidden" name="workflow_id" value="<%= workflows[i].getID() %>"/>
                    <input class="btn btn-default" type="submit" name="submit_abort" value="<fmt:message key="jsp.dspace-admin.general.abort-w-confirm"/>" />
               </form>
             </td>

@@ -17,8 +17,8 @@ import java.io.IOException;
 public class NoOpCurationTask extends AbstractCurationTask
 {
 
-    protected int status = Curator.CURATE_UNSET;
-    protected String result = null;
+    private int status = Curator.CURATE_UNSET;
+    private String result = null;
 
     @Override
     public int perform(DSpaceObject dso) throws IOException

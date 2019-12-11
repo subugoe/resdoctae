@@ -16,17 +16,12 @@ import org.apache.cocoon.environment.SourceResolver;
 import org.dspace.app.util.Util;
 import org.dspace.app.xmlui.utils.ContextUtil;
 import org.dspace.core.Context;
-import org.dspace.xmlworkflow.XmlWorkflowFactoryImpl;
-import org.dspace.xmlworkflow.XmlWorkflowServiceImpl;
-import org.dspace.xmlworkflow.factory.XmlWorkflowFactory;
-import org.dspace.xmlworkflow.factory.XmlWorkflowServiceFactory;
-import org.dspace.xmlworkflow.service.XmlWorkflowService;
+import org.dspace.xmlworkflow.WorkflowFactory;
+import org.dspace.xmlworkflow.XmlWorkflowManager;
 import org.dspace.xmlworkflow.state.Workflow;
 import org.dspace.xmlworkflow.state.actions.WorkflowActionConfig;
 import org.dspace.xmlworkflow.storedcomponents.PoolTask;
 import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
-import org.dspace.xmlworkflow.storedcomponents.service.PoolTaskService;
-import org.dspace.xmlworkflow.storedcomponents.service.XmlWorkflowItemService;
 
 import java.util.Map;
 
@@ -34,12 +29,6 @@ import java.util.Map;
  * @author Kevin Van de Velde (kevin at atmire dot com)
  */
 public class ClaimTasksAction extends AbstractAction {
-
-    protected PoolTaskService poolTaskService = XmlWorkflowServiceFactory.getInstance().getPoolTaskService();
-    protected XmlWorkflowItemService xmlWorkflowItemService = XmlWorkflowServiceFactory.getInstance().getXmlWorkflowItemService();
-    protected XmlWorkflowFactory workflowFactory = XmlWorkflowServiceFactory.getInstance().getWorkflowFactory();
-    protected XmlWorkflowService xmlWorkflowService = XmlWorkflowServiceFactory.getInstance().getXmlWorkflowService();
-
     @Override
     public Map act(Redirector redirector, SourceResolver resolver, Map objectModel, String source, Parameters parameters) throws Exception {
         Request request = ObjectModelHelper.getRequest(objectModel);
@@ -51,13 +40,14 @@ public class ClaimTasksAction extends AbstractAction {
     	{
             for (int workflowID : workflowIDs)
             {
-                XmlWorkflowItem workflowItem = xmlWorkflowItemService.find(context, workflowID);
-                PoolTask poolTask = poolTaskService.findByWorkflowIdAndEPerson(context, workflowItem, context.getCurrentUser());
-                Workflow workflow = workflowFactory.getWorkflow(workflowItem.getCollection());
+                PoolTask poolTask = PoolTask.findByWorkflowIdAndEPerson(context, workflowID, context.getCurrentUser().getID());
+                XmlWorkflowItem workflowItem = XmlWorkflowItem.find(context, workflowID);
+                Workflow workflow = WorkflowFactory.getWorkflow(workflowItem.getCollection());
 
                 WorkflowActionConfig currentAction = workflow.getStep(poolTask.getStepID()).getActionConfig(poolTask.getActionID());
-                xmlWorkflowService.doState(context, context.getCurrentUser(), request, workflowID, workflow, currentAction);
+                XmlWorkflowManager.doState(context, context.getCurrentUser(), request, workflowID, workflow, currentAction);
             }
+            context.commit();
         }
 
 

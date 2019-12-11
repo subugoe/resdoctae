@@ -9,9 +9,8 @@ package org.dspace.app.xmlui.aspect.administrative.item;
 
 import java.io.Serializable;
 import java.sql.SQLException;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Comparator;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
@@ -23,11 +22,8 @@ import org.dspace.app.xmlui.wing.element.List;
 import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
-import org.dspace.content.MetadataField;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 
 
 /**
@@ -65,7 +61,6 @@ public class ConfirmItemForm extends AbstractDSpaceTransformer {
     private static final Message T_submit_private = message("xmlui.administrative.item.ConfirmItemForm.submit_private");
     private static final Message T_submit_public = message("xmlui.administrative.item.ConfirmItemForm.submit_public");
 
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
 
 	public void addPageMeta(PageMeta pageMeta) throws WingException
 	{
@@ -81,10 +76,10 @@ public class ConfirmItemForm extends AbstractDSpaceTransformer {
 	public void addBody(Body body) throws WingException, SQLException 
 	{
 		// Get our parameters and state
-		UUID itemID = UUID.fromString(parameters.getParameter("itemID", null));
-		Item item = itemService.find(context, itemID);
-		final java.util.List<MetadataValue> values = itemService.getMetadata(item, Item.ANY, Item.ANY, Item.ANY, Item.ANY);
-		Collections.sort(values, new DCValueComparator());
+		int itemID = parameters.getParameterAsInteger("itemID",-1);
+		Item item = Item.find(context, itemID);
+		final Metadatum[] values = item.getMetadata(Item.ANY, Item.ANY, Item.ANY, Item.ANY);
+		Arrays.sort(values, new DCValueComparator());
 
 		String confirm = parameters.getParameter("confirm",null);
 
@@ -109,18 +104,17 @@ public class ConfirmItemForm extends AbstractDSpaceTransformer {
 
 
 		// TABLE: metadata table
-		Table table = main.addTable("withdrawValues", values.size()+1, 3);
+		Table table = main.addTable("withdrawValues", values.length+1, 3);
 		final Row header = table.addRow(Row.ROLE_HEADER);
 		header.addCell().addContent(T_column1);
 		header.addCell().addContent(T_column2);
 		header.addCell().addContent(T_column3);
-		for(final MetadataValue value:values){
-			MetadataField metadataField = value.getMetadataField();
-			final String dcValue = metadataField.getMetadataSchema().getName() + ". " + metadataField.getElement() + (metadataField.getQualifier()==null?"":(". " + metadataField.getQualifier()));
+		for(final Metadatum value:values){
+			final String dcValue = value.schema + ". " + value.element + (value.qualifier==null?"":(". " + value.qualifier));
 			final Row row = table.addRow();
 			row.addCell().addContent(dcValue);
-			row.addCell().addContent(value.getValue());
-			row.addCell().addContent(value.getLanguage());
+			row.addCell().addContent(value.value);
+			row.addCell().addContent(value.language);
 		}
 
 		// LIST: actions, confirm or return
@@ -159,12 +153,10 @@ public class ConfirmItemForm extends AbstractDSpaceTransformer {
 	 */
 	static class DCValueComparator implements Comparator, Serializable {
 		public int compare(Object arg0, Object arg1) {
-			final MetadataValue o1 = (MetadataValue)arg0;
-			final MetadataValue o2 = (MetadataValue)arg1;
-			MetadataField o1Field = o1.getMetadataField();
-			MetadataField o2Field = o2.getMetadataField();
-			final String s1 = o1Field.getMetadataSchema().getName() + o1Field.getElement() + (o1Field.getQualifier()==null?"":("." + o1Field.getQualifier()));
-			final  String s2 = o2Field.getMetadataSchema().getName() + o2Field.getElement() + (o2Field.getQualifier()==null?"":("." + o2Field.getQualifier()));
+			final Metadatum o1 = (Metadatum)arg0;
+			final Metadatum o2 = (Metadatum)arg1;
+			final String s1 = o1.schema + o1.element + (o1.qualifier==null?"":("." + o1.qualifier));
+			final  String s2 = o2.schema + o2.element + (o2.qualifier==null?"":("." + o2.qualifier));
 			return s1.compareTo(s2);
 		}
 	}

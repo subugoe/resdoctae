@@ -25,48 +25,36 @@
 
 <%@ taglib uri="http://www.dspace.org/dspace-tags.tld" prefix="dspace" %>
 
+<%@ page import="javax.servlet.jsp.jstl.fmt.LocaleSupport" %>
+<%@ page import="org.dspace.app.webui.servlet.admin.EditCommunitiesServlet" %>
+<%@ page import="org.dspace.app.webui.util.CurateTaskResult" %>
 <%@ page import="org.dspace.content.Item" %>
+<%@ page import="org.dspace.content.Metadatum" %>
 <%@ page import="org.dspace.core.ConfigurationManager" %>
-<%@ page import="java.util.UUID" %>
 <%!
     private static final String TASK_QUEUE_NAME = ConfigurationManager.getProperty("curate", "ui.queuename");
 %>
 <%
     Item item = (Item) request.getAttribute("item");
-    UUID itemID = (item != null ? item.getID() : null);
+    int itemID = (item != null ? item.getID() : -1);
     String title = "Unknown Item";
     if (item != null)
     {
-        title = item.getName();
+        Metadatum[] dcvs = item.getMetadataByMetadataString("dc.title");
+        if (dcvs != null && dcvs.length > 0)
+        {
+            title = dcvs[0].value;
+        }
     }
     String groupOptions = (String)request.getAttribute("curate_group_options");
     String taskOptions = (String)request.getAttribute("curate_task_options");
-
-    // Is the logged in user an admin or community admin or collection admin
-    Boolean admin = (Boolean)request.getAttribute("is.admin");
-    boolean isAdmin = (admin == null ? false : admin.booleanValue());
-    
-    Boolean communityAdmin = (Boolean)request.getAttribute("is.communityAdmin");
-    boolean isCommunityAdmin = (communityAdmin == null ? false : communityAdmin.booleanValue());
-    
-    Boolean collectionAdmin = (Boolean)request.getAttribute("is.collectionAdmin");
-    boolean isCollectionAdmin = (collectionAdmin == null ? false : collectionAdmin.booleanValue());
-    
-    String naviAdmin = "admin";
-    String link = "/dspace-admin";
-    
-    if(!isAdmin && (isCommunityAdmin || isCollectionAdmin))
-    {
-        naviAdmin = "community-or-collection-admin";
-        link = "/tools";
-    }
 %>
 
 <dspace:layout style="submission" titlekey="jsp.tools.curate.item.title"
-               navbar="<%= naviAdmin %>"
+               navbar="admin"
                locbar="link"
                parenttitlekey="jsp.administer"
-               parentlink="<%= link %>">
+               parentlink="/dspace-admin">
 
 <%@ include file="/tools/curate-message.jsp" %>
 

@@ -62,7 +62,7 @@ public class ResolvedTask
      * curation DI.
      * 
      * @param curator the Curator controlling this task
-     * @throws IOException if IO error
+     * @throws IOException
      */
     public void init(Curator curator) throws IOException
     {
@@ -81,7 +81,7 @@ public class ResolvedTask
      *
      * @param dso the DSpace object
      * @return status code
-     * @throws IOException if error
+     * @throws IOException
      */
     public int perform(DSpaceObject dso) throws IOException
     {
@@ -94,7 +94,7 @@ public class ResolvedTask
      * @param ctx DSpace context object
      * @param id persistent ID for DSpace object
      * @return status code
-     * @throws IOException if error
+     * @throws Exception
      */
     public int perform(Context ctx, String id) throws IOException
     {

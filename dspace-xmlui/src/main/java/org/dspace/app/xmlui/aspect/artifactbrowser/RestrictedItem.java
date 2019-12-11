@@ -20,13 +20,10 @@ import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.*;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.UUID;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.cocoon.ResourceNotFoundException;
 import org.apache.cocoon.environment.http.HttpEnvironment;
@@ -99,9 +96,6 @@ public class RestrictedItem extends AbstractDSpaceTransformer //implements Cache
     private static final Message T_para_login =
             message("xmlui.ArtifactBrowser.RestrictedItem.login");
 
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-
-
     public void addPageMeta(PageMeta pageMeta) throws SAXException,
             WingException, UIException, SQLException, IOException,
             AuthorizeException 
@@ -112,7 +106,7 @@ public class RestrictedItem extends AbstractDSpaceTransformer //implements Cache
 
         pageMeta.addTrailLink(contextPath + "/", T_dspace_home);
         if (dso != null) {
-            HandleUtil.buildHandleTrail(context, dso, pageMeta, contextPath);
+            HandleUtil.buildHandleTrail(dso, pageMeta, contextPath);
         }
         pageMeta.addTrail().addContent(T_trail);
 
@@ -140,14 +134,14 @@ public class RestrictedItem extends AbstractDSpaceTransformer //implements Cache
             Community community = (Community) dso;
             unauthorized = body.addDivision("unauthorized-resource", "primary");
             unauthorized.setHead(T_head_community);
-            unauthorized.addPara(T_para_community.parameterize(community.getName()));
+            unauthorized.addPara(T_para_community.parameterize(community.getMetadata("name")));
         } 
         else if (dso instanceof Collection) 
         {
             Collection collection = (Collection) dso;
             unauthorized = body.addDivision("unauthorized-resource", "primary");
             unauthorized.setHead(T_head_collection);
-            unauthorized.addPara(T_para_collection.parameterize(collection.getName()));
+            unauthorized.addPara(T_para_collection.parameterize(collection.getMetadata("name")));
         } 
         else if (dso instanceof Item) 
         {
@@ -155,7 +149,7 @@ public class RestrictedItem extends AbstractDSpaceTransformer //implements Cache
             if (request.getParameter("bitstreamId") != null) {
                 String identifier = "unknown";
                 try {
-                    Bitstream bit = bitstreamService.find(context, UUID.fromString(request.getParameter("bitstreamId")));
+                    Bitstream bit = Bitstream.find(context, new Integer(request.getParameter("bitstreamId")));
                     if (bit != null) {
                         identifier = bit.getName();
                     }

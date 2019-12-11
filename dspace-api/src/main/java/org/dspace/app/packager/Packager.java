@@ -7,26 +7,31 @@
  */
 package org.dspace.app.packager;
 
-import org.apache.commons.cli.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.sql.SQLException;
+import java.util.List;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.packager.PackageDisseminator;
 import org.dspace.content.packager.PackageException;
-import org.dspace.content.packager.PackageIngester;
 import org.dspace.content.packager.PackageParameters;
+import org.dspace.content.packager.PackageIngester;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.core.service.PluginService;
+import org.dspace.core.PluginManager;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.workflow.WorkflowException;
-
-import java.io.*;
-import java.sql.SQLException;
-import java.util.List;
+import org.dspace.handle.HandleManager;
 
 /**
  * Command-line interface to the Packager plugin.
@@ -108,12 +113,12 @@ import java.util.List;
 public class Packager
 {
     /* Various private global settings/options */
-    protected String packageType = null;
-    protected boolean submit = true;
-    protected boolean userInteractionEnabled = true;
+    private String packageType = null;
+    private boolean submit = true;
+    private boolean userInteractionEnabled = true;
 
     // die from illegal command line
-    protected static void usageError(String msg)
+    private static void usageError(String msg)
     {
         System.out.println(msg);
         System.out.println(" (run with -h flag for details)");
@@ -157,7 +162,6 @@ public class Packager
         String[] parents = null;
         String identifier = null;
         PackageParameters pkgParams = new PackageParameters();
-        PluginService pluginService = CoreServiceFactory.getInstance().getPluginService();
 
         //initialize a new packager -- we'll add all our current params as settings
         Packager myPackager = new Packager();
@@ -176,7 +180,7 @@ public class Packager
                 System.out.println("--------------------------------------------------------------");
                 System.out.println("(These options may be specified using --option as described above)");
 
-                PackageIngester sip = (PackageIngester) pluginService
+                PackageIngester sip = (PackageIngester) PluginManager
                     .getNamedPlugin(PackageIngester.class, line.getOptionValue('t'));
 
                 if (sip != null)
@@ -189,7 +193,7 @@ public class Packager
                     System.out.println("\nNo valid Submission plugin found for " + line.getOptionValue('t') + " type.");
                 }
 
-                PackageDisseminator dip = (PackageDisseminator) pluginService
+                PackageDisseminator dip = (PackageDisseminator) PluginManager
                     .getNamedPlugin(PackageDisseminator.class, line.getOptionValue('t'));
 
                 if (dip != null)
@@ -206,7 +210,7 @@ public class Packager
             else  //otherwise, display list of valid packager types
             {
                 System.out.println("\nAvailable Submission Package (SIP) types:");
-                String pn[] = pluginService
+                String pn[] = PluginManager
                         .getAllPluginNames(PackageIngester.class);
                 for (int i = 0; i < pn.length; ++i)
                 {
@@ -214,7 +218,7 @@ public class Packager
                 }
                 System.out
                         .println("\nAvailable Dissemination Package (DIP) types:");
-                pn = pluginService.getAllPluginNames(PackageDisseminator.class);
+                pn = PluginManager.getAllPluginNames(PackageDisseminator.class);
                 for (int i = 0; i < pn.length; ++i)
                 {
                     System.out.println("  " + pn[i]);
@@ -312,7 +316,7 @@ public class Packager
         // find the EPerson, assign to context
         Context context = new Context();
         EPerson myEPerson = null;
-        myEPerson = EPersonServiceFactory.getInstance().getEPersonService().findByEmail(context, eperson);
+        myEPerson = EPerson.findByEmail(context, eperson);
         if (myEPerson == null)
         {
             usageError("Error, eperson cannot be found: " + eperson);
@@ -323,8 +327,7 @@ public class Packager
         //If we are in REPLACE mode
         if(pkgParams.replaceModeEnabled())
         {
-            context.setMode(Context.Mode.BATCH_EDIT);
-            PackageIngester sip = (PackageIngester) pluginService
+            PackageIngester sip = (PackageIngester) PluginManager
                     .getNamedPlugin(PackageIngester.class, myPackager.packageType);
             if (sip == null)
             {
@@ -336,7 +339,7 @@ public class Packager
             //if a specific identifier was specified, make sure it is valid
             if(identifier!=null && identifier.length()>0)
             {
-                objToReplace = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context, identifier);
+                objToReplace = HandleManager.resolveToObject(context, identifier);
                 if (objToReplace == null)
                 {
                     throw new IllegalArgumentException("Bad identifier/handle -- "
@@ -387,9 +390,7 @@ public class Packager
         //else if normal SUBMIT mode (or basic RESTORE mode -- which is a special type of submission)
         else if (myPackager.submit || pkgParams.restoreModeEnabled())
         {
-            context.setMode(Context.Mode.BATCH_EDIT);
-
-            PackageIngester sip = (PackageIngester) pluginService
+            PackageIngester sip = (PackageIngester) PluginManager
                     .getNamedPlugin(PackageIngester.class, myPackager.packageType);
             if (sip == null)
             {
@@ -406,7 +407,7 @@ public class Packager
                 for (int i = 0; i < parents.length; i++)
                 {
                     // sanity check: did handle resolve?
-                    parentObjs[i] = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context,
+                    parentObjs[i] = HandleManager.resolveToObject(context,
                             parents[i]);
                     if (parentObjs[i] == null)
                     {
@@ -440,17 +441,15 @@ public class Packager
         }// else, if DISSEMINATE mode
         else
         {
-            context.setMode(Context.Mode.READ_ONLY);
-
             //retrieve specified package disseminator
-            PackageDisseminator dip = (PackageDisseminator) pluginService
+            PackageDisseminator dip = (PackageDisseminator) PluginManager
                 .getNamedPlugin(PackageDisseminator.class, myPackager.packageType);
             if (dip == null)
             {
                 usageError("Error, Unknown package type: " + myPackager.packageType);
             }
 
-            DSpaceObject dso = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context, identifier);
+            DSpaceObject dso = HandleManager.resolveToObject(context, identifier);
             if (dso == null)
             {
                 throw new IllegalArgumentException("Bad identifier/handle -- "
@@ -475,12 +474,12 @@ public class Packager
      * @param pkgParams Parameters to pass to individual packager instances
      * @param sourceFile location of the source package to ingest
      * @param parentObjs Parent DSpace object(s) to attach new object to
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws FileNotFoundException if file doesn't exist
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
-     * @throws PackageException if packaging error
+     * @throws IOException
+     * @throws SQLException
+     * @throws FileNotFoundException
+     * @throws AuthorizeException
+     * @throws CrosswalkException
+     * @throws PackageException
      */
     protected void ingest(Context context, PackageIngester sip, PackageParameters pkgParams, String sourceFile, DSpaceObject parentObjs[])
             throws IOException, SQLException, FileNotFoundException, AuthorizeException, CrosswalkException, PackageException
@@ -505,103 +504,103 @@ public class Packager
         //NOTE: at this point, Parent may be null -- in which case it is up to the PackageIngester
         // to either determine the Parent (from package contents) or throw an error.
 
-        try
+
+        //If we are doing a recursive ingest, call ingestAll()
+        if(pkgParams.recursiveModeEnabled())
         {
-            //If we are doing a recursive ingest, call ingestAll()
-            if(pkgParams.recursiveModeEnabled())
+            System.out.println("\nAlso ingesting all referenced packages (recursive mode)..");
+            System.out.println("This may take a while, please check your logs for ongoing status while we process each package.");
+
+            //ingest first package & recursively ingest anything else that package references (child packages, etc)
+            List<String> hdlResults = sip.ingestAll(context, parent, pkgFile, pkgParams, null);
+
+            if(hdlResults!=null)
             {
-                System.out.println("\nAlso ingesting all referenced packages (recursive mode)..");
-                System.out.println("This may take a while, please check your logs for ongoing status while we process each package.");
+                //Report total objects created
+                System.out.println("\nCREATED a total of " + hdlResults.size() + " DSpace Objects.");
 
-                //ingest first package & recursively ingest anything else that package references (child packages, etc)
-                List<String> hdlResults = sip.ingestAll(context, parent, pkgFile, pkgParams, null);
-
-                if (hdlResults != null)
+                String choiceString = null;
+                //Ask if user wants full list printed to command line, as this may be rather long.
+                if(this.userInteractionEnabled)
                 {
-                    //Report total objects created
-                    System.out.println("\nCREATED a total of " + hdlResults.size() + " DSpace Objects.");
+                    BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("\nWould you like to view a list of all objects that were created? [y/n]: ");
+                    choiceString = input.readLine();
+                }
+                else
+                {
+                    // user interaction disabled -- default answer to 'yes', as
+                    // we want to provide user with as detailed a report as possible.
+                    choiceString = "y";
+                }
 
-                    String choiceString = null;
-                    //Ask if user wants full list printed to command line, as this may be rather long.
-                    if (this.userInteractionEnabled)
+                // Provide detailed report if user answered 'yes'
+                if (choiceString.equalsIgnoreCase("y"))
+                {
+                    System.out.println("\n\n");
+                    for(String result : hdlResults)
                     {
-                        BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-                        System.out.print("\nWould you like to view a list of all objects that were created? [y/n]: ");
-                        choiceString = input.readLine();
-                    }
-                    else
-                    {
-                        // user interaction disabled -- default answer to 'yes', as
-                        // we want to provide user with as detailed a report as possible.
-                        choiceString = "y";
-                    }
-
-                    // Provide detailed report if user answered 'yes'
-                    if (choiceString.equalsIgnoreCase("y"))
-                    {
-                        System.out.println("\n\n");
-                        for (String result : hdlResults)
+                        DSpaceObject dso = HandleManager.resolveToObject(context, result);
+                        
+                        if(dso!=null)
                         {
-                            DSpaceObject dso = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context, result);
-
-                            if(dso!=null)
+                            if(pkgParams.restoreModeEnabled())
                             {
-
-                                if (pkgParams.restoreModeEnabled()) {
-                                    System.out.println("RESTORED DSpace " + Constants.typeText[dso.getType()] +
-                                            " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
-                                } else {
-                                    System.out.println("CREATED new DSpace " + Constants.typeText[dso.getType()] +
-                                            " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
-                                }
+                                System.out.println("RESTORED DSpace " + Constants.typeText[dso.getType()] +
+                                        " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
+                            }
+                            else
+                            {
+                                System.out.println("CREATED new DSpace " + Constants.typeText[dso.getType()] +
+                                        " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
                             }
                         }
                     }
                 }
 
             }
-            else
+        }
+        else
+        {
+
+            //otherwise, just one package to ingest
+            try
             {
-                //otherwise, just one package to ingest
-                try
-                {
-                    DSpaceObject dso = sip.ingest(context, parent, pkgFile, pkgParams, null);
 
-                    if (dso != null)
-                    {
-                        if (pkgParams.restoreModeEnabled())
-                        {
-                            System.out.println("RESTORED DSpace " + Constants.typeText[dso.getType()] +
-                                    " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
-                        }
-                        else
-                        {
-                            System.out.println("CREATED new DSpace " + Constants.typeText[dso.getType()] +
-                                    " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
-                        }
-                    }
-                }
-                catch (IllegalStateException ie)
-                {
-                    // NOTE: if we encounter an IllegalStateException, this means the
-                    // handle is already in use and this object already exists.
+                DSpaceObject dso = sip.ingest(context, parent, pkgFile, pkgParams, null);
 
-                    //if we are skipping over (i.e. keeping) existing objects
-                    if (pkgParams.keepExistingModeEnabled())
+                if(dso!=null)
+                {
+                    if(pkgParams.restoreModeEnabled())
                     {
-                        System.out.println("\nSKIPPED processing package '" + pkgFile + "', as an Object already exists with this handle.");
+                        System.out.println("RESTORED DSpace " + Constants.typeText[dso.getType()] +
+                                " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
                     }
-                    else // Pass this exception on -- which essentially causes a full rollback of all changes (this is the default)
+                    else
                     {
-                        throw ie;
+                        System.out.println("CREATED new DSpace " + Constants.typeText[dso.getType()] +
+                                " [ hdl=" + dso.getHandle() + ", dbID=" + dso.getID() + " ] ");
                     }
                 }
             }
+            catch(IllegalStateException ie)
+            {
+                // NOTE: if we encounter an IllegalStateException, this means the
+                // handle is already in use and this object already exists.
+
+                //if we are skipping over (i.e. keeping) existing objects
+                if(pkgParams.keepExistingModeEnabled())
+                {
+                    System.out.println("\nSKIPPED processing package '" + pkgFile + "', as an Object already exists with this handle.");
+                }
+                else // Pass this exception on -- which essentially causes a full rollback of all changes (this is the default)
+                {
+                    throw ie;
+                }
+            }
+
         }
-        catch (WorkflowException e)
-        {
-            throw new PackageException(e);
-        }
+
     }
 
 
@@ -614,12 +613,12 @@ public class Packager
      * @param dso DSpace Object to disseminate as a package
      * @param pkgParams Parameters to pass to individual packager instances
      * @param outputFile File where final package should be saved
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws FileNotFoundException if file doesn't exist
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
-     * @throws PackageException if packaging error
+     * @throws IOException
+     * @throws SQLException
+     * @throws FileNotFoundException
+     * @throws AuthorizeException
+     * @throws CrosswalkException
+     * @throws PackageException
      */
     protected void disseminate(Context context, PackageDisseminator dip,
 			       DSpaceObject dso, PackageParameters pkgParams,
@@ -696,12 +695,12 @@ public class Packager
      * @param pkgParams Parameters to pass to individual packager instances
      * @param sourceFile location of the source package to ingest as the replacement
      * @param objToReplace DSpace object to replace (may be null if it will be specified in the package itself)
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws FileNotFoundException if file doesn't exist
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
-     * @throws PackageException if packaging error
+     * @throws IOException
+     * @throws SQLException
+     * @throws FileNotFoundException
+     * @throws AuthorizeException
+     * @throws CrosswalkException
+     * @throws PackageException
      */
     protected void replace(Context context, PackageIngester sip, PackageParameters pkgParams, String sourceFile, DSpaceObject objToReplace)
             throws IOException, SQLException, FileNotFoundException, AuthorizeException, CrosswalkException, PackageException
@@ -725,67 +724,63 @@ public class Packager
         // NOTE: At this point, objToReplace may be null.  If it is null, it is up to the PackageIngester
         // to determine which Object needs to be replaced (based on the handle specified in the pkg, etc.)
 
-        try
+
+        //If we are doing a recursive replace, call replaceAll()
+        if(pkgParams.recursiveModeEnabled())
         {
-            //If we are doing a recursive replace, call replaceAll()
-            if (pkgParams.recursiveModeEnabled())
+            //ingest first object using package & recursively replace anything else that package references (child objects, etc)
+            List<String> hdlResults = sip.replaceAll(context, objToReplace, pkgFile, pkgParams);
+
+            if(hdlResults!=null)
             {
-                //ingest first object using package & recursively replace anything else that package references (child objects, etc)
-                List<String> hdlResults = sip.replaceAll(context, objToReplace, pkgFile, pkgParams);
+                //Report total objects replaced
+                System.out.println("\nREPLACED a total of " + hdlResults.size() + " DSpace Objects.");
 
-                if (hdlResults != null) {
-                    //Report total objects replaced
-                    System.out.println("\nREPLACED a total of " + hdlResults.size() + " DSpace Objects.");
+                String choiceString = null;
+                //Ask if user wants full list printed to command line, as this may be rather long.
+                if(this.userInteractionEnabled)
+                {
+                    BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.print("\nWould you like to view a list of all objects that were replaced? [y/n]: ");
+                    choiceString = input.readLine();
+                }
+                else
+                {
+                    // user interaction disabled -- default answer to 'yes', as
+                    // we want to provide user with as detailed a report as possible.
+                    choiceString = "y";
+                }
 
-                    String choiceString = null;
-                    //Ask if user wants full list printed to command line, as this may be rather long.
-                    if (this.userInteractionEnabled)
+                // Provide detailed report if user answered 'yes'
+                if (choiceString.equalsIgnoreCase("y"))
+                {
+                    System.out.println("\n\n");
+                    for(String result : hdlResults)
                     {
-                        BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
-                        System.out.print("\nWould you like to view a list of all objects that were replaced? [y/n]: ");
-                        choiceString = input.readLine();
-                    }
-                    else
-                    {
-                        // user interaction disabled -- default answer to 'yes', as
-                        // we want to provide user with as detailed a report as possible.
-                        choiceString = "y";
-                    }
-
-                    // Provide detailed report if user answered 'yes'
-                    if (choiceString.equalsIgnoreCase("y"))
-                    {
-                        System.out.println("\n\n");
-                        for (String result : hdlResults)
+                        DSpaceObject dso = HandleManager.resolveToObject(context, result);
+                        
+                        if(dso!=null)
                         {
-                            DSpaceObject dso = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context, result);
-
-                            if (dso != null)
-                            {
-                                System.out.println("REPLACED DSpace " + Constants.typeText[dso.getType()] +
+                            System.out.println("REPLACED DSpace " + Constants.typeText[dso.getType()] +
                                         " [ hdl=" + dso.getHandle() + " ] ");
-                            }
                         }
                     }
-
-
                 }
-            }
-            else
-            {
-                //otherwise, just one object to replace
-                DSpaceObject dso = sip.replace(context, objToReplace, pkgFile, pkgParams);
 
-                if (dso != null)
-                {
-                    System.out.println("REPLACED DSpace " + Constants.typeText[dso.getType()] +
-                            " [ hdl=" + dso.getHandle() + " ] ");
-                }
+
             }
         }
-        catch (WorkflowException e)
+        else
         {
-            throw new PackageException(e);
+            //otherwise, just one object to replace
+            DSpaceObject dso = sip.replace(context, objToReplace, pkgFile, pkgParams);
+
+            if(dso!=null)
+            {
+                System.out.println("REPLACED DSpace " + Constants.typeText[dso.getType()] +
+                        " [ hdl=" + dso.getHandle() + " ] ");
+            }
         }
     }
+
 }

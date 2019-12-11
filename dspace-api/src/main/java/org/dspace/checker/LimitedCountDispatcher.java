@@ -7,10 +7,7 @@
  */
 package org.dspace.checker;
 
-import org.dspace.content.Bitstream;
-
-import java.sql.SQLException;
-import org.dspace.core.factory.CoreServiceFactory;
+import org.dspace.core.PluginManager;
 
 /**
  * Decorator that dispatches a specified number of bitstreams from a delegate
@@ -30,11 +27,11 @@ public class LimitedCountDispatcher implements BitstreamDispatcher
     private BitstreamDispatcher delegate = null;
 
     /**
-     * Default constructor uses LegacyPluginServiceImpl
+     * Default constructor uses PluginManager
      */
     public LimitedCountDispatcher()
     {
-        this((BitstreamDispatcher) CoreServiceFactory.getInstance().getPluginService()
+        this((BitstreamDispatcher) PluginManager
                 .getSinglePlugin(BitstreamDispatcher.class));
     }
 
@@ -66,11 +63,12 @@ public class LimitedCountDispatcher implements BitstreamDispatcher
     /**
      * Retreives the next bitstream to be checked.
      * 
-     * @return the bitstream
-     * @throws SQLException if database error
+     * @return the bitstream id
+     * @throws SQLException
+     *             if database error occurs.
      */
-    @Override
-    public Bitstream next() throws SQLException {
+    public int next()
+    {
         if (remaining > 0)
         {
             remaining--;
@@ -79,7 +77,7 @@ public class LimitedCountDispatcher implements BitstreamDispatcher
         }
         else
         {
-            return null;
+            return BitstreamDispatcher.SENTINEL;
         }
     }
 }

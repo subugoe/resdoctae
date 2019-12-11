@@ -10,6 +10,7 @@ package org.dspace.storage.rdbms.migration;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
+import org.dspace.storage.rdbms.MigrationUtils;
 import org.flywaydb.core.api.migration.MigrationChecksumProvider;
 import org.flywaydb.core.api.migration.jdbc.JdbcMigration;
 
@@ -52,7 +53,7 @@ public class V5_0_2014_09_25__DS_1582_Metadata_For_All_Objects_drop_constraint
             throws IOException, SQLException
     {
         // Drop the constraint associated with "item_id" column of "metadatavalue"
-        checksum = MigrationUtils.dropDBConstraint(connection, "metadatavalue", "item_id", "fkey");
+        checksum = MigrationUtils.dropDBConstraint(connection, "metadatavalue", "item_id");
     }
 
     /**

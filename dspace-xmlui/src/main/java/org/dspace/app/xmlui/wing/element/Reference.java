@@ -51,7 +51,7 @@ public class Reference extends AbstractWingElement implements
     private String type;
 
     /** All content of this container */
-    private java.util.List<AbstractWingElement> contents = new ArrayList<>();
+    private java.util.List<AbstractWingElement> contents = new ArrayList<AbstractWingElement>();
 
     /**
      * Construct a new object reference.
@@ -62,8 +62,6 @@ public class Reference extends AbstractWingElement implements
      * 
      * @param object
      *            (Required) The referenced object.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            if the object cannot be managed.
      */
     protected Reference(WingContext context, Object object)
             throws WingException
@@ -100,8 +98,6 @@ public class Reference extends AbstractWingElement implements
      * @param render
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @return the new set.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public ReferenceSet addReferenceSet(String type, String orderBy, String render)
             throws WingException
@@ -119,8 +115,6 @@ public class Reference extends AbstractWingElement implements
      *            (required) The reference type, see referenceSet.TYPES
      * @param orderBy
      *            (May be null) A statement of ordering for reference sets.
-     * @return the new set.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public ReferenceSet addReferenceSet(String type, String orderBy)
             throws WingException
@@ -133,8 +127,6 @@ public class Reference extends AbstractWingElement implements
      * 
      * @param type
      *            (required) The include type, see includeSet.TYPES
-     * @return the new set.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public ReferenceSet addReferenceSet(String type) throws WingException
     {
@@ -153,9 +145,7 @@ public class Reference extends AbstractWingElement implements
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler, 
             NamespaceSupport namespaces) throws SAXException
     {
@@ -177,7 +167,9 @@ public class Reference extends AbstractWingElement implements
         endElement(contentHandler, namespaces, E_REFERENCE);
     }
 
-    @Override
+    /**
+     * dispose
+     */
     public void dispose()
     {
         if (contents != null)

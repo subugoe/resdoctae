@@ -18,10 +18,8 @@ import org.apache.avalon.framework.parameters.Parameters;
 import org.apache.cocoon.environment.http.HttpEnvironment;
 import org.apache.cocoon.selection.Selector;
 import org.dspace.app.xmlui.utils.ContextUtil;
-import org.dspace.authenticate.AuthenticationServiceImpl;
+import org.dspace.authenticate.AuthenticationManager;
 import org.dspace.authenticate.AuthenticationMethod;
-import org.dspace.authenticate.factory.AuthenticateServiceFactory;
-import org.dspace.authenticate.service.AuthenticationService;
 
 /**
  * Selector will count the number of interactive AuthenticationMethods defined in the 
@@ -31,15 +29,13 @@ import org.dspace.authenticate.service.AuthenticationService;
  *
  */
 public class AuthenticationCountSelector implements Selector{
-
-    protected AuthenticationService authenticationService = AuthenticateServiceFactory.getInstance().getAuthenticationService();
     /**
      * Returns true if the expression (in this case a number) is equal to the number
      * of AuthenticationMethods defined in the dspace.cfg file.
      */
 	public boolean select(String expression, Map objectModel, Parameters parameters) {
 		// get an iterator of all the AuthenticationMethods defined
-		final Iterator<AuthenticationMethod> authMethods = authenticationService
+		final Iterator<AuthenticationMethod> authMethods = AuthenticationManager
 		    .authenticationMethodIterator();
 		
 		  final HttpServletResponse httpResponse = (HttpServletResponse) objectModel

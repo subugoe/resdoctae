@@ -11,8 +11,9 @@
 
 <!--
 
-The ViewArtifacts Aspect is responsible for viewing communities /
-collections / items / and bitstreams
+The ArtifactBrowser Aspect is responsible for browsing communities /
+collections / items / and bitstreams, viewing an individual item,
+and searching the repository.
 -->
 
 <!-- Added request-item support
@@ -108,6 +109,12 @@ collections / items / and bitstreams
                                 <map:serialize type="xml"/>
                         </map:match>
 
+
+			<!-- appanded static pages -->
+			<map:match pattern="info/**">
+				<map:transform type="Include" src="file:///opt/dspace/adw/config/{1}.xml" />
+                                <map:serialize type="xml"/>
+                        </map:match>
 
 
 			<!-- Display statistics -->
@@ -286,7 +293,9 @@ collections / items / and bitstreams
 				<map:transform type="FeedbackSent" />
 				<map:serialize type="xml" />
 			</map:match>
-			
+
+
+
 			<!-- A request item flow -->
 			<map:match pattern="itemRequestResponse/*/">
 				<map:act type="ItemRequestResponseAction">

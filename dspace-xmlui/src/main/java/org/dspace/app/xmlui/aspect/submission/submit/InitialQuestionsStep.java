@@ -20,11 +20,8 @@ import org.dspace.app.xmlui.wing.element.Division;
 import org.dspace.app.xmlui.wing.element.List;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
-import org.dspace.content.MetadataSchema;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.xml.sax.SAXException;
 
 /**
@@ -78,8 +75,6 @@ public class InitialQuestionsStep extends AbstractSubmissionStep
     protected static final Message T_publisher= 
         message("xmlui.Submission.submit.InitialQuestionsStep.publisher");
 
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-
     /**
 	 * Establish our required parameters, abstractStep will enforce these.
 	 */
@@ -98,11 +93,11 @@ public class InitialQuestionsStep extends AbstractSubmissionStep
 		Collection collection = submission.getCollection();
 		String actionURL = contextPath + "/handle/"+collection.getHandle() + "/submit/" + knot.getId() + ".continue";
 
-		java.util.List<MetadataValue> titles = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "title", "alternative", Item.ANY);
+		Metadatum[] titles = item.getDC("title", "alternative", Item.ANY);
 		
-        java.util.List<MetadataValue> dateIssued = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "date", "issued", Item.ANY);
-        java.util.List<MetadataValue> citation = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "identifier", "citation", Item.ANY);
-        java.util.List<MetadataValue> publisher = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "publisher", null, Item.ANY);
+		Metadatum[] dateIssued = item.getDC("date", "issued", Item.ANY);
+        Metadatum[] citation = item.getDC("identifier", "citation", Item.ANY);
+        Metadatum[] publisher = item.getDC("publisher", null, Item.ANY);
     	
     	
         // Generate a from asking the user two questions: multiple 
@@ -125,19 +120,19 @@ public class InitialQuestionsStep extends AbstractSubmissionStep
         
         // If any titles would be removed if the user unselected this box then 
         // warn the user!
-        if (titles.size() > 0)
+        if (titles.length > 0)
         {
 	        org.dspace.app.xmlui.wing.element.Item note = form.addItem();
 	        note.addHighlight("bold").addContent(T_important_note);
 	        note.addContent(T_multiple_titles_note);
-	        for (int i=0; i< titles.size(); i++)
+	        for (int i=0; i< titles.length; i++)
 	        {
 	        	if (i > 0)
                 {
                     note.addContent(T_separator);
                 }
 	        	note.addContent("\"");
-	        	note.addHighlight("bold").addContent(titles.get(i).getValue());
+	        	note.addHighlight("bold").addContent(titles[i].value);
 	        	note.addContent("\"");
 	        }
         }
@@ -153,7 +148,7 @@ public class InitialQuestionsStep extends AbstractSubmissionStep
         
         // If any metadata would be removed if the user unselected the box then warn 
         // the user about what will be removed.
-        if (dateIssued.size() > 0 || citation.size() > 0 || publisher.size() > 0)
+        if (dateIssued.length > 0 || citation.length > 0 || publisher.length > 0)
         {
         	org.dspace.app.xmlui.wing.element.Item note = form.addItem();
 	        note.addHighlight("bold").addContent(T_important_note);
@@ -161,73 +156,73 @@ public class InitialQuestionsStep extends AbstractSubmissionStep
 	        
 	        // Start a convoluted processes to build an english list of values.
 	        // Format: Date Issued (value, value, value), Citation (value, value, value), Publisher (value, value, value)
-	        if (dateIssued.size() > 0)
+	        if (dateIssued.length > 0)
 	        {
 	        	note.addHighlight("bold").addContent(T_date_issued);
 	        	note.addContent(T_open);
-	        	for (int i=0; i< dateIssued.size(); i++)
+	        	for (int i=0; i< dateIssued.length; i++)
 	        	{
 	        		if (i > 0)
                     {
                         note.addContent(T_separator);
                     }
-	        		note.addContent(dateIssued.get(i).getValue());
+	        		note.addContent(dateIssued[i].value);
 	        	}
 	        	note.addContent(T_close);
 	        }
 	        
 	        // Conjunction
-	        if (dateIssued.size() > 0 && (citation.size() > 0 || publisher.size() > 0))
+	        if (dateIssued.length > 0 && (citation.length > 0 || publisher.length > 0))
             {
                 note.addContent(T_separator);
             }
 	        
-	        if (dateIssued.size() > 0 && citation.size() > 0 && publisher.size() == 0)
+	        if (dateIssued.length > 0 && citation.length > 0 && publisher.length == 0)
 	        {
 	        	note.addContent(T_and);
 	        }
 	        
 	        // Citation
-	        if (citation.size() > 0)
+	        if (citation.length > 0)
 	        {
 	        	note.addHighlight("bold").addContent(T_citation);
 	        	note.addContent(T_open);
-	        	for (int i=0; i< citation.size(); i++)
+	        	for (int i=0; i< citation.length; i++)
 	        	{
 	        		if (i > 0)
                     {
                         note.addContent(T_separator);
                     }
-	        		note.addContent(citation.get(i).getValue());
+	        		note.addContent(citation[i].value);
 	        	}
 	        	note.addContent(T_close);
 	        }
 	        
 	        
 	        // Conjunction
-	        if (citation.size() > 0 && publisher.size() > 0)
+	        if (citation.length > 0 && publisher.length > 0)
 	        {
 	        	note.addContent(T_separator);
 	        }
 	        
-	        if ((dateIssued.size() > 0 || citation.size() > 0) && publisher.size() > 0)
+	        if ((dateIssued.length > 0 || citation.length > 0) && publisher.length > 0)
 	        {
 	        	note.addContent(T_and);
 	        }
 	        
 	        
 	        // Publisher
-	        if (publisher.size() > 0)
+	        if (publisher.length > 0)
 	        {
 	        	note.addHighlight("bold").addContent(T_publisher);
 	        	note.addContent(T_open);
-	        	for (int i=0; i< publisher.size(); i++)
+	        	for (int i=0; i< publisher.length; i++)
 	        	{
 	        		if (i > 0)
                     {
                         note.addContent(T_separator);
                     }
-	        		note.addContent(publisher.get(i).getValue());
+	        		note.addContent(publisher[i].value);
 	        	}
 	        	note.addContent(T_close);
 	        }

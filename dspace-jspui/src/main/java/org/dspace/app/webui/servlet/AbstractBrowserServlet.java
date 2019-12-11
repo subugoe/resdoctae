@@ -18,14 +18,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.browse.BrowseEngine;
 import org.dspace.browse.BrowseException;
 import org.dspace.browse.BrowseIndex;
 import org.dspace.browse.BrowseInfo;
 import org.dspace.browse.BrowserScope;
-import org.dspace.services.factory.DSpaceServicesFactory;
 import org.dspace.sort.SortOption;
 import org.dspace.sort.SortException;
+import org.dspace.utils.DSpace;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.core.ConfigurationManager;
@@ -339,7 +340,7 @@ public abstract class AbstractBrowserServlet extends DSpaceServlet
             
             request.setAttribute("browse.info", binfo);
 
-            if (authorizeService.isAdmin(context))
+            if (AuthorizeManager.isAdmin(context))
             {
                 // Set a variable to create admin buttons
                 request.setAttribute("admin_button", Boolean.TRUE);
@@ -350,7 +351,7 @@ public abstract class AbstractBrowserServlet extends DSpaceServlet
                 if (bi.isMetadataIndex() && !scope.isSecondLevel())
                 {
                 	if (bi.isTagCloudEnabled()){
-                		TagCloudConfiguration tagCloudConfiguration = DSpaceServicesFactory.getInstance().getServiceManager().getServiceByName("browseTagCloudConfiguration", TagCloudConfiguration.class);
+                		TagCloudConfiguration tagCloudConfiguration = new DSpace().getServiceManager().getServiceByName("browseTagCloudConfiguration", TagCloudConfiguration.class);
                 		if (tagCloudConfiguration == null){
                 			tagCloudConfiguration = new TagCloudConfiguration();
                 		}

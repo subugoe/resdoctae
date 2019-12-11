@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.collection;
 
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
@@ -19,8 +18,6 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Para;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 
 /**
  * Confirmation step for the deletion a collection's role
@@ -42,8 +39,7 @@ public class DeleteCollectionRoleConfirm extends AbstractDSpaceTransformer
 	private static final Message T_submit_confirm = message("xmlui.general.delete");
 	private static final Message T_submit_cancel = message("xmlui.general.cancel");
 	
-	protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-
+	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
         pageMeta.addMetadata("title").addContent(T_title);
@@ -54,8 +50,8 @@ public class DeleteCollectionRoleConfirm extends AbstractDSpaceTransformer
 	public void addBody(Body body) throws WingException, SQLException, AuthorizeException
 	{
 		String role = parameters.getParameter("role", null);
-		UUID groupID = UUID.fromString(parameters.getParameter("groupID", null));
-		Group toBeDeleted = groupService.find(context, groupID);
+		int groupID = parameters.getParameterAsInteger("groupID", -1);
+		Group toBeDeleted = Group.find(context, groupID);
 		
 		
 		// DIVISION: main

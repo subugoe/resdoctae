@@ -40,13 +40,13 @@ public class DSpaceCSVTest extends AbstractUnitTest
         {
             // Test the CSV parsing
             String[] csv = {"id,collection,\"dc.title[en]\",dc.contributor.author,dc.description.abstract",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,Easy line,\"Lewis, Stuart\",A nice short abstract",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,Two authors,\"Lewis, Stuart||Bloggs, Joe\",Two people wrote this item",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,Three authors,\"Lewis, Stuart||Bloggs, Joe||Loaf, Meat\",Three people wrote this item",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,\"Two line\n\ntitle\",\"Lewis, Stuart\",abstract",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,\"Empty lines\n\nshould work too (DS-3245).\",\"Lewis, Stuart\",abstract",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,\"\"\"Embedded quotes\"\" here\",\"Lewis, Stuart\",\"Abstract with\ntwo\nnew lines\"",
-                            "+,56599ad5-c7d2-4ac3-8354-a1f277d5a31f,\"\"\"Unbalanced embedded\"\" quotes\"\" here\",\"Lewis, Stuart\",\"Abstract with\ntwo\nnew lines\"",};
+                            "1,2,Easy line,\"Lewis, Stuart\",A nice short abstract",
+                            "2,2,Two authors,\"Lewis, Stuart||Bloggs, Joe\",Two people wrote this item",
+                            "3,2,Three authors,\"Lewis, Stuart||Bloggs, Joe||Loaf, Meat\",Three people wrote this item",
+                            "4,2,\"Two line\ntitle\",\"Lewis, Stuart\",abstract",
+                            "5,2,\"Empty lines\n\nshould work too (DS-3245).\",\"Lewis, Stuart\",abstract",
+                            "6,2,\"\"\"Embedded quotes\"\" here\",\"Lewis, Stuart\",\"Abstract with\ntwo\nnew lines\"",
+                            "7,2,\"\"\"Unbalanced embedded\"\" quotes\"\" here\",\"Lewis, Stuart\",\"Abstract with\ntwo\nnew lines\"",};
             // Write the string to a file
             String filename = "test.csv";
             BufferedWriter out = new BufferedWriter(
@@ -69,7 +69,7 @@ public class DSpaceCSVTest extends AbstractUnitTest
             DSpaceCSVLine line = csvLines.get(5);
             List<String> value = new ArrayList<String>();
             value.add("Abstract with\ntwo\nnew lines");    
-            assertThat("testDSpaceCSV New lines", line.valueToCSV(value, dcsv.valueSeparator),
+            assertThat("testDSpaceCSV New lines", line.valueToCSV(value),
                                                   equalTo("\"Abstract with\ntwo\nnew lines\""));
             line = null;
 

@@ -9,7 +9,6 @@ package org.dspace.app.xmlui.cocoon;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.apache.cocoon.ProcessingException;
 import org.apache.cocoon.ResourceNotFoundException;
@@ -20,12 +19,9 @@ import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.crosswalk.DisseminationCrosswalk;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
+import org.dspace.core.PluginManager;
+import org.dspace.handle.HandleManager;
 import org.jdom.Element;
 import org.jdom.JDOMException;
 import org.jdom.output.SAXOutputter;
@@ -40,10 +36,6 @@ import org.xml.sax.SAXException;
  */
 public class DSpaceOREGenerator extends AbstractGenerator
 {
-
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-	protected HandleService handleService = HandleServiceFactory.getInstance().getHandleService();
-
 	/**
 	 * Generate the ORE Aggregation.
 	 */
@@ -62,9 +54,9 @@ public class DSpaceOREGenerator extends AbstractGenerator
             
             // Instantiate and execute the ORE plugin
             SAXOutputter out = new SAXOutputter(contentHandler);
-            DisseminationCrosswalk xwalk = (DisseminationCrosswalk)CoreServiceFactory.getInstance().getPluginService().getNamedPlugin(DisseminationCrosswalk.class,"ore");
+            DisseminationCrosswalk xwalk = (DisseminationCrosswalk)PluginManager.getNamedPlugin(DisseminationCrosswalk.class,"ore");
             
-            Element ore = xwalk.disseminateElement(context, item);
+            Element ore = xwalk.disseminateElement(item);
             out.output(ore);
             
 			/* Generate the METS document
@@ -93,7 +85,7 @@ public class DSpaceOREGenerator extends AbstractGenerator
 		 if (handle != null)
          {
 			// Specified using a regular handle. 
-         	DSpaceObject dso = handleService.resolveToObject(context, handle);
+         	DSpaceObject dso = HandleManager.resolveToObject(context, handle);
          	
          	// Handles can be either items or containers.
          	if (dso instanceof Item)
@@ -113,11 +105,11 @@ public class DSpaceOREGenerator extends AbstractGenerator
          	if (parts.length == 2)
          	{
          		String type = parts[0];
-         		UUID id = UUID.fromString(parts[1]);
+         		int id = Integer.valueOf(parts[1]);
          		
          		if ("item".equals(type))
          		{
-                     return itemService.find(context,id);
+                     return Item.find(context,id);
          		}
          		else
                  {

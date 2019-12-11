@@ -25,34 +25,36 @@ import java.util.Collection;
  */
 public class DSpaceSolrItem extends DSpaceItem
 {
-    private static final Logger log = LogManager
+    private static Logger log = LogManager
             .getLogger(DSpaceSolrItem.class);
     
-    private final String unparsedMD;
+    private String unparsedMD;
     private ItemMetadata metadata;
-    private final String handle;
-    private final Date lastMod;
-    private final List<ReferenceSet> sets;
-    private final boolean deleted;
-
+    private String handle;
+    private Date lastMod;
+    private List<ReferenceSet> sets;
+    private boolean deleted;
+    
     public DSpaceSolrItem (SolrDocument doc) {
     	log.debug("Creating OAI Item from Solr source");
         unparsedMD = (String) doc.getFieldValue("item.compile");
         handle = (String) doc.getFieldValue("item.handle");
         lastMod = (Date) doc.getFieldValue("item.lastmodified");
-        sets = new ArrayList<>();
+        sets = new ArrayList<ReferenceSet>();
 
-        Collection<Object> fieldValues;
-
-        fieldValues = doc.getFieldValues("item.communities");
-        if (null != fieldValues)
-            for (Object obj : fieldValues)
+        Collection<Object> communities = doc.getFieldValues("item.communities");
+        if (null != communities)
+            for (Object obj : communities)
                 sets.add(new ReferenceSet((String) obj));
+        else
+            log.warn(String.format("Record for item %s has no communities.", handle));
 
-        fieldValues = doc.getFieldValues("item.collections");
-        if (null != fieldValues)
-            for (Object obj : fieldValues)
+        Collection<Object> collections = doc.getFieldValues("item.collections");
+        if (null != collections)
+            for (Object obj : collections)
                 sets.add(new ReferenceSet((String) obj));
+        else
+            log.warn(String.format("Record for item %s has no collections.", handle));
 
         deleted = (Boolean) doc.getFieldValue("item.deleted");
     }

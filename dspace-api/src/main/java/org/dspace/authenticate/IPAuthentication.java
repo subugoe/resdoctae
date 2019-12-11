@@ -9,24 +9,20 @@ package org.dspace.authenticate;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.collections.ListUtils;
 import org.apache.log4j.Logger;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
-import org.dspace.services.factory.DSpaceServicesFactory;
 
 /**
  * Adds users to special groups based on IP address. Configuration parameter
@@ -52,15 +48,13 @@ public class IPAuthentication implements AuthenticationMethod
     private static Logger log = Logger.getLogger(IPAuthentication.class);
 
     /** Whether to look for x-forwarded headers for logging IP addresses */
-    protected static Boolean useProxies;
+    private static Boolean useProxies;
 
     /** All the IP matchers */
-    protected List<IPMatcher> ipMatchers;
+    private List<IPMatcher> ipMatchers;
 
     /** All the negative IP matchers */
-    protected List<IPMatcher> ipNegativeMatchers;
-
-    protected GroupService groupService;
+    private List<IPMatcher> ipNegativeMatchers;
 
     
     /**
@@ -68,10 +62,10 @@ public class IPAuthentication implements AuthenticationMethod
      * the DB ID is known, the IPMatcher is moved to ipMatcherGroupIDs and then
      * points to the DB ID.
      */
-    protected Map<IPMatcher, String> ipMatcherGroupNames;
+    private Map<IPMatcher, String> ipMatcherGroupNames;
 
     /** Maps IPMatchers to group IDs (Integers) where we know the group DB ID */
-    protected Map<IPMatcher, UUID> ipMatcherGroupIDs;
+    private Map<IPMatcher, Integer> ipMatcherGroupIDs;
 
     /**
      * Initialize an IP authenticator, reading in the configuration. Note this
@@ -81,24 +75,27 @@ public class IPAuthentication implements AuthenticationMethod
     {
         ipMatchers = new ArrayList<IPMatcher>();
         ipNegativeMatchers = new ArrayList<IPMatcher>();
-        ipMatcherGroupIDs = new HashMap<>();
-        ipMatcherGroupNames = new HashMap<>();
-        groupService = EPersonServiceFactory.getInstance().getGroupService();
+        ipMatcherGroupIDs = new HashMap<IPMatcher, Integer>();
+        ipMatcherGroupNames = new HashMap<IPMatcher, String>();
 
-        List<String> propNames = DSpaceServicesFactory.getInstance().getConfigurationService().getPropertyKeys("authentication-ip");
+        Enumeration e = ConfigurationManager.propertyNames("authentication-ip");
 
-        for(String propName : propNames)
+        while (e.hasMoreElements())
         {
-            String[] nameParts = propName.split("\\.");
+            String propName = (String) e.nextElement();
+            if (propName.startsWith("ip."))
+            {
+                String[] nameParts = propName.split("\\.");
 
-            if (nameParts.length == 2)
-            {
-                addMatchers(nameParts[1], DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty(propName));
-            }
-            else
-            {
-                log.warn("Malformed configuration property name: "
-                        + propName);
+                if (nameParts.length == 2)
+                {
+                    addMatchers(nameParts[1], ConfigurationManager.getProperty("authentication-ip", propName));
+                }
+                else
+                {
+                    log.warn("Malformed configuration property name: "
+                            + propName);
+                }
             }
         }
     }
@@ -111,9 +108,11 @@ public class IPAuthentication implements AuthenticationMethod
      * @param ipRanges
      *            IP ranges
      */
-    protected void addMatchers(String groupName, String[] ipRanges)
+    private void addMatchers(String groupName, String ipRanges)
     {
-        for (String entry : ipRanges)
+        String[] ranges = ipRanges.split("\\s*,\\s*");
+
+        for (String entry : ranges)
         {
             try
             {
@@ -144,41 +143,36 @@ public class IPAuthentication implements AuthenticationMethod
         }
     }
 
-    @Override
     public boolean canSelfRegister(Context context, HttpServletRequest request,
             String username) throws SQLException
     {
         return false;
     }
 
-    @Override
     public void initEPerson(Context context, HttpServletRequest request,
             EPerson eperson) throws SQLException
     {
     }
 
-    @Override
     public boolean allowSetPassword(Context context,
             HttpServletRequest request, String username) throws SQLException
     {
         return false;
     }
 
-    @Override
     public boolean isImplicit()
     {
         return true;
     }
 
-    @Override
-    public List<Group> getSpecialGroups(Context context, HttpServletRequest request)
+    public int[] getSpecialGroups(Context context, HttpServletRequest request)
             throws SQLException
     {
         if (request == null)
         {
-            return ListUtils.EMPTY_LIST;
+            return new int[0];
         }
-        List<Group> groups = new ArrayList<Group>();
+        List<Integer> groupIDs = new ArrayList<Integer>();
 
         // Get the user's IP address
         String addr = request.getRemoteAddr();
@@ -204,10 +198,10 @@ public class IPAuthentication implements AuthenticationMethod
                 if (ipm.match(addr))
                 {
                     // Do we know group ID?
-                    UUID g = ipMatcherGroupIDs.get(ipm);
+                    Integer g = ipMatcherGroupIDs.get(ipm);
                     if (g != null)
                     {
-                        groups.add(groupService.find(context, g));
+                        groupIDs.add(g);
                     }
                     else
                     {
@@ -216,14 +210,14 @@ public class IPAuthentication implements AuthenticationMethod
 
                         if (groupName != null)
                         {
-                            Group group = groupService.findByName(context, groupName);
+                            Group group = Group.findByName(context, groupName);
                             if (group != null)
                             {
                                 // Add ID so we won't have to do lookup again
-                                ipMatcherGroupIDs.put(ipm, (group.getID()));
+                                ipMatcherGroupIDs.put(ipm, Integer.valueOf(group.getID()));
                                 ipMatcherGroupNames.remove(ipm);
 
-                                groups.add(group);
+                                groupIDs.add(Integer.valueOf(group.getID()));
                             }
                             else
                             {
@@ -250,10 +244,10 @@ public class IPAuthentication implements AuthenticationMethod
                 if (ipm.match(addr))
                 {
                     // Do we know group ID?
-                    UUID g = ipMatcherGroupIDs.get(ipm);
+                    Integer g = ipMatcherGroupIDs.get(ipm);
                     if (g != null)
                     {
-                        groups.remove(groupService.find(context, g));
+                        groupIDs.remove(g);
                     }
                     else
                     {
@@ -262,14 +256,14 @@ public class IPAuthentication implements AuthenticationMethod
 
                         if (groupName != null)
                         {
-                            Group group = groupService.findByName(context, groupName);
+                            Group group = Group.findByName(context, groupName);
                             if (group != null)
                             {
                                 // Add ID so we won't have to do lookup again
-                                ipMatcherGroupIDs.put(ipm, group.getID());
+                                ipMatcherGroupIDs.put(ipm, Integer.valueOf(group.getID()));
                                 ipMatcherGroupNames.remove(ipm);
 
-                                groups.remove(group);
+                                groupIDs.remove(Integer.valueOf(group.getID()));
                             }
                             else
                             {
@@ -289,35 +283,44 @@ public class IPAuthentication implements AuthenticationMethod
         }
 
 
+        int[] results = new int[groupIDs.size()];
+        for (int i = 0; i < groupIDs.size(); i++)
+        {
+            results[i] = (groupIDs.get(i)).intValue();
+        }
+
         if (log.isDebugEnabled())
         {
-            StringBuilder gsb = new StringBuilder();
-            for (Group group : groups) {
-                gsb.append(group.getID()).append(", ");
+            StringBuffer gsb = new StringBuffer();
+
+            for (int i = 0; i < results.length; i++)
+            {
+                if (i > 0)
+                {
+                    gsb.append(",");
+                }
+                gsb.append(results[i]);
             }
 
             log.debug(LogManager.getHeader(context, "authenticated",
                     "special_groups=" + gsb.toString()));
         }
 
-        return groups;
+        return results;
     }
 
-    @Override
     public int authenticate(Context context, String username, String password,
             String realm, HttpServletRequest request) throws SQLException
     {
         return BAD_ARGS;
     }
 
-    @Override
     public String loginPageURL(Context context, HttpServletRequest request,
             HttpServletResponse response)
     {
         return null;
     }
 
-    @Override
     public String loginPageTitle(Context context)
     {
         return null;

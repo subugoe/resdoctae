@@ -10,12 +10,11 @@ package org.dspace.statistics.util;
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
 import org.apache.tools.ant.taskdefs.Get;
-import org.dspace.statistics.factory.StatisticsServiceFactory;
-import org.dspace.statistics.service.SolrLoggerService;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.statistics.SolrLogger;
 
 import java.io.*;
 import java.net.URL;
-import org.dspace.services.factory.DSpaceServicesFactory;
 
 /**
  * Class to load intermediate statistics files into solr
@@ -54,7 +53,7 @@ public class StatisticsClient
 
         options.addOption("u", "update-spider-files", false,
                 "Update Spider IP Files from internet into " +
-                        DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("dspace.dir") + "/config/spiders");
+                        ConfigurationManager.getProperty("dspace.dir") + "/config/spiders");
 
         options.addOption("m", "mark-spiders", false, "Update isBot Flag in Solr");
         options.addOption("f", "delete-spiders-by-flag", false, "Delete Spiders in Solr By isBot Flag");
@@ -74,38 +73,37 @@ public class StatisticsClient
             printHelp(options, 0);
         }
 
-        SolrLoggerService solrLoggerService = StatisticsServiceFactory.getInstance().getSolrLoggerService();
         if(line.hasOption("u"))
         {
             StatisticsClient.updateSpiderFiles();
         }
         else if (line.hasOption('m'))
         {
-            solrLoggerService.markRobotsByIP();
+            SolrLogger.markRobotsByIP();
         }
         else if(line.hasOption('f'))
         {
-            solrLoggerService.deleteRobotsByIsBotFlag();
+            SolrLogger.deleteRobotsByIsBotFlag();
         }
         else if(line.hasOption('i'))
         {
-            solrLoggerService.deleteRobotsByIP();
+            SolrLogger.deleteRobotsByIP();
         }
         else if(line.hasOption('o'))
         {
-            solrLoggerService.optimizeSOLR();
+            SolrLogger.optimizeSOLR();
         }
         else if(line.hasOption('b'))
         {
-            solrLoggerService.reindexBitstreamHits(line.hasOption('r'));
+            SolrLogger.reindexBitstreamHits(line.hasOption('r'));
         }
         else if(line.hasOption('e'))
         {
-            solrLoggerService.exportHits();
+            SolrLogger.exportHits();
         }
         else if(line.hasOption('s'))
         {
-            solrLoggerService.shardSolrIndex();
+            SolrLogger.shardSolrIndex();
         }
         else
         {
@@ -123,22 +121,23 @@ public class StatisticsClient
             System.out.println("Downloading latest spider IP addresses:");
 
             // Get the list URLs to download from
-            String[] urls = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("solr-statistics.spiderips.urls");
-            if((urls == null) || (urls.length==0))
+            String urls = ConfigurationManager.getProperty("solr-statistics", "spiderips.urls");
+            if ((urls == null) || ("".equals(urls)))
             {
                 System.err.println(" - Missing setting from dspace.cfg: solr.spiderips.urls");
                 System.exit(0);
             }
 
             // Get the location of spiders directory
-            File spiders = new File(DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("dspace.dir"),"config/spiders");
+            File spiders = new File(ConfigurationManager.getProperty("dspace.dir"),"config/spiders");
 
             if (!spiders.exists() && !spiders.mkdirs())
             {
                 log.error("Unable to create spiders directory");
             }
 
-            for (String value : urls)
+            String[] values = urls.split(",");
+            for (String value : values)
             {
                 value = value.trim();
                 System.out.println(" Downloading: " + value);

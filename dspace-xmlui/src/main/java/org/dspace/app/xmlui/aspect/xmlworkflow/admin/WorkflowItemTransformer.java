@@ -20,13 +20,9 @@ import org.dspace.app.xmlui.wing.element.Division;
 import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.ReferenceSet;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.AuthorizeServiceImpl;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.core.Context;
-import org.dspace.xmlworkflow.factory.XmlWorkflowServiceFactory;
 import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
-import org.dspace.xmlworkflow.storedcomponents.service.XmlWorkflowItemService;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
@@ -56,9 +52,6 @@ public class WorkflowItemTransformer extends AbstractDSpaceTransformer {
     protected static final Message T_showsimple =
         message("xmlui.Submission.general.showsimple");
 
-    protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    protected XmlWorkflowItemService xmlWorkflowItemService = XmlWorkflowServiceFactory.getInstance().getXmlWorkflowItemService();
-
 
     @Override
     public void addPageMeta(PageMeta pageMeta) throws SAXException, WingException, UIException, SQLException, IOException, AuthorizeException {
@@ -78,7 +71,7 @@ public class WorkflowItemTransformer extends AbstractDSpaceTransformer {
     public void addBody(Body body) throws SAXException, WingException, UIException, SQLException, IOException, AuthorizeException {
         Request request = ObjectModelHelper.getRequest(objectModel);
         Context context = ContextUtil.obtainContext(request);
-        if(!authorizeService.isAdmin(context)){
+        if(!AuthorizeManager.isAdmin(context)){
             throw new AuthorizeException();
         }
 
@@ -118,6 +111,6 @@ public class WorkflowItemTransformer extends AbstractDSpaceTransformer {
 
     private XmlWorkflowItem retrieveWorkflowItem(Request request, Context context) throws SQLException, AuthorizeException, IOException {
         int workflowItemId = Util.getIntParameter(request, "wfiId");
-        return xmlWorkflowItemService.find(context, workflowItemId);
+        return XmlWorkflowItem.find(context, workflowItemId);
     }
 }

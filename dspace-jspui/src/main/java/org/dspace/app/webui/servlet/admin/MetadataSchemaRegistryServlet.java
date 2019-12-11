@@ -9,7 +9,6 @@ package org.dspace.app.webui.servlet.admin;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -24,8 +23,6 @@ import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.MetadataSchema;
 import org.dspace.content.NonUniqueMetadataException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataSchemaService;
 import org.dspace.core.Context;
 
 /**
@@ -37,14 +34,9 @@ import org.dspace.core.Context;
 public class MetadataSchemaRegistryServlet extends DSpaceServlet
 {
     /** Logger */
-    private static final Logger log = Logger.getLogger(MetadataSchemaRegistryServlet.class);
+    private static Logger log = Logger.getLogger(MetadataSchemaRegistryServlet.class);
+    private String clazz = "org.dspace.app.webui.servlet.admin.MetadataSchemaRegistryServlet";
 
-    private static final String clazz = "org.dspace.app.webui.servlet.admin.MetadataSchemaRegistryServlet";
-
-    private final transient MetadataSchemaService schemaService
-             = ContentServiceFactory.getInstance().getMetadataSchemaService();
-    
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -53,7 +45,6 @@ public class MetadataSchemaRegistryServlet extends DSpaceServlet
         showSchemas(context, request, response);
     }
 
-    @Override
     protected void doDSPost(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -76,23 +67,24 @@ public class MetadataSchemaRegistryServlet extends DSpaceServlet
 
             try
             {
-                String namespace = request.getParameter("namespace");
-				String name = request.getParameter("short_name");
-				if (id.equals(""))
+                if (id.equals(""))
                 {
                     // Create a new metadata schema
-                    schemaService.create(context, name, namespace);
+                    MetadataSchema schema = new MetadataSchema();
+                    schema.setNamespace(request.getParameter("namespace"));
+                    schema.setName(request.getParameter("short_name"));
+                    schema.create(context);
                     showSchemas(context, request, response);
                     context.complete();
                 }
                 else
                 {
                     // Update an existing schema
-                    MetadataSchema schema = schemaService.find(context,
+                    MetadataSchema schema = MetadataSchema.find(context,
                             UIUtil.getIntParameter(request, "dc_schema_id"));
-                    schema.setNamespace(namespace);
-                    schema.setName(name);
-                    schemaService.update(context, schema);
+                    schema.setNamespace(request.getParameter("namespace"));
+                    schema.setName(request.getParameter("short_name"));
+                    schema.update(context);
                     showSchemas(context, request, response);
                     context.complete();
                 }
@@ -109,7 +101,7 @@ public class MetadataSchemaRegistryServlet extends DSpaceServlet
         else if (button.equals("submit_delete"))
         {
             // Start delete process - go through verification step
-            MetadataSchema schema = schemaService.find(context, UIUtil
+            MetadataSchema schema = MetadataSchema.find(context, UIUtil
                     .getIntParameter(request, "dc_schema_id"));
             request.setAttribute("schema", schema);
             JSPManager.showJSP(request, response,
@@ -118,9 +110,9 @@ public class MetadataSchemaRegistryServlet extends DSpaceServlet
         else if (button.equals("submit_confirm_delete"))
         {
             // User confirms deletion of type
-            MetadataSchema dc = schemaService.find(context, UIUtil
+            MetadataSchema dc = MetadataSchema.find(context, UIUtil
                     .getIntParameter(request, "dc_schema_id"));
-            schemaService.delete(context, dc);
+            dc.delete(context);
             showSchemas(context, request, response);
             context.complete();
         }
@@ -205,7 +197,7 @@ public class MetadataSchemaRegistryServlet extends DSpaceServlet
             HttpServletResponse response) throws ServletException,
             SQLException, IOException
     {
-        List<MetadataSchema> schemas = schemaService.findAll(context);
+        MetadataSchema[] schemas = MetadataSchema.findAll(context);
         request.setAttribute("schemas", schemas);
         log.info("Showing Schemas");
         JSPManager.showJSP(request, response,

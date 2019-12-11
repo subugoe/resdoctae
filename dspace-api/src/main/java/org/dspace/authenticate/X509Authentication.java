@@ -29,21 +29,15 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
-import org.apache.commons.collections.ListUtils;
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
-import org.dspace.authenticate.factory.AuthenticateServiceFactory;
-import org.dspace.authenticate.service.AuthenticationService;
+import org.dspace.authenticate.AuthenticationMethod;
+import org.dspace.authenticate.AuthenticationManager;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.eperson.service.GroupService;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
 
 /**
  * Implicit authentication method that gets credentials from the X.509 client
@@ -117,13 +111,6 @@ public class X509Authentication implements AuthenticationMethod
 
     private static String loginPageURL = null;
 
-    protected AuthenticationService authenticationService = AuthenticateServiceFactory.getInstance().getAuthenticationService();
-    protected EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-    protected ConfigurationService configurationService = 
-            DSpaceServicesFactory.getInstance().getConfigurationService();
-
-
     /**
      * Initialization: Set caPublicKey and/or keystore. This loads the
      * information needed to check if a client cert presented is valid and
@@ -131,23 +118,21 @@ public class X509Authentication implements AuthenticationMethod
      */
     static
     {
-        ConfigurationService configurationService = 
-            DSpaceServicesFactory.getInstance().getConfigurationService();
         /*
          * allow identification of alternative entry points for certificate
          * authentication when selected by the user rather than implicitly.
          */
-        loginPageTitle = configurationService
-                .getProperty("authentication-x509.chooser.title.key");
-        loginPageURL = configurationService
-                .getProperty("authentication-x509.chooser.uri");
+        loginPageTitle = ConfigurationManager
+                .getProperty("authentication-x509", "chooser.title.key");
+        loginPageURL = ConfigurationManager
+                .getProperty("authentication-x509", "chooser.uri");
 
-        String keystorePath = configurationService
-                .getProperty("authentication-x509.keystore.path");
-        String keystorePassword = configurationService
-                .getProperty("authentication-x509.keystore.password");
-        String caCertPath = configurationService
-                .getProperty("authentication-x509.ca.cert");
+        String keystorePath = ConfigurationManager
+                .getProperty("authentication-x509", "keystore.path");
+        String keystorePassword = ConfigurationManager
+                .getProperty("authentication-x509", "keystore.password");
+        String caCertPath = ConfigurationManager
+                .getProperty("authentication-x509", "ca.cert");
 
         // First look for keystore full of trusted certs.
         if (keystorePath != null)
@@ -387,21 +372,17 @@ public class X509Authentication implements AuthenticationMethod
      * configuration value. You'll probably want this to be true to take
      * advantage of a Web certificate infrastructure with many more users than
      * are already known by DSpace.
-     * @throws SQLException if database error
      */
-    @Override
     public boolean canSelfRegister(Context context, HttpServletRequest request,
             String username) throws SQLException
     {
-        return configurationService
-                .getBooleanProperty("authentication-x509.autoregister");
+        return ConfigurationManager
+                .getBooleanProperty("authentication-x509", "autoregister");
     }
 
     /**
      * Nothing extra to initialize.
-     * @throws SQLException if database error
      */
-    @Override
     public void initEPerson(Context context, HttpServletRequest request,
             EPerson eperson) throws SQLException
     {
@@ -409,9 +390,7 @@ public class X509Authentication implements AuthenticationMethod
 
     /**
      * We don't use EPerson password so there is no reason to change it.
-     * @throws SQLException if database error
      */
-    @Override
     public boolean allowSetPassword(Context context,
             HttpServletRequest request, String username) throws SQLException
     {
@@ -421,7 +400,6 @@ public class X509Authentication implements AuthenticationMethod
     /**
      * Returns true, this is an implicit method.
      */
-    @Override
     public boolean isImplicit()
     {
         return true;
@@ -437,14 +415,17 @@ public class X509Authentication implements AuthenticationMethod
     {
         List<String> groupNames = new ArrayList<String>();
 
-        String[] groups = configurationService
-                .getArrayProperty("authentication-x509.groups");
+        String x509GroupConfig = null;
+        x509GroupConfig = ConfigurationManager
+                .getProperty("authentication-x509", "groups");
 
-        if(ArrayUtils.isNotEmpty(groups))
+        if (null != x509GroupConfig && !"".equals(x509GroupConfig))
         {
-            for (String group : groups)
+            String[] groups = x509GroupConfig.split("\\s*,\\s*");
+
+            for (int i = 0; i < groups.length; i++)
             {
-                groupNames.add(group.trim());
+                groupNames.add(groups[i].trim());
             }
         }
 
@@ -489,21 +470,19 @@ public class X509Authentication implements AuthenticationMethod
      * Return special groups configured in dspace.cfg for X509 certificate
      * authentication.
      * 
-     * @param context context
+     * @param context
      * @param request
      *            object potentially containing the cert
      * 
      * @return An int array of group IDs
-     * @throws SQLException if database error
      * 
      */
-    @Override
-    public List<Group> getSpecialGroups(Context context, HttpServletRequest request)
+    public int[] getSpecialGroups(Context context, HttpServletRequest request)
             throws SQLException
     {
         if (request == null)
         {
-            return ListUtils.EMPTY_LIST;
+            return new int[0];
         }
 
         Boolean authenticated = false;
@@ -514,7 +493,7 @@ public class X509Authentication implements AuthenticationMethod
         if (authenticated)
         {
             List<String> groupNames = getX509Groups();
-            List<Group> groups = new ArrayList<>();
+            List<Integer> groupIDs = new ArrayList<Integer>();
 
             if (groupNames != null)
             {
@@ -522,10 +501,10 @@ public class X509Authentication implements AuthenticationMethod
                 {
                     if (groupName != null)
                     {
-                        Group group = groupService.findByName(context, groupName);
+                        Group group = Group.findByName(context, groupName);
                         if (group != null)
                         {
-                            groups.add(group);
+                            groupIDs.add(Integer.valueOf(group.getID()));
                         }
                         else
                         {
@@ -537,10 +516,33 @@ public class X509Authentication implements AuthenticationMethod
                 }
             }
 
-            return groups;
+            int[] results = new int[groupIDs.size()];
+            for (int i = 0; i < groupIDs.size(); i++)
+            {
+                results[i] = (groupIDs.get(i)).intValue();
+            }
+
+            if (log.isDebugEnabled())
+            {
+                StringBuffer gsb = new StringBuffer();
+
+                for (int i = 0; i < results.length; i++)
+                {
+                    if (i > 0)
+                    {
+                        gsb.append(",");
+                    }
+                    gsb.append(results[i]);
+                }
+
+                log.debug(LogManager.getHeader(context, "authenticated",
+                        "special_groups=" + gsb.toString()));
+            }
+
+            return results;
         }
 
-        return ListUtils.EMPTY_LIST;
+        return new int[0];
     }
 
     /**
@@ -562,9 +564,7 @@ public class X509Authentication implements AuthenticationMethod
      * </ul>
      * 
      * @return One of: SUCCESS, BAD_CREDENTIALS, NO_SUCH_USER, BAD_ARGS
-     * @throws SQLException if database error
      */
-    @Override
     public int authenticate(Context context, String username, String password,
             String realm, HttpServletRequest request) throws SQLException
     {
@@ -599,7 +599,7 @@ public class X509Authentication implements AuthenticationMethod
                 EPerson eperson = null;
                 if (email != null)
                 {
-                    eperson = ePersonService.findByEmail(context, email);
+                    eperson = EPerson.findByEmail(context, email);
                 }
                 if (eperson == null)
                 {
@@ -613,13 +613,13 @@ public class X509Authentication implements AuthenticationMethod
 
                         // TEMPORARILY turn off authorisation
                         context.turnOffAuthorisationSystem();
-                        eperson = ePersonService.create(context);
+                        eperson = EPerson.create(context);
                         eperson.setEmail(email);
                         eperson.setCanLogIn(true);
-                        authenticationService.initEPerson(context, request,
+                        AuthenticationManager.initEPerson(context, request,
                                 eperson);
-                        ePersonService.update(context, eperson);
-                        context.dispatchEvents();
+                        eperson.update();
+                        context.commit();
                         context.restoreAuthSystemState();
                         context.setCurrentUser(eperson);
                         setSpecialGroupsFlag(request, email);
@@ -679,7 +679,6 @@ public class X509Authentication implements AuthenticationMethod
      * 
      * @return fully-qualified URL
      */
-    @Override
     public String loginPageURL(Context context, HttpServletRequest request,
             HttpServletResponse response)
     {
@@ -695,7 +694,6 @@ public class X509Authentication implements AuthenticationMethod
      * 
      * @return Message key to look up in i18n message catalog.
      */
-    @Override
     public String loginPageTitle(Context context)
     {
         return loginPageTitle;

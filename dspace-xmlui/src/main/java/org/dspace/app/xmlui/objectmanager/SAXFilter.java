@@ -90,41 +90,31 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 		this.namespaces = namespaces;
 	}
 
-	/** Allow start/end document events
-     * @return this instance.
-     */
+	/** Allow start/end document events */
 	public SAXFilter allowDocuments() {
 		this.allowDocuments = true;
 		return this;
 	}
 	
-	/** Allow document locator events
-     * @return this instance.
-     */
+	/** Allow document locator events */
 	public SAXFilter allowDocumentLocators() {
 		this.allowDocumentLocators = true;
 		return this;
 	}
 	
-	/** Allow processing instruction events
-     * @return this instance.
-     */
+	/** Allow processing instruction events */
 	public SAXFilter allowProcessingInstructions() {
 		this.allowProcessingInstructions = true;
 		return this;
 	}
 	
-	/** allow start/end prefix mapping events
-     * @return this instance.
-     */
+	/** allow start/end prefix mapping events */
 	public SAXFilter allowPrefixMappings() {
 		this.allowPrefixMappings = true;
 		return this;
 	}
 	
-	/** allow start/end element events
-     * @return this instance.
-     */
+	/** allow start/end element events */
 	public SAXFilter allowElements() {
 		this.allowElements = true;
 		return this;
@@ -148,54 +138,43 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 		return this;
 	}
 	
-	/** Allow ignorable whitespace events
-     * @return this instance.
-     */
+	/** Allow ignorable whitespace events */
 	public SAXFilter allowIgnorableWhitespace() {
 		this.allowIgnorableWhitespace = true;
 		return this;
 	}
 	
-	/** Allow start / end events for skipped entities
-     * @return this instance.
-     */
+	/** Allow start / end events for skipped entities */
 	public SAXFilter allowSkippedEntities() {
 		this.allowSkippedEntities = true;
 		return this;
 	}
 	
-	/** Allow character events
-     * @return this instance.
-     */
+	/** Allow character events */
 	public SAXFilter allowCharacters() {
 		this.allowCharacters = true;
 		return this;
 	}
 	
-	/** Allow DTD events
-     * @return this instance.
-     */
+	/** Allow DTD events */
 	public SAXFilter allowDTDs() {
 		this.allowDTDs = true;
 		return this;
 	}
 	
-	/** Allow XML entities events
-     * @return this instance. */
+	/** Allow XML entities events */
 	public SAXFilter allowEntities() {
 		this.allowEntities = true;
 		return this;
 	}
 	
-	/** Allow CDATA events
-     * @return this instance. */
+	/** Allow CDATA events */
 	public SAXFilter allowCDATA() {
 		this.allowCDATA = true;
 		return this;
 	}
 	
-	/** Allow comment events
-     * @return  this instance. */
+	/** Allow comment events */
 	public SAXFilter allowComments() {
 		this.allowComments = true;
 		return this;
@@ -207,7 +186,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 	 * namespace support object
 	 * 
 	 * @param uri the default namespace uri.
-     * @return this instance.
 	 */
 	public SAXFilter setDefaultNamespace(String uri)
 	{
@@ -215,15 +193,10 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 		return this;
 	}
 
-	/*
+	/**
 	 * SAX Content events
-     */
-
-    /**
-     * Start of the document.
-     * @throws org.xml.sax.SAXException passed through.
 	 */
-    @Override
+	
 	public void startDocument() throws SAXException
 	{
 		if (allowDocuments)
@@ -232,11 +205,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * End of the document.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void endDocument() throws SAXException
 	{	
 		if (allowDocuments)
@@ -245,12 +213,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-    /**
-     * Supply a callback object for location awareness.
-     *
-     * @param locator the new locator.
-     */
-    @Override
 	public void setDocumentLocator(Locator locator)
 	{
 		if (allowDocumentLocators)
@@ -259,14 +221,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-    /**
-     * A processing instruction was parsed.
-     *
-     * @param target the processing instruction target.
-     * @param data from the processing instruction.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void processingInstruction(String target, String data)
 	throws SAXException
 	{
@@ -276,14 +230,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-    /**
-     * A namespace prefix is declared.
-     *
-     * @param prefix a tag prefix.
-     * @param uri namespace indicated by the prefix.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void startPrefixMapping(String prefix, String uri)
 	throws SAXException
 	{
@@ -293,13 +239,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-    /**
-     * End of a prefix mapping.
-     *
-     * @param prefix the name of the mapping.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void endPrefixMapping(String prefix) throws SAXException
 	{
 		if (allowPrefixMappings)
@@ -308,16 +247,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-    /**
-     * Start of an element.
-     *
-     * @param uri namespace of the element.
-     * @param localName local name of the element.
-     * @param qName qualified name of the element.
-     * @param atts attributes of this instance of the element.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException
 	{
 		if (allowElements)
@@ -347,15 +276,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 		}
 	}
 
-    /**
-     * End of an element.
-     *
-     * @param uri namespace of the element.
-     * @param localName local name of the element.
-     * @param qName qualified name of the element.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void endElement(String uri, String localName, String qName)
 	throws SAXException
 	{
@@ -386,15 +306,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
 		}
 	}
 
-    /**
-     * Ignorable whitespace is recognized.
-     *
-     * @param ch content of the whitespace.
-     * @param start starting position.
-     * @param length length of the whitespace.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void ignorableWhitespace(char[] ch, int start, int length)
 	throws SAXException
 	{
@@ -404,13 +315,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * Recognize a skipped entity.
-     *
-     * @param name name of the entity.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void skippedEntity(String name) throws SAXException
 	{
 		if (allowSkippedEntities)
@@ -419,15 +323,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * Character content.
-     *
-     * @param ch content characters.
-     * @param start starting position.
-     * @param length length of content.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void characters(char[] ch, int start, int length)
 	throws SAXException
 	{
@@ -437,20 +332,10 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 	
-	/*
+	/**
 	 * SAX Lexical events
-     */
-
-    /**
-     * Start of a DTD declaration.
-     *
-     * @param name of the DTD.
-     * @param publicId public identifier for the DTD.
-     * @param systemId system identifier for the DTD.
-     * @throws org.xml.sax.SAXException passed through.
 	 */
 
-    @Override
 	public void startDTD(String name, String publicId, String systemId)
 	throws SAXException
 	{
@@ -460,12 +345,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * End of a DTD declaration.
-     *
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void endDTD() throws SAXException
 	{
 		if (allowDTDs)
@@ -474,13 +353,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * Start of an entity.
-     *
-     * @param name of the entity.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void startEntity(String name)
 	throws SAXException
 	{
@@ -490,13 +362,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * End of an entity.
-     *
-     * @param name of the entity.
-     * @throws SAXException passed through
-     */
-    @Override
 	public void endEntity(String name)
 	throws SAXException
 	{
@@ -506,12 +371,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * Start of character data.
-     *
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void startCDATA()
 	throws SAXException
 	{
@@ -521,12 +380,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * End of character data.
-     *
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void endCDATA()
 	throws SAXException
 	{
@@ -536,15 +389,6 @@ public class SAXFilter implements ContentHandler, LexicalHandler
         }
 	}
 
-    /**
-     * XML comment.
-     *
-     * @param ch content of the comment.
-     * @param start starting position.
-     * @param length length of the comment.
-     * @throws SAXException passed through.
-     */
-    @Override
 	public void comment(char[] ch, int start, int length)
 	throws SAXException
 	{

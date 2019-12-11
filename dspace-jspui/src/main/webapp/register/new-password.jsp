@@ -65,24 +65,28 @@
 	<p><fmt:message key="jsp.register.new-password.info2"/></p>
 
     <form class="form-horizontal" action="<%= request.getContextPath() %>/forgot" method="post">
+    
+    
+    
+        
         <div class="form-group">
-            <%-- <td align="right" class="standard"><strong>New Password:</strong></td> --%>
-            <label class="col-md-offset-3 col-md-2 control-label" for="tpassword"><fmt:message key="jsp.register.new-password.pswd.field"/></label>
-            <div class="col-md-3">
-                <input class="form-control" type="password" name="password" id="tpassword" />
+                            <%-- <td align="right" class="standard"><strong>New Password:</strong></td> --%>
+							<label class="col-md-offset-3 col-md-2 control-label" for="tpassword"><fmt:message key="jsp.register.new-password.pswd.field"/></label>
+							<div class="col-md-3">
+                            	<input class="form-control" type="password" name="password" id="tpassword" />
+                            </div>
             </div>
-        </div>
         <div class="form-group">
-            <%-- <td align="right" class="standard"><strong>Again to Confirm:</strong></td> --%>
-            <label class="col-md-offset-3 col-md-2 control-label" for="tpassword_confirm"><fmt:message key="jsp.register.new-password.confirm.field"/></label>
-            <div class="col-md-3">
-                <input class="form-control" type="password" name="password_confirm" id="tpassword_confirm" />
-            </div>
+	                           <%-- <td align="right" class="standard"><strong>Again to Confirm:</strong></td> --%>
+							<label class="col-md-offset-3 col-md-2 control-label" for="tpassword_confirm"><fmt:message key="jsp.register.new-password.confirm.field"/></label>
+							<div class="col-md-3">
+                            	<input class="form-control" type="password" name="password_confirm" id="tpassword_confirm" /></td>
+                            </div>
 		</div>
-        <div class="col-md-offset-5">
-            <%-- <p align="center"><input type="submit" name="submit" value="Update Profile"></p> --%>
-            <input class="btn btn-success col-md-4" type="submit" name="submit" value="<fmt:message key="jsp.register.new-password.set.button"/>" />
-        </div>
+	<div class="col-md-offset-5">
+       <%-- <p align="center"><input type="submit" name="submit" value="Update Profile"></p> --%>
+	   <input class="btn btn-success col-md-4" type="submit" name="submit" value="<fmt:message key="jsp.register.new-password.set.button"/>" />
+	 </div>
 	 
 	    <input type="hidden" name="step" value="<%= RegisterServlet.NEW_PASSWORD_PAGE %>"/>
         <input type="hidden" name="token" value="<%= token %>"/>

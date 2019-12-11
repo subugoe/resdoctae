@@ -49,7 +49,7 @@ public class PubmedService
 
     private static final Logger log = Logger.getLogger(PubmedService.class);
 
-    protected int timeout = 1000;
+    private int timeout = 1000;
 
     public void setTimeout(int timeout)
     {
@@ -76,7 +76,7 @@ public class PubmedService
         if (StringUtils.isNotBlank(title))
         {
             query.append("((").append(title).append("[TI]) OR (");
-            // [TI] does not always work, book chapter title
+            // [TI] non funziona sempre, titolo di capitoli di libro
             query.append("(").append(title).append("[book]))");
         }
         if (StringUtils.isNotBlank(author))
@@ -108,7 +108,7 @@ public class PubmedService
                 client.getParams().setIntParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, timeout);
 
                 URIBuilder uriBuilder = new URIBuilder(
-                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi");
+                        "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi");
                 uriBuilder.addParameter("db", "pubmed");
                 uriBuilder.addParameter("datetype", "edat");
                 uriBuilder.addParameter("retmax", "10");
@@ -226,7 +226,7 @@ public class PubmedService
 
             try {
                 URIBuilder uriBuilder = new URIBuilder(
-                        "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi");
+                        "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi");
                 uriBuilder.addParameter("db", "pubmed");
                 uriBuilder.addParameter("retmode", "xml");
                 uriBuilder.addParameter("rettype", "full");

@@ -16,12 +16,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.dspace.app.webui.discovery.DiscoverySearchRequestProcessor;
+import org.dspace.app.webui.search.LuceneSearchRequestProcessor;
 import org.dspace.app.webui.search.SearchProcessorException;
 import org.dspace.app.webui.search.SearchRequestProcessor;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
 import org.dspace.core.PluginConfigurationError;
-import org.dspace.core.factory.CoreServiceFactory;
+import org.dspace.core.PluginManager;
 
 /**
  * Servlet for producing OpenSearch-compliant search results, and the OpenSearch
@@ -38,18 +39,16 @@ public class OpenSearchServlet extends DSpaceServlet
 {
     private static final long serialVersionUID = 1L;
     
-    private transient SearchRequestProcessor internalLogic;
+    private SearchRequestProcessor internalLogic;
 
     /** log4j category */
-    private static final Logger log = Logger.getLogger(OpenSearchServlet.class);
+    private static Logger log = Logger.getLogger(OpenSearchServlet.class);
 
-    public OpenSearchServlet()
+    public void init()
     {
-        super();
-
         try
         {
-            internalLogic = (SearchRequestProcessor) CoreServiceFactory.getInstance().getPluginService()
+            internalLogic = (SearchRequestProcessor) PluginManager
                     .getSinglePlugin(SearchRequestProcessor.class);
         }
         catch (PluginConfigurationError e)
@@ -64,7 +63,6 @@ public class OpenSearchServlet extends DSpaceServlet
         }
     }
 
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException

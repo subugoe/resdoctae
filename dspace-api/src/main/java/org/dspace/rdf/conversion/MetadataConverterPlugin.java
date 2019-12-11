@@ -26,16 +26,15 @@ import java.util.Iterator;
 import java.util.List;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.dspace.app.util.factory.UtilServiceFactory;
+import org.dspace.app.util.MetadataExposure;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.DSpaceObjectService;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
+import org.dspace.content.Metadatum;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.rdf.RDFUtil;
 import org.dspace.services.ConfigurationService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  *
@@ -48,7 +47,6 @@ public class MetadataConverterPlugin implements ConverterPlugin
     public final static String METADATA_PREFIXES_KEY = "rdf.metadata.prefixes";
     
     private final static Logger log = Logger.getLogger(MetadataConverterPlugin.class);
-    @Autowired(required=true)
     protected ConfigurationService configurationService;
     
     @Override
@@ -60,10 +58,9 @@ public class MetadataConverterPlugin implements ConverterPlugin
     public Model convert(Context context, DSpaceObject dso)
             throws SQLException, AuthorizeException {
         String uri = RDFUtil.generateIdentifier(context, dso);
-        DSpaceObjectService<DSpaceObject> dsoService = ContentServiceFactory.getInstance().getDSpaceObjectService(dso);
         if (uri == null)
         {
-            log.error("Cannot create URI for " + dsoService.getTypeText(dso) + " " 
+            log.error("Cannot create URI for " + dso.getTypeText() + " " 
                     + dso.getID() + " stopping conversion.");
             return null;
         }
@@ -130,24 +127,23 @@ public class MetadataConverterPlugin implements ConverterPlugin
         // should be changed, if Communities and Collections have metadata as well.
         if (!(dso instanceof Item))
         {
-            log.error("This DspaceObject (" + dsoService.getTypeText(dso) + " " 
+            log.error("This DspaceObject (" + dso.getTypeText() + " " 
                     + dso.getID() + ") should not have bin submitted to this "
                     + "plugin, as it supports Items only!");
             return null;
         }
         
-        List<MetadataValue> metadata_values = dsoService.getMetadata(dso, MetadataSchema.DC_SCHEMA, Item.ANY, Item.ANY, Item.ANY);
-        for (MetadataValue value : metadata_values)
+        Item item = (Item) dso;
+        Metadatum[] metadata_values = item.getDC(Item.ANY, Item.ANY, Item.ANY);
+        for (Metadatum value : metadata_values)
         {
-            MetadataField metadataField = value.getMetadataField();
-            MetadataSchema metadataSchema = metadataField.getMetadataSchema();
-            String fieldname = metadataSchema.getName() + "." + metadataField.getElement();
-            if (metadataField.getQualifier() != null) 
+            String fieldname = value.schema + "." + value.element;
+            if (value.qualifier != null) 
             {
-                fieldname = fieldname + "." + metadataField.getQualifier();
+                fieldname = fieldname + "." + value.qualifier;
             }
-            if (UtilServiceFactory.getInstance().getMetadataExposureService().isHidden(context, metadataSchema.getName(), metadataField.getElement(),
-                    metadataField.getQualifier()))
+            if (MetadataExposure.isHidden(context, value.schema, value.element,
+                    value.qualifier))
             {
                 log.debug(fieldname + " is a hidden metadata field, won't "
                         + "convert it.");
@@ -155,29 +151,29 @@ public class MetadataConverterPlugin implements ConverterPlugin
             }
 
             boolean converted = false;
-            if (metadataField.getQualifier() != null)
+            if (value.qualifier != null)
             {
                 Iterator<MetadataRDFMapping> iter = mappings.iterator();
                 while (iter.hasNext())
                 {
                     MetadataRDFMapping mapping = iter.next();
-                    if (mapping.matchesName(fieldname) && mapping.fulfills(value.getValue()))
+                    if (mapping.matchesName(fieldname) && mapping.fulfills(value.value))
                     {
-                        mapping.convert(value.getValue(), value.getLanguage(), uri, convertedData);
+                        mapping.convert(value.value, value.language, uri, convertedData);
                         converted = true;
                     }
                 }
             }
             if (!converted)
             {
-                String name = metadataSchema.getName() + "." + metadataField.getElement();
+                String name = value.schema + "." + value.element;
                 Iterator<MetadataRDFMapping> iter = mappings.iterator();
                 while (iter.hasNext() && !converted)
                 {
                     MetadataRDFMapping mapping = iter.next();
-                    if (mapping.matchesName(name) && mapping.fulfills(value.getValue()))
+                    if (mapping.matchesName(name) && mapping.fulfills(value.value))
                     {
-                        mapping.convert(value.getValue(), value.getLanguage(), uri, convertedData);
+                        mapping.convert(value.value, value.language, uri, convertedData);
                         converted = true;
                     }
                 }
@@ -205,29 +201,31 @@ public class MetadataConverterPlugin implements ConverterPlugin
     
     protected Model loadConfiguration()
     {
-        InputStream is = null;
-        Model config = ModelFactory.createDefaultModel();
-        String mapping = configurationService.getProperty(METADATA_MAPPING_PATH_KEY);
-        if (StringUtils.isEmpty(mapping))
+        String mappingPathes = configurationService.getProperty(METADATA_MAPPING_PATH_KEY);
+        if (StringUtils.isEmpty(mappingPathes))
+        {
+            return null;
+        }
+        String[] mappings = mappingPathes.split(",\\s*");        
+        if (mappings == null || mappings.length == 0)
         {
             log.error("Cannot find metadata mappings (looking for "
                     + "property " + METADATA_MAPPING_PATH_KEY + ")!");
             return null;
         }
-        else
+        
+        InputStream is = null;
+        Model config = ModelFactory.createDefaultModel();
+        for (String mappingPath : mappings)
         {
-            is = FileManager.get().open(mapping);
+            is = FileManager.get().open(mappingPath);
             if (is == null)
             {
-                log.warn("Cannot find file '" + mapping + "', ignoring...");
+                log.warn("Cannot find file '" + mappingPath + "', ignoring...");
             }
-            config.read(is, "file://" + mapping, FileUtils.guessLang(mapping));
+            config.read(is, "file://" + mappingPath, FileUtils.guessLang(mappingPath));
             try {
-                // Make sure that we have an input stream to avoid NullPointer
-                if(is != null)
-                {
-                    is.close();
-                }
+                is.close();
             }
             catch (IOException ex)
             {

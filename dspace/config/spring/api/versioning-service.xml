@@ -19,10 +19,16 @@
          Default Item Versioning Provider, defines behavior for replicating
          Item, Metadata, Bundles and Bitstreams. Autowired at this time.
      -->
-    <bean id="org.dspace.versioning.service.VersioningService"
+    <bean id="org.dspace.versioning.VersioningService"
           class="org.dspace.versioning.VersioningServiceImpl"
           autowire="byType"
           scope="singleton">
+       <property name="versionDAO">
+          <bean class="org.dspace.versioning.VersionDAO"/>
+       </property>
+       <property name="versionHistoryDAO">
+          <bean class="org.dspace.versioning.VersionHistoryDAO"/>
+       </property>
        <property name="provider">
            <!-- Default Item Versioning Provider, defines behavior for replicating
                 Item, Metadata, Budles and Bitstreams. Autowired at this time. -->
@@ -36,7 +42,7 @@
                
            </bean>
        </property>
-
+ 
     </bean>
-
+    
 </beans>

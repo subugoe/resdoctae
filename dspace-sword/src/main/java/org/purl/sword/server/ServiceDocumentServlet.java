@@ -33,7 +33,7 @@ import org.purl.sword.base.ServiceDocumentRequest;
 public class ServiceDocumentServlet extends HttpServlet {
 
 	/** The repository */
-	private transient SWORDServer myRepository;
+	private SWORDServer myRepository;
 
 	/** Authentication type. */
 	private String authN;
@@ -42,27 +42,24 @@ public class ServiceDocumentServlet extends HttpServlet {
 	private int maxUploadSize;
 
 	/** Logger */
-	private static final Logger log = Logger.getLogger(ServiceDocumentServlet.class);
+	private static Logger log = Logger.getLogger(ServiceDocumentServlet.class);
 
-    /**
+	/**
 	 * Initialise the servlet.
-	 *
-	 * @throws ServletException if the server class cannot be instantiated.
+	 * 
+	 * @throws ServletException
 	 */
-    @Override
 	public void init() throws ServletException {
-
-        // Instantiate the correct SWORD Server class
+		// Instantiate the correct SWORD Server class
 		String className = getServletContext().getInitParameter("sword-server-class");
 		if (className == null) {
 			log.fatal("Unable to read value of 'sword-server-class' from Servlet context");
-            throw new ServletException("Unable to read value of 'sword-server-class' from Servlet context");
 		} else {
 			try {
 				myRepository = (SWORDServer) Class.forName(className)
 						.newInstance();
 				log.info("Using " + className + " as the SWORDServer");
-			} catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+			} catch (Exception e) {
 				log.fatal("Unable to instantiate class from 'server-class': "
 						+ className);
 				throw new ServletException(
@@ -96,13 +93,8 @@ public class ServiceDocumentServlet extends HttpServlet {
 	}
 
 	/**
-	 * Process the GET request.
-     * @param request the request.
-     * @param response the response.
-     * @throws javax.servlet.ServletException passed through.
-     * @throws java.io.IOException passed through.
+	 * Process the get request.
 	 */
-    @Override
 	protected void doGet(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
 		// Create the ServiceDocumentRequest
@@ -124,7 +116,8 @@ public class ServiceDocumentServlet extends HttpServlet {
 		}
 
 		// Set the x-on-behalf-of header
-		sdr.setOnBehalfOf(request.getHeader(HttpHeaders.X_ON_BEHALF_OF));
+		sdr.setOnBehalfOf(request.getHeader(HttpHeaders.X_ON_BEHALF_OF
+				.toString()));
 
 		// Set the IP address
 		sdr.setIPAddress(request.getRemoteAddr());
@@ -154,7 +147,7 @@ public class ServiceDocumentServlet extends HttpServlet {
 			// Return the relevant HTTP status code
 			response.sendError(see.getStatus(), see.getDescription());
 		} catch (SWORDException se) {
-            log.error("Internal error", se);
+			se.printStackTrace();
 			// Throw a HTTP 500
 			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, se.getMessage());
 		}
@@ -162,12 +155,7 @@ public class ServiceDocumentServlet extends HttpServlet {
 
 	/**
 	 * Process the post request. This will return an unimplemented response.
-     * @param request the request.
-     * @param response the response.
-     * @throws javax.servlet.ServletException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-    @Override
 	protected void doPost(HttpServletRequest request,
 			HttpServletResponse response) throws ServletException, IOException {
 		// Send a '501 Not Implemented'

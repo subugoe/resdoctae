@@ -29,11 +29,11 @@ import org.dspace.core.LogManager;
  */
 public class PubmedOnlineDataLoader extends NetworkSubmissionLookupDataLoader
 {
-    protected boolean searchProvider = true;
+    private boolean searchProvider = true;
 
     private static final Logger log = Logger.getLogger(PubmedOnlineDataLoader.class);
 
-    protected PubmedService pubmedService = new PubmedService();
+    private PubmedService pubmedService = new PubmedService();
 
     public void setPubmedService(PubmedService pubmedService)
     {

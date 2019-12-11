@@ -19,7 +19,7 @@ import org.dspace.content.DSpaceObject;
 import org.dspace.content.Community;
 import org.dspace.content.Collection;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.apache.cocoon.caching.CacheableProcessingComponent;
 import org.apache.cocoon.util.HashUtil;
@@ -30,6 +30,7 @@ import org.apache.log4j.Logger;
 import org.dspace.core.Context;
 import org.dspace.discovery.*;
 import org.dspace.services.ConfigurationService;
+import org.dspace.utils.DSpace;
 import org.xml.sax.SAXException;
 
 import java.io.Serializable;
@@ -66,7 +67,7 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
      */
     protected DiscoverQuery queryArgs;
 
-    private final int DEFAULT_PAGE_SIZE = 10;
+    private int DEFAULT_PAGE_SIZE = 10;
 
     public static final String OFFSET = "offset";
     public static final String FACET_FIELD = "field";
@@ -74,15 +75,14 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
     private SearchService searchService = null;
 
     public BrowseFacet() {
-        searchService = DSpaceServicesFactory.getInstance().getServiceManager().getServiceByName(SearchService.class.getName(),SearchService.class);
+        DSpace dspace = new DSpace();
+        searchService = dspace.getServiceManager().getServiceByName(SearchService.class.getName(),SearchService.class);
     }
 
     /**
      * Generate the unique caching key.
      * This key must be unique inside the space of this component.
-     * @return the key.
      */
-    @Override
     public Serializable getKey() {
         try {
             DSpaceObject dso = HandleUtil.obtainHandle(objectModel);
@@ -103,46 +103,44 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
 
     /**
      * Generate the cache validity object.
-     * <p>
+     * <p/>
      * The validity object will include the collection being viewed and
      * all recently submitted items. This does not include the community / collection
      * hierarchy, when this changes they will not be reflected in the cache.
-     * @return the validity.
      */
-    @Override
     public SourceValidity getValidity() {
         if (this.validity == null) {
 
             try {
-                DSpaceValidity newValidity = new DSpaceValidity();
+                DSpaceValidity validity = new DSpaceValidity();
 
                 DSpaceObject dso = HandleUtil.obtainHandle(objectModel);
 
                 if (dso != null) {
                     // Add the actual collection;
-                    newValidity.add(context, dso);
+                    validity.add(dso);
                 }
 
                 // add recently submitted items, serialize solr query contents.
                 DiscoverResult response = getQueryResponse(dso);
 
-                newValidity.add("numFound:" + response.getDspaceObjects().size());
+                validity.add("numFound:" + response.getDspaceObjects().size());
 
                 for (DSpaceObject resultDso : response.getDspaceObjects()) {
-                    newValidity.add(context, resultDso);
+                    validity.add(resultDso);
                 }
 
                 for (String facetField : response.getFacetResults().keySet()) {
-                    newValidity.add(facetField);
+                    validity.add(facetField);
 
                     List<DiscoverResult.FacetResult> facetValues = response.getFacetResults().get(facetField);
                     for (DiscoverResult.FacetResult facetValue : facetValues) {
-                        newValidity.add(facetValue.getAsFilterQuery() + facetValue.getCount());
+                        validity.add(facetValue.getAsFilterQuery() + facetValue.getCount());
                     }
                 }
 
 
-                this.validity = newValidity.complete();
+                this.validity = validity.complete();
             }
             catch (Exception e) {
                 // Just ignore all errors and return an invalid cache.
@@ -157,7 +155,6 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
      * Get the recently submitted items for the given community or collection.
      *
      * @param scope The collection.
-     * @return recently submitted items.
      */
     protected DiscoverResult getQueryResponse(DSpaceObject scope) {
 
@@ -183,7 +180,7 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
 
 //        TODO: change this !
         queryArgs.setSortField(
-                DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("recent.submissions.sort-option"),
+                ConfigurationManager.getProperty("recent.submissions.sort-option"),
                 DiscoverQuery.SORT_ORDER.asc
         );
         queryArgs.addFilterQueries(getParameterFacetQueries());
@@ -238,6 +235,11 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
             discoverQuery.setMaxResults(1);
             discoverQuery.setSortField(dateField, DiscoverQuery.SORT_ORDER.asc);
             discoverQuery.addFilterQueries(filterquery);
+
+            DiscoverResult rsp = searchService.search(context, discoverQuery);
+//            if(0 < rsp.getResults().getNumFound()){
+//                return (Date) rsp.getResults().get(0).getFieldValue(dateField);
+//            }
         }catch (Exception e){
             log.error("Unable to get lowest date", e);
         }
@@ -246,16 +248,8 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
 
     /**
      * Add a page title and trail links.
-     *
-     * @throws org.xml.sax.SAXException passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
      */
-    @Override
-    public void addPageMeta(PageMeta pageMeta)
-            throws SAXException, WingException, SQLException, IOException, AuthorizeException {
+    public void addPageMeta(PageMeta pageMeta) throws SAXException, WingException, SQLException, IOException, AuthorizeException {
         Request request = ObjectModelHelper.getRequest(objectModel);
         String facetField = request.getParameter(FACET_FIELD);
 
@@ -266,7 +260,7 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
 
         DSpaceObject dso = HandleUtil.obtainHandle(objectModel);
         if ((dso instanceof Collection) || (dso instanceof Community)) {
-            HandleUtil.buildHandleTrail(context, dso, pageMeta, contextPath);
+            HandleUtil.buildHandleTrail(dso, pageMeta, contextPath);
         }
 
         pageMeta.addTrail().addContent(message("xmlui.ArtifactBrowser.AbstractSearch.type_" + facetField + "_browse"));
@@ -292,7 +286,7 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
             Map<String, List<DiscoverResult.FacetResult>> facetFields = this.queryResults.getFacetResults();
             if (facetFields == null)
             {
-                facetFields = new LinkedHashMap<>();
+                facetFields = new LinkedHashMap<String, List<DiscoverResult.FacetResult>>();
             }
 
 //            facetFields.addAll(this.queryResults.getFacetDates());
@@ -328,7 +322,7 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
 
                     Table singleTable = results.addTable("browse-by-" + facetField + "-results", (int) (queryResults.getDspaceObjects().size() + 1), 1);
 
-                    List<String> filterQueries = new ArrayList<>();
+                    List<String> filterQueries = new ArrayList<String>();
                     if(request.getParameterValues("fq") != null)
                     {
                         filterQueries = Arrays.asList(request.getParameterValues("fq"));
@@ -387,26 +381,26 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
     }
 
     private String getNextPageURL(Request request) {
-        Map<String, String> urlParameters = new HashMap<>();
-        urlParameters.put(FACET_FIELD, request.getParameter(FACET_FIELD));
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(FACET_FIELD, request.getParameter(FACET_FIELD));
         if (queryArgs.getFacetOffset() != -1)
         {
-            urlParameters.put(OFFSET, String.valueOf(queryArgs.getFacetOffset() + DEFAULT_PAGE_SIZE));
+            parameters.put(OFFSET, String.valueOf(queryArgs.getFacetOffset() + DEFAULT_PAGE_SIZE));
         }
 
         // Add the filter queries
-        String newURL = generateURL("browse-discovery", urlParameters);
+        String url = generateURL("browse-discovery", parameters);
         String[] fqs = getParameterFacetQueries();
         if (fqs != null) {
-            StringBuilder urlBuilder = new StringBuilder(newURL);
+            StringBuilder urlBuilder = new StringBuilder(url);
             for (String fq : fqs) {
                 urlBuilder.append("&fq=").append(fq);
             }
 
-            newURL = urlBuilder.toString();
+            url = urlBuilder.toString();
         }
 
-        return newURL;
+        return url;
     }
 
     private String getPreviousPageURL(Request request) {
@@ -416,29 +410,32 @@ public class BrowseFacet extends AbstractDSpaceTransformer implements CacheableP
             return null;
         }
 
-        Map<String, String> urlParameters = new HashMap<>();
-        urlParameters.put(FACET_FIELD, request.getParameter(FACET_FIELD));
+        Map<String, String> parameters = new HashMap<String, String>();
+        parameters.put(FACET_FIELD, request.getParameter(FACET_FIELD));
         if (queryArgs.getFacetOffset() != -1)
         {
-            urlParameters.put(OFFSET, String.valueOf(queryArgs.getFacetOffset() - DEFAULT_PAGE_SIZE));
+            parameters.put(OFFSET, String.valueOf(queryArgs.getFacetOffset() - DEFAULT_PAGE_SIZE));
         }
 
         // Add the filter queries
-        String newURL = generateURL("browse-discovery", urlParameters);
+        String url = generateURL("browse-discovery", parameters);
         String[] fqs = getParameterFacetQueries();
         if (fqs != null) {
-            StringBuilder urlBuilder = new StringBuilder(newURL);
+            StringBuilder urlBuilder = new StringBuilder(url);
             for (String fq : fqs) {
                 urlBuilder.append("&fq=").append(fq);
             }
 
-            newURL = urlBuilder.toString();
+            url = urlBuilder.toString();
         }
 
-        return newURL;
+        return url;
     }
 
-    @Override
+
+    /**
+     * Recycle
+     */
     public void recycle() {
         // Clear out our item's cache.
         this.queryResults = null;

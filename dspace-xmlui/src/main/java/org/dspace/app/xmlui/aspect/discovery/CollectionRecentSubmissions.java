@@ -16,8 +16,6 @@ import org.dspace.app.xmlui.wing.element.ReferenceSet;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.DSpaceObject;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
@@ -35,7 +33,6 @@ public class CollectionRecentSubmissions extends AbstractRecentSubmissionTransfo
     private static final Message T_head_recent_submissions =
             message("xmlui.ArtifactBrowser.CollectionViewer.head_recent_submissions");
 
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
 
     /**
      * Displays the recent submissions for this collection
@@ -79,7 +76,7 @@ public class CollectionRecentSubmissions extends AbstractRecentSubmissionTransfo
                 }
             }
 
-            if (itemService.countItems(context, collection) > maxRecentSubmissions)
+            if (collection.countItems() > maxRecentSubmissions)
                 addViewMoreLink(lastSubmittedDiv, collection);
         }
     }

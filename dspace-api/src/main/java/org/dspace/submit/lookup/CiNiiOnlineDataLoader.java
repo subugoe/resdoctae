@@ -25,15 +25,15 @@ import org.dspace.core.Context;
  */
 public class CiNiiOnlineDataLoader extends NetworkSubmissionLookupDataLoader
 {
-    protected CiNiiService ciniiService = new CiNiiService();
+    private CiNiiService ciniiService = new CiNiiService();
 
-    protected boolean searchProvider = true;
+    private boolean searchProvider = true;
 
     /** Application id to use CiNii */
-    protected String appId = null;
+    private String appId = null;
 
     /** max result number to return */
-    protected int maxResults = 10;
+    private int maxResults = 10;
 
     public void setCiNiiService(CiNiiService ciniiService)
     {

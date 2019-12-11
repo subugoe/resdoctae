@@ -12,19 +12,22 @@ import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.Division;
 import org.dspace.app.xmlui.wing.element.List;
 
+
 /**
  * A set of static utilities to help with EPerson workflows.
  * 
  * @author Scott Phillips
  */
+
 public class EPersonUtils
 {
+
     /**
      * Create a progress list for the registration workflow.
-     *
+     * 
      * @param form The division of the current workflow step.
-     * @param step The current step of the workflow (-1 if no step).
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
+     * @param step The current step of the workflow (-1 if no step)
+     * 
      */
     public static void registrationProgressList(Division form, int step) throws WingException
     {
@@ -48,7 +51,6 @@ public class EPersonUtils
      * 
      * @param form The division of the current workflow step
      * @param step The current step of the workflow (-1 if no step)
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public static void forgottProgressList(Division form, int step) throws WingException
     {

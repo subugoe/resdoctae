@@ -20,23 +20,24 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.log4j.Logger;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.pdfparser.PDFParser;
-import org.apache.pdfbox.io.ScratchFile;
-import org.apache.pdfbox.io.MemoryUsageSetting;
-import org.apache.pdfbox.io.RandomAccessBufferedFileInputStream;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
+import org.dspace.content.Bitstream;
+import org.dspace.content.BitstreamFormat;
+import org.dspace.content.Bundle;
+import org.dspace.content.Collection;
+import org.dspace.content.DCDate;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
+import org.dspace.content.WorkspaceItem;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.crosswalk.MetadataValidationException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.*;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 import org.dspace.core.SelfNamedPlugin;
 import org.dspace.core.Utils;
-import org.dspace.workflow.WorkflowException;
 
 /**
  * Accept a PDF file by itself as a SIP.
@@ -62,29 +63,25 @@ public class PDFPackager
     /** log4j category */
     private static final Logger log = Logger.getLogger(PDFPackager.class);
 
-    protected static final String BITSTREAM_FORMAT_NAME = "Adobe PDF";
+    private static final String BITSTREAM_FORMAT_NAME = "Adobe PDF";
 
-    protected static String aliases[] = { "PDF", "Adobe PDF", "pdf", "application/pdf" };
+    private static String aliases[] = { "PDF", "Adobe PDF", "pdf", "application/pdf" };
 
     public static String[] getPluginNames()
     {
         return (String[]) ArrayUtils.clone(aliases);
     }
 
-    protected final BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected final BundleService bundleService = ContentServiceFactory.getInstance().getBundleService();
-    protected final BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-    protected final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    protected final WorkspaceItemService workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
-
     // utility to grovel bitstream formats..
-    protected void setFormatToMIMEType(Context context, Bitstream bs, String mimeType)
+    private static void setFormatToMIMEType(Context context, Bitstream bs, String mimeType)
         throws SQLException
     {
-        List<BitstreamFormat> bf = bitstreamFormatService.findNonInternal(context);
-        for (BitstreamFormat aBf : bf) {
-            if (aBf.getMIMEType().equalsIgnoreCase(mimeType)) {
-                bs.setFormat(context, aBf);
+        BitstreamFormat bf[] = BitstreamFormat.findNonInternal(context);
+        for (int i = 0; i < bf.length; ++i)
+        {
+            if (bf[i].getMIMEType().equalsIgnoreCase(mimeType))
+            {
+                bs.setFormat(bf[i]);
                 break;
             }
         }
@@ -106,19 +103,15 @@ public class PDFPackager
      * @param params  package parameters (none recognized)
      * @param license  may be null, which takes default license.
      * @return workspace item created by ingest.
-     * @throws PackageValidationException if package invalid
-     * @throws CrosswalkException if crosswalking fails
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws WorkflowException if workflow error
+     * @throws PackageException if package is unacceptable or there is
+     *  a fatal error turning it into an Item.
      */
-    @Override
     public DSpaceObject ingest(Context context, DSpaceObject parent,
                                 File pkgFile, PackageParameters params,
                                 String license)
-            throws PackageValidationException, CrosswalkException,
-            AuthorizeException, SQLException, IOException, WorkflowException {
+        throws PackageValidationException, CrosswalkException,
+               AuthorizeException, SQLException, IOException
+    {
         boolean success = false;
         Bundle original = null;
         Bitstream bs = null;
@@ -128,15 +121,15 @@ public class PDFPackager
         {
             // Save the PDF in a bitstream first, since the parser
             // has to read it as well, and we cannot "rewind" it after that.
-            wi = workspaceItemService.create(context, (Collection)parent, false);
+            wi = WorkspaceItem.create(context, (Collection)parent, false);
             Item myitem = wi.getItem();
-            original = bundleService.create(context, myitem, "ORIGINAL");
+            original = myitem.createBundle("ORIGINAL");
 
             InputStream fileStream = null;
             try
             {
                 fileStream = new FileInputStream(pkgFile);
-                bs = bitstreamService.create(context, original, fileStream);
+                bs = original.createBitstream(fileStream);
             }
             finally
             {
@@ -146,17 +139,18 @@ public class PDFPackager
                 }
             }
 
-            bs.setName(context, "package.pdf");
+            bs.setName("package.pdf");
             setFormatToMIMEType(context, bs, "application/pdf");
-            bitstreamService.update(context, bs);
+            bs.update();
             if (log.isDebugEnabled())
             {
                 log.debug("Created bitstream ID=" + String.valueOf(bs.getID()) + ", parsing...");
             }
 
-            crosswalkPDF(context, myitem, bitstreamService.retrieve(context, bs));
+            crosswalkPDF(context, myitem, bs.retrieve());
 
-            workspaceItemService.update(context, wi);
+            wi.update();
+            context.commit();
             success = true;
             log.info(LogManager.getHeader(context, "ingest",
                 "Created new Item, db ID="+String.valueOf(myitem.getID())+
@@ -172,27 +166,20 @@ public class PDFPackager
             {
                 if (original != null && bs != null)
                 {
-                    bundleService.removeBitstream(context, original, bs);
+                    original.removeBitstream(bs);
                 }
                 if (wi != null)
                 {
-                    workspaceItemService.deleteAll(context, wi);
+                    wi.deleteAll();
                 }
             }
-            context.complete();
+            context.commit();
         }
     }
 
     /**
      * IngestAll() cannot be implemented for a PDF ingester, because there's only one PDF to ingest
-     * @throws UnsupportedOperationException if unsupported operation
-     * @throws PackageException if package error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
      */
-    @Override
     public List<String> ingestAll(Context context, DSpaceObject parent, File pkgFile,
                                 PackageParameters params, String license)
         throws PackageException, UnsupportedOperationException,
@@ -205,14 +192,7 @@ public class PDFPackager
 
     /**
      * Replace is not implemented.
-     * @throws UnsupportedOperationException if unsupported operation
-     * @throws PackageException if package error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
      */
-    @Override
     public DSpaceObject replace(Context context, DSpaceObject dso,
                             File pkgFile, PackageParameters params)
         throws PackageException, UnsupportedOperationException,
@@ -224,14 +204,7 @@ public class PDFPackager
 
     /**
      * ReplaceAll() cannot be implemented for a PDF ingester, because there's only one PDF to ingest
-     * @throws UnsupportedOperationException if unsupported operation
-     * @throws PackageException if package error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
-     * @throws CrosswalkException if crosswalk error
      */
-    @Override
     public List<String> replaceAll(Context context, DSpaceObject dso,
                                 File pkgFile, PackageParameters params)
         throws PackageException, UnsupportedOperationException,
@@ -245,13 +218,7 @@ public class PDFPackager
      * VERY crude dissemination: just look for the first
      * bitstream with the PDF package type, and toss it out.
      * Works on packages importer with this packager, and maybe some others.
-     * @param dso DSpaceObject
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
      */
-    @Override
     public void disseminate(Context context, DSpaceObject dso,
                             PackageParameters params, File pkgFile)
         throws PackageValidationException, CrosswalkException,
@@ -263,13 +230,13 @@ public class PDFPackager
         }
 
         Item item = (Item)dso;
-        BitstreamFormat pdff = bitstreamFormatService.findByShortDescription(context,
+        BitstreamFormat pdff = BitstreamFormat.findByShortDescription(context,
                                 BITSTREAM_FORMAT_NAME);
         if (pdff == null)
         {
             throw new PackageValidationException("Cannot find BitstreamFormat \"" + BITSTREAM_FORMAT_NAME + "\"");
         }
-        Bitstream pkgBs = PackageUtils.getBitstreamByFormat(context, item, pdff, Constants.DEFAULT_BUNDLE_NAME);
+        Bitstream pkgBs = PackageUtils.getBitstreamByFormat(item, pdff, Constants.DEFAULT_BUNDLE_NAME);
         if (pkgBs == null)
         {
             throw new PackageValidationException("Cannot find Bitstream with format \"" + BITSTREAM_FORMAT_NAME + "\"");
@@ -287,7 +254,7 @@ public class PDFPackager
         {
             //open up output stream to copy bitstream to file
             out = new FileOutputStream(pkgFile);
-            Utils.copy(bitstreamService.retrieve(context, pkgBs), out);
+            Utils.copy(pkgBs.retrieve(), out);
         }
         finally
         {
@@ -300,13 +267,7 @@ public class PDFPackager
 
     /**
      * disseminateAll() cannot be implemented for a PDF disseminator, because there's only one PDF to disseminate
-     * @throws PackageException if package error
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
      */
-    @Override
     public List<File> disseminateAll(Context context, DSpaceObject dso,
                      PackageParameters params, File pkgFile)
         throws PackageException, CrosswalkException,
@@ -319,10 +280,8 @@ public class PDFPackager
     /**
      * Identifies the MIME-type of this package, i.e. "application/pdf".
      *
-     * @param params package params
      * @return the MIME type (content-type header) of the package to be returned
      */
-    @Override
     public String getMIMEType(PackageParameters params)
     {
         return "application/pdf";
@@ -335,18 +294,7 @@ public class PDFPackager
 
         try
         {
-            ScratchFile scratchFile = null;
-            try
-            {
-                long useRAM = Runtime.getRuntime().freeMemory()*80/100; // use up to 80% of JVM free memory
-                scratchFile = new ScratchFile(MemoryUsageSetting.setupMixed(useRAM)); // then fallback to temp file (unlimited size)
-            }
-            catch (IOException ioe)
-            {
-                log.warn("Error initializing scratch file: " + ioe.getMessage());
-            }
-        
-            PDFParser parser = new PDFParser(new RandomAccessBufferedFileInputStream(metadata), scratchFile);
+            PDFParser parser = new PDFParser(metadata);
             parser.parse();
             cos = parser.getDocument();
 
@@ -386,11 +334,11 @@ public class PDFPackager
             {
                 log.debug("PDF Info dict title=\"" + title + "\"");
             }
-            itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "title", null, "en", title);
+            item.addDC("title", null, "en", title);
             String value = docinfo.getAuthor();
             if (value != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "contributor", "author", null, value);
+                item.addDC("contributor", "author", null, value);
                 if (log.isDebugEnabled())
                 {
                     log.debug("PDF Info dict author=\"" + value + "\"");
@@ -400,27 +348,27 @@ public class PDFPackager
             value = docinfo.getCreator();
             if (value != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "description", "provenance", "en",
+                item.addDC("description", "provenance", "en",
                         "Application that created the original document: " + value);
             }
 
             value = docinfo.getProducer();
             if (value != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "description", "provenance", "en",
+                item.addDC("description", "provenance", "en",
                         "Original document converted to PDF by: " + value);
             }
 
             value = docinfo.getSubject();
             if (value != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "description", "abstract", null, value);
+                item.addDC("description", "abstract", null, value);
             }
 
             value = docinfo.getKeywords();
             if (value != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "subject", "other", null, value);
+                item.addDC("subject", "other", null, value);
             }
 
             // Take either CreationDate or ModDate as "date.created",
@@ -433,10 +381,10 @@ public class PDFPackager
 
             if (calValue != null)
             {
-                itemService.addMetadata(context, item, MetadataSchema.DC_SCHEMA, "date", "created", null,
+                item.addDC("date", "created", null,
                         (new DCDate(calValue.getTime())).toString());
             }
-            itemService.update(context, item);
+            item.update();
         }
         finally
         {

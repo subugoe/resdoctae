@@ -8,16 +8,16 @@
 package org.dspace.app.util;
 
 import java.sql.SQLException;
-import java.util.List;
 
 import org.dspace.authorize.AuthorizeConfiguration;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.authorize.ResourcePolicy;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.*;
+import org.dspace.content.Bitstream;
+import org.dspace.content.Bundle;
+import org.dspace.content.Collection;
+import org.dspace.content.Community;
+import org.dspace.content.Item;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 
@@ -31,28 +31,24 @@ import org.dspace.core.Context;
 public class AuthorizeUtil
 {
 
-    private static final AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    private static final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    private static final CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-
     /**
      * Is allowed manage (create, remove, edit) bitstream's policies in the
      * current context?
-     *
+     * 
      * @param context
      *            the DSpace Context Object
      * @param bitstream
      *            the bitstream that the policy refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             manage the bitstream's policies
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageBitstreamPolicy(Context context,
             Bitstream bitstream) throws AuthorizeException, SQLException
     {
-        Bundle bundle = bitstream.getBundles().get(0);
+        Bundle bundle = bitstream.getBundles()[0];
         authorizeManageBundlePolicy(context, bundle);
     }
 
@@ -64,16 +60,16 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param bundle
      *            the bundle that the policy refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             manage the bundle's policies
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageBundlePolicy(Context context,
             Bundle bundle) throws AuthorizeException, SQLException
     {
-        Item item = bundle.getItems().get(0);
+        Item item = bundle.getItems()[0];
         authorizeManageItemPolicy(context, item);
     }
 
@@ -85,10 +81,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param item
      *            the item that the policy refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             manage the item's policies
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageItemPolicy(Context context, Item item)
@@ -96,20 +92,20 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canItemAdminManagePolicies())
         {
-            authorizeService.authorizeAction(context, item, Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, item, Constants.ADMIN);
         }
         else if (AuthorizeConfiguration.canCollectionAdminManageItemPolicies())
         {
-            authorizeService.authorizeAction(context, item
+            AuthorizeManager.authorizeAction(context, item
                     .getOwningCollection(), Constants.ADMIN);
         }
         else if (AuthorizeConfiguration.canCommunityAdminManageItemPolicies())
         {
-            authorizeService
+            AuthorizeManager
                     .authorizeAction(context, item.getOwningCollection()
-                            .getCommunities().get(0), Constants.ADMIN);
+                            .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage item policies");
@@ -124,10 +120,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection that the policy refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             manage the collection's policies
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageCollectionPolicy(Context context,
@@ -135,16 +131,16 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCollectionAdminManagePolicies())
         {
-            authorizeService.authorizeAction(context, collection,
+            AuthorizeManager.authorizeAction(context, collection,
                     Constants.ADMIN);
         }
         else if (AuthorizeConfiguration
                 .canCommunityAdminManageCollectionPolicies())
         {
-            authorizeService.authorizeAction(context, collection
-                    .getCommunities().get(0), Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, collection
+                    .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage collection policies");
@@ -159,10 +155,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param community
      *            the community that the policy refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             manage the community's policies
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageCommunityPolicy(Context context,
@@ -170,10 +166,10 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCommunityAdminManagePolicies())
         {
-            authorizeService.authorizeAction(context, community,
+            AuthorizeManager.authorizeAction(context, community,
                     Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage community policies");
@@ -185,15 +181,15 @@ public class AuthorizeUtil
      * 
      * @param context
      *            the DSpace Context Object
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not a System Admin
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void requireAdminRole(Context context)
             throws AuthorizeException, SQLException
     {
-        if (!authorizeService.isAdmin(context))
+        if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to perform this action");
@@ -208,10 +204,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param item
      *            the item that the CC License refer to
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to
      *             manage the item's CC License
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageCCLicense(Context context, Item item)
@@ -219,25 +215,25 @@ public class AuthorizeUtil
     {
         try
         {
-            authorizeService.authorizeAction(context, item, Constants.ADD);
-            authorizeService.authorizeAction(context, item, Constants.REMOVE);
+            AuthorizeManager.authorizeAction(context, item, Constants.ADD);
+            AuthorizeManager.authorizeAction(context, item, Constants.REMOVE);
         }
         catch (AuthorizeException authex)
         {
             if (AuthorizeConfiguration.canItemAdminManageCCLicense())
             {
-                authorizeService
+                AuthorizeManager
                         .authorizeAction(context, item, Constants.ADMIN);
             }
             else if (AuthorizeConfiguration.canCollectionAdminManageCCLicense())
             {
-                authorizeService.authorizeAction(context, itemService
-                        .getParentObject(context, item), Constants.ADMIN);
+                AuthorizeManager.authorizeAction(context, item
+                        .getParentObject(), Constants.ADMIN);
             }
             else if (AuthorizeConfiguration.canCommunityAdminManageCCLicense())
             {
-                authorizeService.authorizeAction(context, itemService
-                        .getParentObject(context, item), Constants.ADMIN);
+                AuthorizeManager.authorizeAction(context, item
+                        .getParentObject().getParentObject(), Constants.ADMIN);
             }
             else
             {
@@ -254,34 +250,34 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to manage the collection's
      *             template item
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageTemplateItem(Context context,
             Collection collection) throws AuthorizeException, SQLException
     {
-        boolean isAuthorized = collectionService.canEditBoolean(context, collection, false);
+        boolean isAuthorized = collection.canEditBoolean(false);
 
         if (!isAuthorized
                 && AuthorizeConfiguration
                         .canCollectionAdminManageTemplateItem())
         {
-            authorizeService.authorizeAction(context, collection,
+            AuthorizeManager.authorizeAction(context, collection,
                     Constants.ADMIN);
         }
         else if (!isAuthorized
                 && AuthorizeConfiguration
                         .canCommunityAdminManageCollectionTemplateItem())
         {
-            List<Community> communities = collection.getCommunities();
-            Community parent = communities != null && communities.size() > 0 ? communities.get(0)
+            Community[] communities = collection.getCommunities();
+            Community parent = communities != null && communities.length > 0 ? communities[0]
                     : null;
-            authorizeService.authorizeAction(context, parent, Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, parent, Constants.ADMIN);
         }
-        else if (!isAuthorized && !authorizeService.isAdmin(context))
+        else if (!isAuthorized && !AuthorizeManager.isAdmin(context)) 
         {
             throw new AuthorizeException(
                     "You are not authorized to create a template item for the collection");
@@ -296,10 +292,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to manage the collection's
      *             submitters group
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageSubmittersGroup(Context context,
@@ -307,16 +303,16 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCollectionAdminManageSubmitters())
         {
-            authorizeService.authorizeAction(context, collection,
+            AuthorizeManager.authorizeAction(context, collection,
                     Constants.ADMIN);
         }
         else if (AuthorizeConfiguration
                 .canCommunityAdminManageCollectionSubmitters())
         {
-            authorizeService.authorizeAction(context, collection
-                    .getCommunities().get(0), Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, collection
+                    .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage collection submitters");
@@ -331,10 +327,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to manage the collection's
      *             workflow groups
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageWorkflowsGroup(Context context,
@@ -342,16 +338,16 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCollectionAdminManageWorkflows())
         {
-            authorizeService.authorizeAction(context, collection,
+            AuthorizeManager.authorizeAction(context, collection,
                     Constants.ADMIN);
         }
         else if (AuthorizeConfiguration
                 .canCommunityAdminManageCollectionWorkflows())
         {
-            authorizeService.authorizeAction(context, collection
-                    .getCommunities().get(0), Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, collection
+                    .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage collection workflow");
@@ -368,10 +364,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to create/edit the
      *             collection's admins group
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageAdminGroup(Context context,
@@ -379,16 +375,16 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCollectionAdminManageAdminGroup())
         {
-            authorizeService.authorizeAction(context, collection,
+            AuthorizeManager.authorizeAction(context, collection,
                     Constants.ADMIN);
         }
         else if (AuthorizeConfiguration
                 .canCommunityAdminManageCollectionAdminGroup())
         {
-            authorizeService.authorizeAction(context, collection
-                    .getCommunities().get(0), Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, collection
+                    .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage collection admin");
@@ -405,24 +401,24 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param collection
      *            the collection
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to remove the
      *             collection's admins group
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeRemoveAdminGroup(Context context,
             Collection collection) throws AuthorizeException, SQLException
     {
-        List<Community> parentCommunities = collection.getCommunities();
+        Community[] parentCommunities = collection.getCommunities();
         if (AuthorizeConfiguration
                 .canCommunityAdminManageCollectionAdminGroup()
-                && parentCommunities != null && parentCommunities.size() > 0)
+                && parentCommunities != null && parentCommunities.length > 0)
         {
-            authorizeService.authorizeAction(context, collection
-                    .getCommunities().get(0), Constants.ADMIN);
+            AuthorizeManager.authorizeAction(context, collection
+                    .getCommunities()[0], Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin can remove the admin group of a collection");
@@ -439,10 +435,10 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param community
      *            the community
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to create/edit the
      *             community's admins group
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManageAdminGroup(Context context,
@@ -450,10 +446,10 @@ public class AuthorizeUtil
     {
         if (AuthorizeConfiguration.canCommunityAdminManageAdminGroup())
         {
-            authorizeService.authorizeAction(context, community,
+            AuthorizeManager.authorizeAction(context, community,
                     Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin are allowed to manage community admin");
@@ -470,28 +466,23 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param community
      *            the community
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to remove the
      *             collection's admins group
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeRemoveAdminGroup(Context context,
             Community community) throws SQLException, AuthorizeException
     {
-        List<Community> parentCommunities = community.getParentCommunities();
-        Community parentCommunity = null;
-        if(0 < parentCommunities.size())
-        {
-            parentCommunity = parentCommunities.get(0);
-        }
+        Community parentCommunity = community.getParentCommunity();
         if (AuthorizeConfiguration.canCommunityAdminManageAdminGroup()
                 && parentCommunity != null)
         {
-            authorizeService.authorizeAction(context, parentCommunity,
+            AuthorizeManager.authorizeAction(context, parentCommunity,
                     Constants.ADMIN);
         }
-        else if (!authorizeService.isAdmin(context))
+        else if (!AuthorizeManager.isAdmin(context))
         {
             throw new AuthorizeException(
                     "Only system admin can remove the admin group of the community");
@@ -505,32 +496,35 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param rp
      *            a resource policy
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current context (current user) is not allowed to
      *             remove/edit the policy
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
      */
     public static void authorizeManagePolicy(Context c, ResourcePolicy rp)
             throws SQLException, AuthorizeException
     {
-        switch (rp.getdSpaceObject().getType())
+        switch (rp.getResourceType())
         {
         case Constants.BITSTREAM:
-            authorizeManageBitstreamPolicy(c, (Bitstream) rp.getdSpaceObject());
+            authorizeManageBitstreamPolicy(c, Bitstream.find(c, rp
+                    .getResourceID()));
             break;
         case Constants.BUNDLE:
-            authorizeManageBundlePolicy(c, (Bundle) rp.getdSpaceObject());
+            authorizeManageBundlePolicy(c, Bundle.find(c, rp.getResourceID()));
             break;
 
         case Constants.ITEM:
-            authorizeManageItemPolicy(c, (Item) rp.getdSpaceObject());
+            authorizeManageItemPolicy(c, Item.find(c, rp.getResourceID()));
             break;
         case Constants.COLLECTION:
-            authorizeManageCollectionPolicy(c, (Collection) rp.getdSpaceObject());
+            authorizeManageCollectionPolicy(c, Collection.find(c, rp
+                    .getResourceID()));
             break;
         case Constants.COMMUNITY:
-            authorizeManageCommunityPolicy(c, (Community) rp.getdSpaceObject());
+            authorizeManageCommunityPolicy(c, Community.find(c, rp
+                    .getResourceID()));
             break;
 
         default:
@@ -546,9 +540,9 @@ public class AuthorizeUtil
      *            the DSpace Context Object
      * @param item
      *            the item
-     * @throws SQLException if database error
+     * @throws SQLException
      *             if a db error occur
-     * @throws AuthorizeException if authorization error
+     * @throws AuthorizeException
      *             if the current user is not allowed to perform the item
      *             withdraw
      */
@@ -558,19 +552,19 @@ public class AuthorizeUtil
         boolean authorized = false;
         if (AuthorizeConfiguration.canCollectionAdminPerformItemWithdrawn())
         {
-            authorized = authorizeService.authorizeActionBoolean(context, item
+            authorized = AuthorizeManager.authorizeActionBoolean(context, item
                     .getOwningCollection(), Constants.ADMIN);
         }
         else if (AuthorizeConfiguration.canCommunityAdminPerformItemWithdrawn())
         {
-            authorized = authorizeService
+            authorized = AuthorizeManager
                     .authorizeActionBoolean(context, item.getOwningCollection()
-                            .getCommunities().get(0), Constants.ADMIN);
+                            .getCommunities()[0], Constants.ADMIN);
         }
 
         if (!authorized)
         {
-            authorized = authorizeService.authorizeActionBoolean(context, item
+            authorized = AuthorizeManager.authorizeActionBoolean(context, item
                     .getOwningCollection(), Constants.REMOVE, false);
         }
 
@@ -589,38 +583,38 @@ public class AuthorizeUtil
     *            the DSpace Context Object
     * @param item
     *            the item
-    * @throws SQLException if database error
+    * @throws SQLException
     *             if a db error occur
-    * @throws AuthorizeException if authorization error
+    * @throws AuthorizeException
     *             if the current user is not allowed to perform the item
     *             reinstatement
     */
     public static void authorizeReinstateItem(Context context, Item item)
             throws SQLException, AuthorizeException
     {
-        List<Collection> colls = item.getCollections();
+        Collection[] colls = item.getCollections();
 
-        for (Collection coll : colls)
+        for (int i = 0; i < colls.length; i++)
         {
             if (!AuthorizeConfiguration
                     .canCollectionAdminPerformItemReinstatiate())
             {
                 if (AuthorizeConfiguration
                         .canCommunityAdminPerformItemReinstatiate()
-                        && authorizeService.authorizeActionBoolean(context,
-                        coll.getCommunities().get(0), Constants.ADMIN))
+                        && AuthorizeManager.authorizeActionBoolean(context,
+                                colls[i].getCommunities()[0], Constants.ADMIN))
                 {
                     // authorized
                 }
                 else
                 {
-                    authorizeService.authorizeAction(context, coll,
+                    AuthorizeManager.authorizeAction(context, colls[i],
                             Constants.ADD, false);
                 }
             }
             else
             {
-                authorizeService.authorizeAction(context, coll,
+                AuthorizeManager.authorizeAction(context, colls[i],
                         Constants.ADD);
             }
         }

@@ -9,19 +9,14 @@
 package org.dspace.authority.indexer;
 
 import org.apache.log4j.Logger;
-import org.dspace.authority.factory.AuthorityServiceFactory;
-import org.dspace.authority.service.AuthorityService;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
 import org.dspace.event.Consumer;
 import org.dspace.event.Event;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * Consumer that takes care of the indexing of authority controlled metadata fields for installed/updated items
@@ -33,30 +28,22 @@ import java.util.UUID;
  */
 public class AuthorityConsumer implements Consumer {
 
-    private final Logger log = Logger.getLogger(AuthorityConsumer.class);
+    private static final Logger log = Logger.getLogger(AuthorityConsumer.class);
 
     /** A set of all item IDs installed which need their authority updated **/
-    protected Set<UUID> itemsToUpdateAuthority = null;
+    private Set<Integer> itemsToUpdateAuthority = null;
 
     /** A set of item IDs who's metadata needs to be reindexed **/
-    protected Set<UUID> itemsToReindex = null;
+    private Set<Integer> itemsToReindex = null;
 
-    protected ItemService itemService;
-
-    protected AuthorityService authorityService;
-
-    @Override
     public void initialize() throws Exception {
-        authorityService = AuthorityServiceFactory.getInstance().getAuthorityService();
-        itemService = ContentServiceFactory.getInstance().getItemService();
 
     }
 
-    @Override
     public void consume(Context ctx, Event event) throws Exception {
         if(itemsToUpdateAuthority == null){
-            itemsToUpdateAuthority = new HashSet<>();
-            itemsToReindex = new HashSet<>();
+            itemsToUpdateAuthority = new HashSet<Integer>();
+            itemsToReindex = new HashSet<Integer>();
         }
 
         DSpaceObject dso = event.getSubject(ctx);
@@ -74,21 +61,22 @@ public class AuthorityConsumer implements Consumer {
         }
     }
 
-    @Override
     public void end(Context ctx) throws Exception {
         if(itemsToUpdateAuthority == null)
             return;
 
         try{
             ctx.turnOffAuthorisationSystem();
-            for (UUID id : itemsToUpdateAuthority) {
-                Item item = itemService.find(ctx, id);
-                authorityService.indexItem(ctx, item);
+            for (Integer id : itemsToUpdateAuthority) {
+                Item item = Item.find(ctx, id);
+                AuthorityIndexClient.indexItem(ctx, item);
             }
             //Loop over our items which need to be re indexed
-            for (UUID id : itemsToReindex) {
-                Item item = itemService.find(ctx, id);
-                authorityService.indexItem(ctx, item);
+            for (Integer id : itemsToReindex) {
+                Item item = Item.find(ctx, id);
+                AuthorityIndexClient.indexItem(ctx, item);
+                //Commit our DB connection in case new UUID were generated.
+                ctx.getDBConnection().commit();
 
             }
         } catch (Exception e){
@@ -101,7 +89,6 @@ public class AuthorityConsumer implements Consumer {
         }
     }
 
-    @Override
     public void finish(Context ctx) throws Exception {
 
     }

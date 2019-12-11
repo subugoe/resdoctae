@@ -35,8 +35,8 @@ public class StepAndPage implements Comparable<StepAndPage>
     /**
      * Initialize a new StepAndPage from given step and page numbers
      * 
-     * @param step step number.
-     * @param page page number.
+     * @param step
+     * @param page
      */
     public StepAndPage(int step, int page)
     {
@@ -94,10 +94,9 @@ public class StepAndPage implements Comparable<StepAndPage>
     /**
      * Compare this StepAndPage with another
      * 
-     * @param other the other comparand.
+     * @param other
      * @return true if both objects have same step value and same page value.
      */
-    @Override
     public boolean equals(Object other)
     {
         if (other instanceof StepAndPage)

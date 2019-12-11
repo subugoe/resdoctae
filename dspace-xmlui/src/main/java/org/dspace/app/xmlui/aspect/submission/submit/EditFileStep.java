@@ -10,7 +10,6 @@ package org.dspace.app.xmlui.aspect.submission.submit;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.avalon.framework.parameters.Parameters;
 import org.apache.cocoon.ProcessingException;
@@ -28,9 +27,8 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Bitstream;
 import org.dspace.content.BitstreamFormat;
 import org.dspace.content.Collection;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.content.FormatIdentifier;
+import org.dspace.core.ConfigurationManager;
 import org.xml.sax.SAXException;
 
 /**
@@ -82,8 +80,6 @@ public class EditFileStep extends AbstractStep
     /** The bitstream we are editing */
 	private Bitstream bitstream;
 
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-
 	
 	/**
 	 * Establish our required parameters, abstractStep will enforce these.
@@ -115,11 +111,11 @@ public class EditFileStep extends AbstractStep
 		String actionURL = contextPath + "/handle/"+collection.getHandle() + "/submit/" + knot.getId() + ".continue";
 
     	// Get the bitstream and all the various formats
-		BitstreamFormat currentFormat = bitstream.getFormat(context);
-        BitstreamFormat guessedFormat = bitstreamFormatService.guessFormat(context, bitstream);
-    	java.util.List<BitstreamFormat> bitstreamFormats = bitstreamFormatService.findNonInternal(context);
+		BitstreamFormat currentFormat = bitstream.getFormat();
+        BitstreamFormat guessedFormat = FormatIdentifier.guessFormat(context, bitstream);
+    	BitstreamFormat[] bitstreamFormats = BitstreamFormat.findNonInternal(context);
     	
-        UUID itemID = submissionInfo.getSubmissionItem().getItem().getID();
+        int itemID = submissionInfo.getSubmissionItem().getItem().getID();
     	String fileUrl = contextPath + "/bitstream/item/" + itemID + "/" + bitstream.getName();
     	String fileName = bitstream.getName();
     	
@@ -140,7 +136,7 @@ public class EditFileStep extends AbstractStep
         description.setValue(bitstream.getDescription());
 
         // if AdvancedAccessPolicy=false: add simmpleFormEmbargo in UploadStep
-        boolean isAdvancedFormEnabled= DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("webui.submission.restrictstep.enableAdvancedForm", false);
+        boolean isAdvancedFormEnabled= ConfigurationManager.getBooleanProperty("webui.submission.restrictstep.enableAdvancedForm", false);
         if(!isAdvancedFormEnabled){
             AccessStepUtil asu = new AccessStepUtil(context);
             // this step is possible only in case of AdvancedForm
@@ -199,7 +195,7 @@ public class EditFileStep extends AbstractStep
         userFormat.setValue(bitstream.getUserFormatDescription());
         
         // add ID of bitstream we're editing
-        div.addHidden("bitstream_id").setValue(bitstream.getID().toString());
+        div.addHidden("bitstream_id").setValue(bitstream.getID()); 
         
         // Note, not standard control actions, this page just goes back to the upload step.
         org.dspace.app.xmlui.wing.element.Item actions = edit.addItem();

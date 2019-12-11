@@ -59,7 +59,7 @@ CREATE TABLE BitstreamFormatRegistry
   description         VARCHAR2(2000),
   support_level       INTEGER,
   -- Identifies internal types
-  internal             BOOLEAN
+  internal             NUMBER(1)
 );
 
 -------------------------------------------------------
@@ -80,14 +80,14 @@ CREATE TABLE Bitstream
    bitstream_id            INTEGER PRIMARY KEY,
    bitstream_format_id     INTEGER REFERENCES BitstreamFormatRegistry(bitstream_format_id),
    name                    VARCHAR2(256),
-   size_bytes              BIGINT,
+   size_bytes              INTEGER,
    checksum                VARCHAR2(64),
    checksum_algorithm      VARCHAR2(32),
    description             VARCHAR2(2000),
    user_format_description VARCHAR2(2000),
    source                  VARCHAR2(256),
    internal_id             VARCHAR2(256),
-   deleted                 BOOLEAN,
+   deleted                 NUMBER(1),
    store_number            INTEGER,
    sequence_id             INTEGER
 );
@@ -102,9 +102,9 @@ CREATE TABLE EPerson
   password            VARCHAR2(64),
   firstname           VARCHAR2(64),
   lastname            VARCHAR2(64),
-  can_log_in          BOOLEAN,
-  require_certificate BOOLEAN,
-  self_registered     BOOLEAN,
+  can_log_in          NUMBER(1),
+  require_certificate NUMBER(1),
+  self_registered     NUMBER(1),
   last_active         TIMESTAMP,
   sub_frequency       INTEGER,
   phone	              VARCHAR2(32)
@@ -129,8 +129,8 @@ CREATE TABLE Item
 (
   item_id         INTEGER PRIMARY KEY,
   submitter_id    INTEGER REFERENCES EPerson(eperson_id),
-  in_archive      BOOLEAN,
-  withdrawn       BOOLEAN,
+  in_archive      NUMBER(1),
+  withdrawn       NUMBER(1),
   last_modified   TIMESTAMP,
   owning_collection INTEGER
 );
@@ -326,9 +326,9 @@ CREATE TABLE WorkspaceItem
   item_id           INTEGER REFERENCES Item(item_id),
   collection_id     INTEGER REFERENCES Collection(collection_id),
   -- Answers to questions on first page of submit UI
-  multiple_titles   BOOLEAN,  -- boolean
-  published_before  BOOLEAN,
-  multiple_files    BOOLEAN,
+  multiple_titles   NUMBER(1),  -- boolean
+  published_before  NUMBER(1),
+  multiple_files    NUMBER(1),
   -- How for the user has got in the submit process
   stage_reached     INTEGER
 );
@@ -345,9 +345,9 @@ CREATE TABLE WorkflowItem
   owner          INTEGER REFERENCES EPerson(eperson_id),
 
   -- Answers to questions on first page of submit UI
-  multiple_titles       BOOLEAN,
-  published_before      BOOLEAN,
-  multiple_files        BOOLEAN
+  multiple_titles       NUMBER(1),
+  published_before      NUMBER(1),
+  multiple_files        NUMBER(1)
   -- Note: stage reached not applicable here - people involved in workflow
   -- can always jump around submission UI
 

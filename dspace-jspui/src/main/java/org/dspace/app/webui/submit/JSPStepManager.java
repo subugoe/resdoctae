@@ -9,6 +9,7 @@ package org.dspace.app.webui.submit;
 
 import java.io.IOException;
 import java.sql.SQLException;
+
 import java.util.Iterator;
 
 import javax.servlet.ServletException;
@@ -16,14 +17,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
-import org.dspace.app.util.SubmissionInfo;
-import org.dspace.app.util.SubmissionStepConfig;
+
 import org.dspace.app.webui.servlet.SubmissionController;
 import org.dspace.app.webui.util.JSPManager;
+import org.dspace.app.util.SubmissionInfo;
+import org.dspace.app.util.SubmissionStepConfig;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.WorkspaceItem;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.WorkspaceItemService;
 import org.dspace.core.Context;
 import org.dspace.submit.AbstractProcessingStep;
 
@@ -218,7 +218,8 @@ public class JSPStepManager
                     SubmissionController.getStepReached(subInfo));
 
             // update database with the number of this last page
-            updatePageReached(context, subInfo, lastPageNum);
+            updatePageReached(subInfo, lastPageNum);
+            context.commit();
         }
         // otherwise, check if pageReached needs updating
         // (it only needs updating if we're in the latest step reached,
@@ -228,7 +229,8 @@ public class JSPStepManager
                 && (currentPage > pageReached))
         {
             // reset page number reached & commit to database
-            updatePageReached(context, subInfo, currentPage);
+            updatePageReached(subInfo, currentPage);
+            context.commit();
         }
 
         /*
@@ -552,7 +554,7 @@ public class JSPStepManager
      * @param pageNumber
      *            new page reached
      */
-    private void updatePageReached(Context context, SubmissionInfo subInfo, int page)
+    private void updatePageReached(SubmissionInfo subInfo, int page)
             throws SQLException, AuthorizeException, IOException
     {
         if (!subInfo.isInWorkflow() && subInfo.getSubmissionItem() != null)
@@ -561,10 +563,8 @@ public class JSPStepManager
 
             if (page > wi.getPageReached())
             {
-            	WorkspaceItemService wis = ContentServiceFactory.getInstance()
-            			.getWorkspaceItemService();
                 wi.setPageReached(page);
-                wis.update(context, wi);
+                wi.update();
             }
         }
     }

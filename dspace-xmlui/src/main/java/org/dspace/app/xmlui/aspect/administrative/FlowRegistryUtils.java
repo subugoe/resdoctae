@@ -7,6 +7,13 @@
  */
 package org.dspace.app.xmlui.aspect.administrative;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.cocoon.environment.Request;
 import org.dspace.app.xmlui.utils.RequestUtils;
 import org.dspace.app.xmlui.utils.UIException;
@@ -16,19 +23,8 @@ import org.dspace.content.BitstreamFormat;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataSchema;
 import org.dspace.content.NonUniqueMetadataException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
-import org.dspace.content.service.MetadataFieldService;
-import org.dspace.content.service.MetadataSchemaService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
-
-import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 
@@ -54,10 +50,6 @@ public class FlowRegistryUtils
 	private static final Message T_delete_bitstream_format_success_notice =
 		new Message("default","xmlui.administrative.FlowRegistryUtils.delete_bitstream_format_success_notice");
 
-	protected static final MetadataSchemaService metadataSchemaService = ContentServiceFactory.getInstance().getMetadataSchemaService();
-	protected static final BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-	protected static final MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-
 	
 	
 	/**
@@ -68,13 +60,8 @@ public class FlowRegistryUtils
 	 * @param namespace The new schema's namespace
 	 * @param name The new schema's name.
 	 * @return A flow result
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws org.dspace.content.NonUniqueMetadataException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException on unsupported encoding.
 	 */
-	public static FlowResult processAddMetadataSchema(Context context, String namespace, String name)
-            throws SQLException, AuthorizeException, NonUniqueMetadataException, UIException
+	public static FlowResult processAddMetadataSchema(Context context, String namespace, String name) throws SQLException, AuthorizeException, NonUniqueMetadataException, UIException
 	{
 		FlowResult result = new FlowResult();
 		result.setContinue(false);
@@ -107,12 +94,17 @@ public class FlowRegistryUtils
 		
 		if (result.getErrors() == null)
 		{
-			MetadataSchema schema = metadataSchemaService.create(context, name, namespace);
+			MetadataSchema schema = new MetadataSchema();
+		    schema.setNamespace(namespace);
+		    schema.setName(name);
+		    schema.create(context);
 
+		    context.commit();
+		    
 		    result.setContinue(true);
 		    result.setOutcome(true);
 		    result.setMessage(T_add_metadata_schema_success_notice);   
-		    result.setParameter("schemaID", schema.getID());
+		    result.setParameter("schemaID", schema.getSchemaID());
 		}
 		
 		return result;
@@ -124,34 +116,32 @@ public class FlowRegistryUtils
 	 * @param context The DSpace context
 	 * @param schemaIDs A list of schema IDs to be deleted.
 	 * @return A flow result
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws org.dspace.content.NonUniqueMetadataException passed through.
 	 */
-	public static FlowResult processDeleteMetadataSchemas(Context context, String[] schemaIDs)
-            throws SQLException, AuthorizeException, NonUniqueMetadataException
+	public static FlowResult processDeleteMetadataSchemas(Context context, String[] schemaIDs) throws SQLException, AuthorizeException, NonUniqueMetadataException
 	{
 		FlowResult result = new FlowResult();
 		
 		int count = 0;
 		for (String id : schemaIDs) 
     	{
-			MetadataSchema schema = metadataSchemaService.find(context, Integer.valueOf(id));
+			MetadataSchema schema = MetadataSchema.find(context, Integer.valueOf(id));
 			
 			// First remove and fields in the schema
-			List<MetadataField> fields = metadataFieldService.findAllInSchema(context, schema);
+			MetadataField[] fields = MetadataField.findAllInSchema(context, schema.getSchemaID());
 			for (MetadataField field : fields)
             {
-				metadataFieldService.delete(context, field);
+				field.delete(context);
             }
 			
 			// Once all the fields are gone, then delete the schema.
-	        metadataSchemaService.delete(context, schema);
+	        schema.delete(context);
 	        count++;
     	}
 		
 		if (count > 0)
 		{
+			context.commit();
+			
 			result.setContinue(true);
 			result.setOutcome(true);
 			result.setMessage(T_delete_metadata_schema_success_notice);
@@ -170,13 +160,8 @@ public class FlowRegistryUtils
 	 * @param qualifier The field's qualifier.
 	 * @param note A scope not about the field.
 	 * @return A results object
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException on unsupported encoding.
 	 */
-	public static FlowResult processAddMetadataField(Context context, int schemaID, String element, String qualifier, String note)
-            throws IOException, AuthorizeException, SQLException, UIException
+	public static FlowResult processAddMetadataField(Context context, int schemaID, String element, String qualifier, String note) throws IOException, AuthorizeException, SQLException, UIException
 	{
 		FlowResult result = new FlowResult();
 		result.setContinue(false);
@@ -206,14 +191,20 @@ public class FlowRegistryUtils
 		{
 			try
 			{
-
-				MetadataSchema schema = metadataSchemaService.find(context, schemaID);
-				MetadataField field = metadataFieldService.create(context, schema, element, qualifier, note);
-
+				
+				MetadataField field = new MetadataField();
+				field.setSchemaID(schemaID);
+				field.setElement(element);
+				field.setQualifier(qualifier);
+				field.setScopeNote(note);
+				field.create(context);
+				
+				context.commit();
+				
 				result.setContinue(true);
 				result.setOutcome(true);
 				result.setMessage(T_add_metadata_field_success_notice);
-				result.setParameter("fieldID", field.getID());
+				result.setParameter("fieldID", field.getFieldID());
 			} 
 			catch (NonUniqueMetadataException nume)
 			{
@@ -235,13 +226,8 @@ public class FlowRegistryUtils
 	 * @param qualifier A new qualifier value
 	 * @param note A new note value.
 	 * @return A results object.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException on unsupported encoding.
 	 */
-	public static FlowResult processEditMetadataField(Context context, int schemaID, int fieldID, String element, String qualifier, String note)
-            throws IOException, AuthorizeException, SQLException, UIException
+	public static FlowResult processEditMetadataField(Context context, int schemaID, int fieldID, String element, String qualifier, String note) throws IOException, AuthorizeException, SQLException, UIException
 	{
 		FlowResult result = new FlowResult();
 		result.setContinue(false);
@@ -268,8 +254,8 @@ public class FlowRegistryUtils
         }
 		
 		// Check to make sure the field is unique, sometimes the NonUniqueMetadataException is not thrown.
-		MetadataField possibleDuplicate = metadataFieldService.findByElement(context, metadataSchemaService.find(context, schemaID), element, qualifier);
-		if (possibleDuplicate != null && possibleDuplicate.getID() != fieldID)
+		MetadataField possibleDuplicate = MetadataField.findByElement(context, schemaID, element, qualifier);
+		if (possibleDuplicate != null && possibleDuplicate.getFieldID() != fieldID)
         {
             result.addError("duplicate_field");
         }
@@ -279,11 +265,13 @@ public class FlowRegistryUtils
 			try
 			{
 				// Update the metadata for a DC type
-				MetadataField field = metadataFieldService.find(context, fieldID);
+				MetadataField field = MetadataField.find(context, fieldID);
 				field.setElement(element);
 				field.setQualifier(qualifier);
 				field.setScopeNote(note);
-				metadataFieldService.update(context, field);
+				field.update(context);
+				
+				context.commit();
 				
 				result.setContinue(true);
 				result.setOutcome(true);
@@ -365,27 +353,24 @@ public class FlowRegistryUtils
 	 * @param schemaID The target schema ID
 	 * @param fieldIDs The fields to be moved.
 	 * @return A results object.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws org.dspace.content.NonUniqueMetadataException passed through.
-     * @throws java.io.IOException passed through.
 	 */	
-	public static FlowResult processMoveMetadataField(Context context, int schemaID, String[] fieldIDs)
-            throws NumberFormatException, SQLException, AuthorizeException, NonUniqueMetadataException, IOException
+	public static FlowResult processMoveMetadataField(Context context, int schemaID, String[] fieldIDs) throws NumberFormatException, SQLException, AuthorizeException, NonUniqueMetadataException, IOException
 	{
 		FlowResult result = new FlowResult();
 
 		int count = 0;
 		for (String id : fieldIDs) 
 		{
-			MetadataField field = metadataFieldService.find(context, Integer.valueOf(id));
-			field.setMetadataSchema(metadataSchemaService.find(context, schemaID));
-			metadataFieldService.update(context, field);
+			MetadataField field = MetadataField.find(context, Integer.valueOf(id));
+			field.setSchemaID(schemaID);
+			field.update(context);
 			count++;
 		}
 
 		if (count > 0)
 		{
+			context.commit();
+
 			result.setContinue(true);
 			result.setOutcome(true);
 			result.setMessage(T_move_metadata_field_sucess_notice);
@@ -401,24 +386,23 @@ public class FlowRegistryUtils
 	 * @param context The DSpace context
 	 * @param fieldIDs The fields to be deleted.
 	 * @return A results object
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
 	 */
-	public static FlowResult processDeleteMetadataField(Context context, String[] fieldIDs)
-            throws NumberFormatException, SQLException, AuthorizeException
+	public static FlowResult processDeleteMetadataField(Context context, String[] fieldIDs) throws NumberFormatException, SQLException, AuthorizeException
 	{
         FlowResult result = new FlowResult();
 		
 		int count = 0;
 		for (String id : fieldIDs) 
     	{
-			MetadataField field = metadataFieldService.find(context, Integer.valueOf(id));
-			metadataFieldService.delete(context, field);
+			MetadataField field = MetadataField.find(context, Integer.valueOf(id));
+	        field.delete(context);
 	        count++;
     	}
 		
 		if (count > 0)
 		{
+			context.commit();
+			
 			result.setContinue(true);
 			result.setOutcome(true);
 			result.setMessage(T_delete_metadata_field_success_notice);
@@ -439,8 +423,6 @@ public class FlowRegistryUtils
 	 * @param formatID The id of the format being updated.
 	 * @param request The request object, for all the field entries.
 	 * @return A results object
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
 	 */
 	public static FlowResult processEditBitstreamFormat(Context context, int formatID, Request request) throws SQLException, AuthorizeException
 	{
@@ -454,7 +436,8 @@ public class FlowRegistryUtils
         String supportLevel = request.getParameter("support_level");
         String internal = request.getParameter("internal");
         List<String> extensionsList = RequestUtils.getFieldValues(request, "extensions");
-
+        String[] extensions = extensionsList.toArray(new String[extensionsList.size()]);
+		
         // The format must at least have a name.
         if (formatID != 1 && (shortDescription == null || shortDescription.length() == 0))
         {
@@ -463,11 +446,11 @@ public class FlowRegistryUtils
         }
         
         // Remove leading periods from file extensions.
-        for (int i = 0; i < extensionsList.size(); i++)
+        for (int i = 0; i < extensions.length; i++)
         {
-        	if (extensionsList.get(i).startsWith("."))
+        	if (extensions[i].startsWith("."))
             {
-				extensionsList.set(i, extensionsList.get(i).substring(1));
+                extensions[i] = extensions[i].substring(1);
             }
         }
         
@@ -476,18 +459,18 @@ public class FlowRegistryUtils
         BitstreamFormat format;
 		if (formatID >= 0)
         {
-            format = bitstreamFormatService.find(context, formatID);
+            format = BitstreamFormat.find(context, formatID);
         }
 		else
         {
-            format = bitstreamFormatService.create(context);
+            format = BitstreamFormat.create(context);
         }
         
 		// Update values
 		format.setMIMEType(mimeType);
 		if (formatID != 1) // don't change the unknow format.
         {
-            format.setShortDescription(context, shortDescription);
+            format.setShortDescription(shortDescription);
         }
 		format.setDescription(description);
 		format.setSupportLevel(Integer.valueOf(supportLevel));
@@ -499,12 +482,13 @@ public class FlowRegistryUtils
         {
             format.setInternal(true);
         }
-		format.setExtensions(extensionsList);
+		format.setExtensions(extensions);
 
 		
 		// Commit the change
-		bitstreamFormatService.update(context, format);
-
+        format.update();
+        context.commit();
+		
 		// Return status
         result.setContinue(true);
 		result.setOutcome(true);
@@ -520,24 +504,23 @@ public class FlowRegistryUtils
 	 * @param context The DSpace context
 	 * @param formatIDs The formats-to-be-deleted.
 	 * @return A results object.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
 	 */
-	public static FlowResult processDeleteBitstreamFormats(Context context, String[] formatIDs)
-            throws NumberFormatException, SQLException, AuthorizeException
+	public static FlowResult processDeleteBitstreamFormats(Context context, String[] formatIDs) throws NumberFormatException, SQLException, AuthorizeException
 	{
         FlowResult result = new FlowResult();
 		
 		int count = 0;
 		for (String id : formatIDs) 
     	{
-			BitstreamFormat format = bitstreamFormatService.find(context,Integer.valueOf(id));
-			bitstreamFormatService.delete(context, format);
+			BitstreamFormat format = BitstreamFormat.find(context,Integer.valueOf(id));
+			format.delete();
 	        count++;
     	}
 		
 		if (count > 0)
 		{
+			context.commit();
+			
 			result.setContinue(true);
 			result.setOutcome(true);
 			result.setMessage(T_delete_bitstream_format_success_notice);

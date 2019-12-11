@@ -8,6 +8,7 @@
 package org.dspace.identifier.ezid;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
@@ -159,10 +160,10 @@ public class EZIDRequest
     /**
      * Create an identifier with a given name. The name is the end of the
      * request path. Note: to "reserve" a given identifier, include "_status =
-     * reserved" in {@code metadata}.
+     * reserved" in {@link metadata}.
      *
      * @param metadata ANVL-encoded key/value pairs.
-     * @return Decoded response data evoked by a request made to EZID.
+     * @return
      */
     public EZIDResponse create(String name, Map<String, String> metadata)
             throws IOException, IdentifierException, URISyntaxException
@@ -182,10 +183,10 @@ public class EZIDRequest
 
     /**
      * Ask EZID to create a unique identifier and return its name. NOTE: to
-     * "reserve" a unique identifier, include "_status = reserved" in {@code metadata}.
+     * "reserve" a unique identifier, include "_status = reserved" in {@link metadata}.
      *
      * @param metadata ANVL-encoded key/value pairs.
-     * @return Decoded response data evoked by a request made to EZID.
+     * @return
      */
     public EZIDResponse mint(Map<String, String> metadata)
             throws IOException, IdentifierException, URISyntaxException
@@ -209,7 +210,7 @@ public class EZIDRequest
      *
      * @param metadata fields to be altered. Leave the value of a field's empty
      *                 to delete the field.
-     * @return Decoded response data evoked by a request made to EZID.
+     * @return
      */
     public EZIDResponse modify(String name, Map<String, String> metadata)
             throws IOException, IdentifierException, URISyntaxException

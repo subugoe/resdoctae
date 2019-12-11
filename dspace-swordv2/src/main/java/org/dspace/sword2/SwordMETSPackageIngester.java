@@ -7,6 +7,7 @@
  */
 package org.dspace.sword2;
 
+
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
@@ -34,12 +35,11 @@ public class SwordMETSPackageIngester extends DSpaceMETSIngester
      */
     @Override
     public void addLicense(Context context, Item item, String license,
-            Collection collection, PackageParameters params)
-            throws PackageValidationException,
+                                    Collection collection, PackageParameters params)
+        throws PackageValidationException,
             AuthorizeException, SQLException, IOException
     {
-        if (PackageUtils.findDepositLicense(context, item) == null &&
-                license != null)
+        if (PackageUtils.findDepositLicense(context, item) == null && license != null)
         {
             PackageUtils.addDepositLicense(context, license, item, collection);
         }

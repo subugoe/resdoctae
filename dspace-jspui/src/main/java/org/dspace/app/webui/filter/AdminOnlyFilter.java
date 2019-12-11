@@ -23,9 +23,7 @@ import org.apache.log4j.Logger;
 import org.dspace.app.webui.util.Authenticate;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
-import org.dspace.authorize.AuthorizeServiceImpl;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 
@@ -42,12 +40,9 @@ public class AdminOnlyFilter implements Filter
     /** log4j category */
     private static Logger log = Logger.getLogger(RegisteredOnlyFilter.class);
 
-    private AuthorizeService authorizeService;
-    
     public void init(FilterConfig config)
     {
         // Do nothing
-    	authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
     }
 
     public void doFilter(ServletRequest request, ServletResponse response,
@@ -70,7 +65,7 @@ public class AdminOnlyFilter implements Filter
                 Authenticate.startAuthentication(context, hrequest, hresponse))
             {
                 // User is authenticated
-                if (authorizeService.isAdmin(context))
+                if (AuthorizeManager.isAdmin(context))
                 {
                     // User is an admin, allow request to proceed
                     chain.doFilter(hrequest, hresponse);

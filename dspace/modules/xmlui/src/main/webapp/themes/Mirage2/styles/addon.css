@@ -1,0 +1,25 @@
+.wikidata-logo {
+	max-width: 60px;
+}
+
+.bigger {
+	font-size: 1.2em;
+}
+
+.separate {
+	margin-top: 30px;
+}
+
+#intro {
+    font-style: italic;
+    padding-bottom: 15px;
+}
+
+.rights	{
+	font-size: 0.8em;
+	padding-left: 15px;
+}
+
+.embargo-info {
+    padding-top: 30px;
+}

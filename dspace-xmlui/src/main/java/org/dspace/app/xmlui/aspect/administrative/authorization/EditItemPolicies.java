@@ -9,8 +9,6 @@ package org.dspace.app.xmlui.aspect.administrative.authorization;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 import org.apache.commons.lang.time.DateFormatUtils;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
@@ -25,15 +23,11 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Para;
 import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.authorize.ResourcePolicy;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
-import org.dspace.authorize.service.ResourcePolicyService;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Bundle;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Constants;
 import org.dspace.eperson.Group;
 
@@ -97,11 +91,7 @@ public class EditItemPolicies extends AbstractDSpaceTransformer
 	private static final Message T_dspace_home =
 		message("xmlui.general.dspace_home");
 	
-
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-	protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-	protected ResourcePolicyService resourcePolicyService = AuthorizeServiceFactory.getInstance().getResourcePolicyService();
-
+	
 	
 	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
@@ -115,15 +105,16 @@ public class EditItemPolicies extends AbstractDSpaceTransformer
 	public void addBody(Body body) throws WingException, SQLException 
 	{
 		/* Get and setup our parameters */
-        UUID itemID = UUID.fromString(parameters.getParameter("itemID", null));
+        int itemID = parameters.getParameterAsInteger("itemID",-1);
         int highlightID = parameters.getParameterAsInteger("highlightID",-1);
         String baseURL = contextPath+"/admin/epeople?administrative-continue="+knot.getId();
 
 		/* First, set up our various data structures */
-		Item item = itemService.find(context, itemID);
-		List<Bundle> bundles = item.getBundles();
-
-		ArrayList<ResourcePolicy> itemPolicies = (ArrayList<ResourcePolicy>) authorizeService.getPolicies(context, item);
+		Item item = Item.find(context, itemID);
+		Bundle[] bundles = item.getBundles();
+		Bitstream[] bitstreams;
+		
+		ArrayList<ResourcePolicy> itemPolicies = (ArrayList<ResourcePolicy>)AuthorizeManager.getPolicies(context, item);
 		
 		// DIVISION: main
 		Division main = body.addInteractiveDivision("edit-item-policies",contextPath+"/admin/authorize",Division.METHOD_POST,"primary administrative authorization");
@@ -156,17 +147,17 @@ public class EditItemPolicies extends AbstractDSpaceTransformer
     		subheader.addCell(null, null, 1, 7, "indent").addHighlight("bold").addContent(T_subhead_bundle.parameterize(bundle.getName(),bundle.getID()));
     		subheader.addCell().addHighlight("bold").addXref(baseURL + "&submit_add_bundle_" + bundle.getID(), T_add_bundlePolicy_link);
 
-    		ArrayList<ResourcePolicy> bundlePolicies = (ArrayList<ResourcePolicy>) authorizeService.getPolicies(context, bundle);
+    		ArrayList<ResourcePolicy> bundlePolicies = (ArrayList<ResourcePolicy>)AuthorizeManager.getPolicies(context, bundle);
     		this.rowBuilder(baseURL, table, bundlePolicies, bundle.getID(), Constants.BUNDLE, highlightID);
     		
     		// And eventually to the bundle's bitstreams
-    		List<Bitstream> bitstreams = bundle.getBitstreams();
+    		bitstreams = bundle.getBitstreams();
     		for (Bitstream bitstream : bitstreams) {
-				subheader = table.addRow(null,Row.ROLE_HEADER,"subheader");
+    			subheader = table.addRow(null,Row.ROLE_HEADER,"subheader");
         		subheader.addCell(null, null, 1, 7, "doubleIndent").addContent(T_subhead_bitstream.parameterize(bitstream.getName(),bitstream.getID()));
         		subheader.addCell().addXref(baseURL + "&submit_add_bitstream_" + bitstream.getID(), T_add_bitstreamPolicy_link);
 
-        		ArrayList<ResourcePolicy> bitstreamPolicies = (ArrayList<ResourcePolicy>) authorizeService.getPolicies(context, bitstream);
+        		ArrayList<ResourcePolicy> bitstreamPolicies = (ArrayList<ResourcePolicy>)AuthorizeManager.getPolicies(context, bitstream);
         		this.rowBuilder(baseURL, table, bitstreamPolicies, bitstream.getID(), Constants.BITSTREAM, highlightID);    			
     		}
     	}
@@ -180,7 +171,7 @@ public class EditItemPolicies extends AbstractDSpaceTransformer
    }
 	
 	
-	private void rowBuilder(String baseURL, Table table, java.util.List<ResourcePolicy> policies, UUID objectID, int objectType, int highlightID) throws WingException, SQLException
+	private void rowBuilder(String baseURL, Table table, java.util.List<ResourcePolicy> policies, int objectID, int objectType, int highlightID) throws WingException, SQLException 
 	{
 		// If the list of policies is empty, say so
 		if (policies == null || policies.size() == 0) {
@@ -233,7 +224,7 @@ public class EditItemPolicies extends AbstractDSpaceTransformer
                 row.addCell().addContent(name);
 
 	        	row.addCell().addXref(baseURL + "&submit_edit&policy_id=" + policy.getID() + 
-	        			"&object_id=" + objectID + "&object_type=" + objectType, resourcePolicyService.getActionText(policy));
+	        			"&object_id=" + objectID + "&object_type=" + objectType, policy.getActionText());
 	        	if (policyGroup != null) {
 	        		Cell groupCell = row.addCell(1,2);
 	        		groupCell.addContent(policyGroup.getName());

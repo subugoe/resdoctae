@@ -21,7 +21,6 @@ import org.dspace.content.DSpaceObject;
 public class SimpleDSpaceObjectLicenseFormatter implements
         LicenseArgumentFormatter
 {
-    @Override
     public void formatTo(Formatter formatter, int flags, int width,
             Object object, String type)
     {

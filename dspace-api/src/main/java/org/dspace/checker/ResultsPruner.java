@@ -10,20 +10,17 @@ package org.dspace.checker;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
-import org.dspace.checker.factory.CheckerServiceFactory;
-import org.dspace.checker.service.ChecksumHistoryService;
 import org.dspace.core.ConfigurationManager;
-import org.dspace.core.Context;
 import org.dspace.core.Utils;
 
 /**
@@ -49,14 +46,13 @@ public final class ResultsPruner
      * Factory method for the default results pruner configuration using
      * dspace.cfg
      * 
-     * @param context Context
      * @return a ResultsPruner that represent the default retention policy
      */
-    public static ResultsPruner getDefaultPruner(Context context)
+    public static ResultsPruner getDefaultPruner()
     {
         try
         {
-            return getPruner(context, ConfigurationManager.getProperties());
+            return getPruner(ConfigurationManager.getProperties());
         }
         catch (FileNotFoundException e)
         {
@@ -70,14 +66,13 @@ public final class ResultsPruner
     /**
      * Factory method for ResultsPruners
      * 
-     * @param context Context
      * @param propsFile
      *            to configure the results pruner.
      * @return the configured results pruner.
-     * @throws FileNotFoundException if file doesn't exist
+     * @throws FileNotFoundException
      *             it the configuration file cannot be found.
      */
-    public static ResultsPruner getPruner(Context context, String propsFile)
+    public static ResultsPruner getPruner(String propsFile)
             throws FileNotFoundException
     {
         Properties props = new Properties();
@@ -87,7 +82,7 @@ public final class ResultsPruner
             fin = new FileInputStream(propsFile);
             props.load(fin);
             
-            return getPruner(context, props);
+            return getPruner(props);
         }
         catch (IOException e)
         {
@@ -114,16 +109,14 @@ public final class ResultsPruner
      * Factory method for ResultsPruners (used to load ConfigurationManager
      * properties.
      * 
-     * @param context Context
-     * @param props Properties
-     * @return pruner
-     * @throws FileNotFoundException if file doesn't exist
+     * @param props
+     * @throws FileNotFoundException
      */
-    public static ResultsPruner getPruner(Context context, Properties props)
+    public static ResultsPruner getPruner(Properties props)
     throws FileNotFoundException
     {
      
-        ResultsPruner rp = new ResultsPruner(context);
+        ResultsPruner rp = new ResultsPruner();
         Pattern retentionPattern = Pattern
                 .compile("checker\\.retention\\.(.*)");
         for (Enumeration<String> en = (Enumeration<String>)props.propertyNames(); en.hasMoreElements();)
@@ -145,15 +138,13 @@ public final class ResultsPruner
                 throw new IllegalStateException("Problem parsing duration: "
                         + e.getMessage(), e);
             }
-            if ("default".equals(resultCode)) {
+            if ("default".equals(resultCode))
+            {
                 rp.setDefaultDuration(duration);
-            } else {
-                ChecksumResultCode code = ChecksumResultCode.valueOf(resultCode);
-                if (code == null) {
-                    throw new IllegalStateException("Checksum result code not found: " + resultCode);
-                }
-
-                rp.addInterested(code, duration);
+            }
+            else
+            {
+                rp.addInterested(resultCode, duration);
             }
         }
         return rp;
@@ -166,24 +157,25 @@ public final class ResultsPruner
     /**
      * Map of retention durations, keyed by result code name
      */
-    Map<ChecksumResultCode, Long> interests = new HashMap<>();
+    Map<String, Long> interests = new HashMap<String, Long>();
 
+    /**
+     * Checksum results database Data access
+     */
+    private ChecksumResultDAO checksumResultDAO = null;
 
     /**
      * Checksum history database data access.
      */
-    private ChecksumHistoryService checksumHistoryService = null;
-
-    private Context context = null;
+    private ChecksumHistoryDAO checksumHistoryDAO = null;
 
     /**
      * Default Constructor
-     * @param context Context
      */
-    public ResultsPruner(Context context)
+    public ResultsPruner()
     {
-        this.checksumHistoryService = CheckerServiceFactory.getInstance().getChecksumHistoryService();
-        this.context = context;
+        checksumResultDAO = new ChecksumResultDAO();
+        checksumHistoryDAO = new ChecksumHistoryDAO();
     }
 
     /**
@@ -197,9 +189,9 @@ public final class ResultsPruner
      *            before bitstreams with the specified result type in the
      *            checksum history is removed.
      */
-    public void addInterested(ChecksumResultCode result, long duration)
+    public void addInterested(String result, long duration)
     {
-        interests.put(result, duration);
+        interests.put(result, Long.valueOf(duration));
     }
 
     /**
@@ -213,9 +205,10 @@ public final class ResultsPruner
      *            before bitstreams with the specified result type in the
      *            checksum history is removed.
      * 
-     * @throws ParseException if the duration cannot be parsed into a long value.
+     * @throws ParseException
+     *             if the duration cannot be parsed into a long value.
      */
-    public void addInterested(ChecksumResultCode result, String duration)
+    public void addInterested(String result, String duration)
             throws ParseException
     {
         addInterested(result, Utils.parseDuration(duration));
@@ -236,20 +229,19 @@ public final class ResultsPruner
      * registered with this object.
      * 
      * @return number of results removed.
-     * @throws SQLException if database error
      */
-    public int prune() throws SQLException {
-        ChecksumResultCode[] codes = ChecksumResultCode.values();
-        for (ChecksumResultCode code : codes)
+    public int prune()
     {
+        List<String> codes = checksumResultDAO.listAllCodes();
+        for (String code : codes)
+        {
             if (!interests.containsKey(code))
             {
-                interests.put(code, defaultDuration);
+                interests.put(code, Long.valueOf(defaultDuration));
             }
 
         }
-        int result = checksumHistoryService.prune(context, interests);
-        return result;
+        return checksumHistoryDAO.prune(interests);
     }
 
     /**

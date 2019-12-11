@@ -7,9 +7,12 @@
  */
 package org.dspace.app.xmlui.aspect.administrative;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
 
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpSession;
 
 import org.apache.avalon.framework.parameters.Parameters;
@@ -19,13 +22,9 @@ import org.apache.cocoon.environment.Redirector;
 import org.apache.cocoon.environment.Request;
 import org.apache.cocoon.environment.SourceResolver;
 import org.dspace.app.xmlui.utils.ContextUtil;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
-import org.dspace.utils.DSpace;
-
-import static org.apache.commons.lang.StringEscapeUtils.escapeHtml;
 
 /**
  * 
@@ -49,36 +48,29 @@ public class CurrentActivityAction extends AbstractAction
 	/** The ordered list of events, by access time */
 	private static Queue<Event> events = new LinkedList<Event>();
 	
-	/** record events that are from anonymous users */
+	/** record events that are from anynmous users */
 	private static boolean recordAnonymousEvents = true;
 	
-    /** record events from automatic bots */
-    private static boolean recordBotEvents = DSpaceServicesFactory.getInstance().getConfigurationService()
-            .getBooleanProperty("currentActivityAction.recordBotEvents", false);
-
-    private static String[] botStrings = (new DSpace()).getSingletonService(
-            ConfigurationService.class).getPropertyAsType(
-            "currentActivityAction.botStrings",
-            new String[] { "google/", "msnbot/", "googlebot/", "webcrawler/",
-                    "inktomi", "teoma", "baiduspider", "bot" });
+	/** record events from automatic bots */
+	private static boolean recordBotEvents = false;
 	
 	/**
 	 * Allow the DSpace.cfg to override our activity max and ip header.
 	 */
 	static {
 		// If the dspace.cfg has a max event count then use it.
-		if (DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("xmlui.controlpanel.activity.max") != null)
+		if (ConfigurationManager.getProperty("xmlui.controlpanel.activity.max") != null)
         {
-			MAX_EVENTS = DSpaceServicesFactory.getInstance().getConfigurationService().getIntProperty("xmlui.controlpanel.activity.max");
+			MAX_EVENTS = ConfigurationManager.getIntProperty("xmlui.controlpanel.activity.max");
         }
         else
         {
             MAX_EVENTS = 250;
         }
 		
-		if (DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("xmlui.controlpanel.activity.ipheader") != null)
+		if (ConfigurationManager.getProperty("xmlui.controlpanel.activity.ipheader") != null)
         {
-			IP_HEADER = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("xmlui.controlpanel.activity.ipheader");
+			IP_HEADER = ConfigurationManager.getProperty("xmlui.controlpanel.activity.ipheader");
         }
         else
         {
@@ -89,16 +81,7 @@ public class CurrentActivityAction extends AbstractAction
 	
     /**
      * Record this current event.
-     *
-     * @param redirector unused.
-     * @param resolver unused.
-     * @param objectModel Cocoon object model.
-     * @param source unused.
-     * @param parameters unused.
-     * @return null.
-     * @throws java.lang.Exception passed through.
      */
-    @Override
     public Map act(Redirector redirector, SourceResolver resolver, Map objectModel,
             String source, Parameters parameters) throws Exception
     {
@@ -177,7 +160,7 @@ public class CurrentActivityAction extends AbstractAction
     	private String sessionID;
     	
     	/** The eperson ID */
-    	private UUID epersonID = null;
+    	private int epersonID = -1;
     	
     	/** The url being viewed */
     	private String url;
@@ -191,18 +174,8 @@ public class CurrentActivityAction extends AbstractAction
     	/** The ip address of the requester */
     	private String ip;
     	
-    	/** The host  address of the requester */
-    	public String host = null;
-    	public Map<String,String> cookieMap = new HashMap<String,String>();
-    	public Map<String,String> headers = new HashMap<String,String>();
-    	public String qs = null;
-    	public String puser = null;
-    	
     	/**
-    	 * Construct a new activity event, grabbing various bits of data about
-         * the request from the context and request.
-         * @param context session context.
-         * @param request current request.
+    	 * Construct a new activity event, grabing various bits of data about the request from the context and request.
     	 */
     	public Event(Context context, Request request)
     	{
@@ -231,25 +204,6 @@ public class CurrentActivityAction extends AbstractAction
                 {
                     ip = request.getRemoteAddr();
                 }
-
-    			host = request.getRemoteHost();
-    			// values should be copied
-    			if ( request.getCookieMap() != null ) {
-            		for ( Object key : request.getCookieMap().keySet() ) {
-            			Object val = request.getCookieMap().get(key);
-            			String cookstr = ((Cookie)val).getName() + ":" + ((Cookie)val).getValue();
-            			cookieMap.put( (String)key, cookstr );
-            		}
-    			}
-    			// values should be copied
-    			if ( request.getHeaders() != null ) {
-            		for ( Object key : request.getHeaders().keySet() ) {
-            			Object val = request.getHeaders().get(key);
-            			headers.put( (String)key, (String)val );
-            		}
-    			}
-    			qs = request.getQueryString();
-    			puser = request.getUserPrincipal() != null ? request.getUserPrincipal().getName() : "None";
     		}
     		
     		// The current time
@@ -262,7 +216,7 @@ public class CurrentActivityAction extends AbstractAction
     		return sessionID;
     	}
     	
-    	public UUID getEPersonID()
+    	public int getEPersonID()
     	{
     		return epersonID;
     	}
@@ -289,16 +243,14 @@ public class CurrentActivityAction extends AbstractAction
     	
     	/**
     	 * Is this event anonymous?
-         * @return true if session has no EPerson ID.
     	 */
     	public boolean isAnonymous()
     	{
-    		return (epersonID == null);
+    		return (epersonID == -1);
     	}
     	
     	/**
     	 * Is this event from a bot?
-         * @return true if user agent matches a bot string.
     	 */
     	public boolean isBot()
     	{
@@ -308,13 +260,14 @@ public class CurrentActivityAction extends AbstractAction
             }
 	    String ua = userAgent.toLowerCase();
 
-	    for(String botString : botStrings){
-	        if (ua.contains(botString)){
-	            return true;
-	        }
-	    }
-	    return false;
-    }
+	    return (ua.contains("google/") ||
+		    ua.contains("msnbot/") ||
+		    ua.contains("googlebot/") || 
+		    ua.contains("webcrawler/") ||
+		    ua.contains("inktomi") ||
+		    ua.contains("teoma") ||
+		    ua.contains("bot"));
+    	}
     	
     	/**
     	 * Return the activity viewer's best guess as to what browser or bot
@@ -361,12 +314,6 @@ public class CurrentActivityAction extends AbstractAction
             {
                 return "Teoma (bot)";
             }
-    		
-    		if (userAgentLower.contains("baiduspider"))
-            {
-                return "Baidu (bot)";
-            }
-
     		
     		if (userAgentLower.contains("bot"))
             {
@@ -507,7 +454,7 @@ public class CurrentActivityAction extends AbstractAction
             }
     		
     		// if you get all the way to the end and still nothing, return unknown.
-    		return userAgent.length() == 0 ? "Unknown" : escapeHtml( userAgent.substring( 0, Math.min(20, userAgent.length()) ) );
+    		return "Unknown";
     	}  
     }
     

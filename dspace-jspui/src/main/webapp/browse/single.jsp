@@ -48,14 +48,14 @@
 	{
 		collection = (Collection) bi.getBrowseContainer();
 	}
-
+	
 	if (community != null)
 	{
-		scope = "\"" + community.getName() + "\"";
+		scope = "\"" + community.getMetadata("name") + "\"";
 	}
 	if (collection != null)
 	{
-		scope = "\"" + collection.getName() + "\"";
+		scope = "\"" + collection.getMetadata("name") + "\"";
 	}
 	
 	type = bix.getName();

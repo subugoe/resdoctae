@@ -21,9 +21,8 @@ import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.SiteService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.content.Site;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.discovery.DiscoverResult;
 import org.xml.sax.SAXException;
 
@@ -45,8 +44,6 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
     protected static final Message T_trail = message("xmlui.Discovery.RecentSubmissions.RecentSubmissionTransformer.trail");
 
     protected boolean isHomePage = false;
-
-    protected SiteService siteService = ContentServiceFactory.getInstance().getSiteService();
 
     @Override
     public void setup(SourceResolver resolver, Map objectModel, String src, Parameters parameters) throws ProcessingException, SAXException, IOException {
@@ -81,7 +78,7 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
 
         // Add the trail back to the repository root.
         pageMeta.addTrailLink(contextPath + "/",T_dspace_home);
-        HandleUtil.buildHandleTrail(context, dso, pageMeta,contextPath, !isHomePage);
+        HandleUtil.buildHandleTrail(dso, pageMeta,contextPath, !isHomePage);
         if(!isHomePage)
         {
             //Add a trail link indicating that we are on a recent submissions page
@@ -94,10 +91,10 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
         if(isHomePage)
         {
             // Add RSS links if available
-            String[] formats = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("webui.feed.formats");
+            String formats = ConfigurationManager.getProperty("webui.feed.formats");
             if ( formats != null )
             {
-                for (String format : formats)
+                for (String format : formats.split(","))
                 {
                     // Remove the protocol number, i.e. just list 'rss' or' atom'
                     String[] parts = format.split("_");
@@ -141,7 +138,7 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
         }
     }
 
-    protected void setPagination(Request request, DSpaceObject dso, Division mainDivision, DiscoverResult recentlySubmittedItems) throws SQLException {
+    protected void setPagination(Request request, DSpaceObject dso, Division mainDivision, DiscoverResult recentlySubmittedItems) {
         int offset = getOffset(request);
         int rpp = RecentSubmissionUtils.getRecentSubmissionConfiguration(dso).getMax();
         int firstIndex = offset + 1;
@@ -162,7 +159,7 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
 
     }
 
-    protected String getNextPageURL(DSpaceObject dso, int currentOffset, int rpp, int total) throws SQLException {
+    protected String getNextPageURL(DSpaceObject dso, int currentOffset, int rpp, int total){
         if((rpp + currentOffset) < total)
         {
             return getBaseUrl(dso) + "?offset=" + (rpp + currentOffset);
@@ -171,7 +168,7 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
         }
     }
 
-    protected String getPreviousPageURL(DSpaceObject dso, int currentOffset, int rpp) throws SQLException {
+    protected String getPreviousPageURL(DSpaceObject dso, int currentOffset, int rpp) {
         if((currentOffset - rpp) < 0){
             return null;
         }else{
@@ -179,9 +176,10 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
         }
     }
 
-    protected String getBaseUrl(DSpaceObject dso) throws SQLException {
+    protected String getBaseUrl(DSpaceObject dso)
+    {
         String url = contextPath;
-        if(dso != null && !dso.equals(siteService.findSite(context)))
+        if(dso != null && dso.getID() != Site.SITE_ID)
         {
             url += "/handle/" + dso.getHandle();
         }
@@ -204,7 +202,7 @@ public class RecentSubmissionTransformer extends AbstractDSpaceTransformer {
         DSpaceObject dso = HandleUtil.obtainHandle(objectModel);
         if(dso == null)
         {
-            return siteService.findSite(context);
+            return Site.find(context, Site.SITE_ID);
         }else{
             return dso;
         }

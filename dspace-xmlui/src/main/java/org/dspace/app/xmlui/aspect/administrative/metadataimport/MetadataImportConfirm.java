@@ -14,7 +14,6 @@ import java.util.List;
 import org.apache.cocoon.environment.ObjectModelHelper;
 import org.apache.cocoon.environment.Request;
 
-import org.dspace.app.bulkedit.BulkEditMetadataValue;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
@@ -28,6 +27,7 @@ import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Cell;
 import org.dspace.content.Collection;
 import org.dspace.content.Item;
+import org.dspace.content.Metadatum;
 import org.xml.sax.SAXException;
 
 import org.dspace.app.bulkedit.BulkEditChange;
@@ -106,8 +106,8 @@ public class MetadataImportConfirm extends AbstractDSpaceTransformer {
                     for (BulkEditChange change : changes)
                     {
                         // Get the changes
-                        List<BulkEditMetadataValue> adds = change.getAdds();
-                        List<BulkEditMetadataValue> removes = change.getRemoves();
+                        List<Metadatum> adds = change.getAdds();
+                        List<Metadatum> removes = change.getRemoves();
                         List<Collection> newCollections = change.getNewMappedCollections();
                         List<Collection> oldCollections = change.getOldMappedCollections();
 
@@ -207,43 +207,43 @@ public class MetadataImportConfirm extends AbstractDSpaceTransformer {
                         }
 
                         // Show additions
-                        for (BulkEditMetadataValue dcv : adds)
+                        for (Metadatum dcv : adds)
                         {
                             Row mdrow = mdchanges.addRow("addition",Row.ROLE_DATA,"metadata-addition");
-                            String md = dcv.getSchema() + "." + dcv.getElement();
-                            if (dcv.getQualifier() != null)
+                            String md = dcv.schema + "." + dcv.element;
+                            if (dcv.qualifier != null)
                             {
-                                md += "." + dcv.getQualifier();
+                                md += "." + dcv.qualifier;
                             }
-                            if (dcv.getLanguage() != null)
+                            if (dcv.language != null)
                             {
-                                md += "[" + dcv.getLanguage() + "]";
+                                md += "[" + dcv.language + "]";
                             }
 
                             Cell cell = mdrow.addCell();
                             cell.addContent(T_item_addition);
                             cell.addContent(" (" + md + ")");
-                            mdrow.addCellContent(dcv.getValue());
+                            mdrow.addCellContent(dcv.value);
                         }
 
                         // Show removals
-                        for (BulkEditMetadataValue dcv : removes)
+                        for (Metadatum dcv : removes)
                         {
                             Row mdrow = mdchanges.addRow("deletion",Row.ROLE_DATA,"metadata-deletion");
-                            String md = dcv.getSchema() + "." + dcv.getElement();
-                            if (dcv.getQualifier() != null)
+                            String md = dcv.schema + "." + dcv.element;
+                            if (dcv.qualifier != null)
                             {
-                                md += "." + dcv.getQualifier();
+                                md += "." + dcv.qualifier;
                             }
-                            if (dcv.getLanguage() != null)
+                            if (dcv.language != null)
                             {
-                                md += "[" + dcv.getLanguage() + "]";
+                                md += "[" + dcv.language + "]";
                             }
 
                             Cell cell = mdrow.addCell();
                             cell.addContent(T_item_deletion);
                             cell.addContent(" (" + md + ")");
-                            mdrow.addCellContent(dcv.getValue());
+                            mdrow.addCellContent(dcv.value);
                         }
                     }
                 }

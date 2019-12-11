@@ -17,8 +17,6 @@ import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.statistics.Dataset;
@@ -50,18 +48,24 @@ public class StatisticsTransformer extends AbstractDSpaceTransformer {
 
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
 
-	protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-
     public StatisticsTransformer(Date dateStart, Date dateEnd) {
         this.dateStart = dateStart;
         this.dateEnd = dateEnd;
 
-		this.context = new Context();
-	}
+        try {
+            this.context = new Context();
+        } catch (SQLException e) {
+            log.error("Error getting context in StatisticsTransformer:" + e.getMessage());
+        }
+    }
 
     public StatisticsTransformer() {
-		this.context = new Context();
-	}
+        try {
+            this.context = new Context();
+        } catch (SQLException e) {
+            log.error("Error getting context in StatisticsTransformer:" + e.getMessage());
+        }
+    }
 
     /**
      * Add a page title and trail links
@@ -74,7 +78,7 @@ public class StatisticsTransformer extends AbstractDSpaceTransformer {
 
         if(dso != null)
         {
-            HandleUtil.buildHandleTrail(context, dso, pageMeta, contextPath, true);
+            HandleUtil.buildHandleTrail(dso, pageMeta, contextPath, true);
         }
         pageMeta.addTrailLink(contextPath + "/handle" + (dso != null && dso.getHandle() != null ? "/" + dso.getHandle() : "/statistics"), T_statistics_trail);
 
@@ -218,7 +222,7 @@ public class StatisticsTransformer extends AbstractDSpaceTransformer {
              //Make sure our item has at least one bitstream
              org.dspace.content.Item item = (org.dspace.content.Item) dso;
             try {
-                if(itemService.hasUploadedFiles(item)){
+                if(item.hasUploadedFiles()){
                     StatisticsListing statsList = new StatisticsListing(new StatisticsDataVisits(dso));
 
                     statsList.setTitle(T_head_visits_bitstream);

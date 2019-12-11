@@ -9,9 +9,9 @@ package org.dspace.app.itemupdate;
 
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FilenameFilter;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -20,7 +20,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -28,17 +27,10 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.commons.lang.StringUtils;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
 
 /**
  *   
@@ -81,11 +73,7 @@ public class ItemUpdate {
 	public static final Map<String, String> filterAliases = new HashMap<String, String>();
 	
 	public static boolean verbose = false;
-
-    protected static final EPersonService epersonService = EPersonServiceFactory.getInstance().getEPersonService();
-    protected static final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    protected static final HandleService handleService = HandleServiceFactory.getInstance().getHandleService();
-
+	
 	static
 	{
 		filterAliases.put("ORIGINAL", "org.dspace.app.itemupdate.OriginalBitstreamFilter");
@@ -97,8 +85,7 @@ public class ItemUpdate {
     // File listing filter to check for folders
     static FilenameFilter directoryFilter = new FilenameFilter()
     {
-        @Override
-		public boolean accept(File dir, String n)
+        public boolean accept(File dir, String n)
         {
             File f = new File(dir.getAbsolutePath() + File.separatorChar + n);
             return f.isDirectory();
@@ -108,8 +95,7 @@ public class ItemUpdate {
     // File listing filter to check for files (not directories)
     static FilenameFilter fileFilter = new FilenameFilter()
     {
-        @Override
-		public boolean accept(File dir, String n)
+        public boolean accept(File dir, String n)
         {
             File f = new File(dir.getAbsolutePath() + File.separatorChar + n);
             return (f.isFile());
@@ -117,13 +103,13 @@ public class ItemUpdate {
     };
 
     // instance variables
-    protected ActionManager actionMgr = new ActionManager();
-    protected List<String> undoActionList = new ArrayList<String>();
-    protected String eperson;
+    private ActionManager actionMgr = new ActionManager(); 
+    private List<String> undoActionList = new ArrayList<String>();  
+    private String eperson;
    
     /**
      * 
-     * @param argv commandline args
+     * @param argv
      */
     public static void main(String[] argv)
     {
@@ -363,11 +349,15 @@ public class ItemUpdate {
 	        
 	        pr("ItemUpdate - initializing run on " + (new Date()).toString());
 	               	
-	        context = new Context(Context.Mode.BATCH_EDIT);
+	        context = new Context();  
 	        iu.setEPerson(context, iu.eperson);	
 	        context.turnOffAuthorisationSystem();
 	        
-	    	HANDLE_PREFIX = handleService.getCanonicalPrefix();
+	    	HANDLE_PREFIX = ConfigurationManager.getProperty("handle.canonical.prefix");
+	    	if (HANDLE_PREFIX == null || HANDLE_PREFIX.length() == 0)
+	    	{
+	    		HANDLE_PREFIX = "http://hdl.handle.net/";
+	    	}
 	    		        
         	iu.processArchive(context, sourcedir, itemField, metadataIndexName, alterProvenance, isTest);		        	            
 
@@ -398,18 +388,8 @@ public class ItemUpdate {
         }
         System.exit(status);
     }
-
-    /**
-     * process an archive
-     * @param context DSpace Context
-     * @param sourceDirPath source path
-     * @param itemField item field
-     * @param metadataIndexName index name
-     * @param alterProvenance whether to alter provenance
-     * @param isTest test flag
-     * @throws Exception if error
-     */
-    protected void processArchive(Context context, String sourceDirPath, String itemField,
+    
+    private void processArchive(Context context, String sourceDirPath, String itemField,
     		String metadataIndexName, boolean alterProvenance, boolean isTest)
     throws Exception
     {
@@ -465,8 +445,9 @@ public class ItemUpdate {
 	    		if (!isTest)
 	    		{
     				Item item = itarch.getItem();
-                    itemService.update(context, item);  //need to update before commit
-					context.uncacheEntity(item);
+    				item.update();  //need to update before commit
+    				context.commit();  
+	    			item.decache();
 	    		}
     			ItemUpdate.pr("Item " + dirname + " completed");
     			successItemCount++;
@@ -529,10 +510,10 @@ public class ItemUpdate {
      * 
      * @param sourceDir - the original source directory
      * @return the directory of the undo archive
-     * @throws FileNotFoundException if file doesn't exist
-     * @throws IOException if IO error
+     * @throws FileNotFoundException
+     * @throws IOException
      */
-    protected File initUndoArchive(File sourceDir)
+	private File initUndoArchive(File sourceDir)
 	throws FileNotFoundException, IOException
 	{				
 		File parentDir = sourceDir.getCanonicalFile().getParentFile();
@@ -573,13 +554,7 @@ public class ItemUpdate {
 	
 	//private void write
 
-    /**
-     * Set EPerson doing import
-     * @param context DSpace Context
-     * @param eperson EPerson obj
-     * @throws Exception if error
-     */
-    protected void setEPerson(Context context, String eperson)
+    private void setEPerson(Context context, String eperson)
     throws Exception
     {
         if (eperson == null)
@@ -593,11 +568,11 @@ public class ItemUpdate {
         if (eperson.indexOf('@') != -1)
         {
             // @ sign, must be an email
-            myEPerson = epersonService.findByEmail(context, eperson);
+            myEPerson = EPerson.findByEmail(context, eperson);
         }
         else
         {
-            myEPerson = epersonService.find(context, UUID.fromString(eperson));
+            myEPerson = EPerson.find(context, Integer.parseInt(eperson));
         }
 
         if (myEPerson == null)
@@ -613,7 +588,7 @@ public class ItemUpdate {
      *   poor man's logging
 	 *   As with ItemImport, API logging goes through log4j to the DSpace.log files
 	 *   whereas the batch logging goes to the console to be captured there.
-     * @param s String
+     * @param s
      */
     static void pr(String s)
     {
@@ -622,7 +597,7 @@ public class ItemUpdate {
     
     /**
      *  print if verbose flag is set
-     * @param s String
+     * @param s
      */
     static void prv(String s)
     {

@@ -29,10 +29,10 @@ public class Label extends TextContainer implements StructuralElement
     public static final String E_LABEL = "label";
 
     /** The label's name */
-    private final String name;
+    private String name;
 
     /** Special rendering hints */
-    private final String rend;
+    private String rend;
 
     /**
      * Construct a new label.
@@ -44,7 +44,7 @@ public class Label extends TextContainer implements StructuralElement
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws WingException passed through.
+     * @throws WingException
      */
     protected Label(WingContext context, String name, String rend)
             throws WingException
@@ -67,9 +67,7 @@ public class Label extends TextContainer implements StructuralElement
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler,
             NamespaceSupport namespaces) throws SAXException
     {

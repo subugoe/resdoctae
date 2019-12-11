@@ -7,18 +7,17 @@
  */
 package org.dspace.app.xmlui.aspect.workflow;
 
-import org.apache.commons.lang.StringUtils;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.utils.UIException;
 import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.content.*;
+import org.dspace.content.Item;
 import org.dspace.eperson.EPerson;
-import org.dspace.workflowbasic.BasicWorkflowItem;
-import org.dspace.workflowbasic.factory.BasicWorkflowServiceFactory;
-import org.dspace.workflowbasic.service.BasicWorkflowItemService;
-import org.dspace.workflowbasic.service.BasicWorkflowService;
+import org.dspace.workflow.WorkflowItem;
+import org.dspace.workflow.WorkflowManager;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
@@ -104,9 +103,6 @@ public class Submissions extends AbstractDSpaceTransformer
     protected static final Message T_status_unknown =
         message("xmlui.Submission.Submissions.status_unknown");
 
-    protected BasicWorkflowService basicWorkflowService = BasicWorkflowServiceFactory.getInstance().getBasicWorkflowService();
-    protected BasicWorkflowItemService basicWorkflowItemService = BasicWorkflowServiceFactory.getInstance().getBasicWorkflowItemService();
-
 
     @Override
     public void addPageMeta(PageMeta pageMeta) throws SAXException,
@@ -145,10 +141,10 @@ public class Submissions extends AbstractDSpaceTransformer
     private void addWorkflowTasks(Division division) throws SQLException, WingException
     {
     	@SuppressWarnings("unchecked") // This cast is correct
-    	List<BasicWorkflowItem> ownedItems = basicWorkflowService.getOwnedTasks(context, context
+    	List<WorkflowItem> ownedItems = WorkflowManager.getOwnedTasks(context, context
                 .getCurrentUser());
     	@SuppressWarnings("unchecked") // This cast is correct.
-    	List<BasicWorkflowItem> pooledItems = basicWorkflowService.getPooledTasks(context, context
+    	List<WorkflowItem> pooledItems = WorkflowManager.getPooledTasks(context, context
                 .getCurrentUser());
 
     	if (!(ownedItems.size() > 0 || pooledItems.size() > 0))
@@ -174,13 +170,13 @@ public class Submissions extends AbstractDSpaceTransformer
 
         if (ownedItems.size() > 0)
         {
-        	for (BasicWorkflowItem owned : ownedItems)
+        	for (WorkflowItem owned : ownedItems)
         	{
         		int workflowItemID = owned.getID();
         		String collectionUrl = contextPath + "/handle/" + owned.getCollection().getHandle();
         		String ownedWorkflowItemUrl = contextPath + "/handle/" + owned.getCollection().getHandle() + "/workflow?workflowID=" + workflowItemID;
-        		String title = owned.getItem().getName();
-        		String collectionName = owned.getCollection().getName();
+        		Metadatum[] titles = owned.getItem().getDC("title", null, Item.ANY);
+        		String collectionName = owned.getCollection().getMetadata("name");
         		EPerson submitter = owned.getSubmitter();
         		String submitterName = submitter.getFullName();
         		String submitterEmail = submitter.getEmail();
@@ -197,9 +193,9 @@ public class Submissions extends AbstractDSpaceTransformer
 	        	row.addCell().addXref(ownedWorkflowItemUrl, state);
 
         		// The item description
-        		if (StringUtils.isNotBlank(title))
+        		if (titles != null && titles.length > 0)
         		{
-        			String displayTitle = title;
+        			String displayTitle = titles[0].value;
         			if (displayTitle.length() > 50)
                     {
                         displayTitle = displayTitle.substring(0, 50) + " ...";
@@ -247,13 +243,13 @@ public class Submissions extends AbstractDSpaceTransformer
         if (pooledItems.size() > 0)
         {
 
-        	for (BasicWorkflowItem pooled : pooledItems)
+        	for (WorkflowItem pooled : pooledItems)
         	{
         		int workflowItemID = pooled.getID();
         		String collectionUrl = contextPath + "/handle/" + pooled.getCollection().getHandle();
         		String pooledItemUrl = contextPath + "/handle/" + pooled.getCollection().getHandle() + "/workflow?workflowID=" + workflowItemID;
-        		String title = pooled.getItem().getName();
-        		String collectionName = pooled.getCollection().getName();
+        		Metadatum[] titles = pooled.getItem().getDC("title", null, Item.ANY);
+        		String collectionName = pooled.getCollection().getMetadata("name");
         		EPerson submitter = pooled.getSubmitter();
         		String submitterName = submitter.getFullName();
         		String submitterEmail = submitter.getEmail();
@@ -271,9 +267,9 @@ public class Submissions extends AbstractDSpaceTransformer
 	        	row.addCell().addXref(pooledItemUrl, state);
 
         		// The item description
-        		if (StringUtils.isNotBlank(title))
+        		if (titles != null && titles.length > 0)
         		{
-        			String displayTitle = title;
+        			String displayTitle = titles[0].value;
         			if (displayTitle.length() > 50)
                     {
                         displayTitle = displayTitle.substring(0, 50) + " ...";
@@ -329,10 +325,10 @@ public class Submissions extends AbstractDSpaceTransformer
      */
     private void addSubmissionsInWorkflow(Division division) throws SQLException, WingException
     {
-    	List<BasicWorkflowItem> inprogressItems = basicWorkflowItemService.findBySubmitter(context, context.getCurrentUser());
+    	WorkflowItem[] inprogressItems = WorkflowItem.findByEPerson(context,context.getCurrentUser());
 
     	// If there is nothing in progress then don't add anything.
-    	if (!(inprogressItems.size() > 0))
+    	if (!(inprogressItems.length > 0))
         {
             return;
         }
@@ -342,42 +338,42 @@ public class Submissions extends AbstractDSpaceTransformer
     	inprogress.addPara(T_p_info1);
 
 
-    	Table table = inprogress.addTable("submissions-inprogress",inprogressItems.size()+1,3);
+    	Table table = inprogress.addTable("submissions-inprogress",inprogressItems.length+1,3);
         Row header = table.addRow(Row.ROLE_HEADER);
         header.addCellContent(T_p_column1);
         header.addCellContent(T_p_column2);
         header.addCellContent(T_p_column3);
 
 
-        for (BasicWorkflowItem workflowItem : inprogressItems)
+        for (WorkflowItem workflowItem : inprogressItems)
         {
-            String title = workflowItem.getItem().getName();
-            String collectionName = workflowItem.getCollection().getName();
-            Message state = getWorkflowStateMessage(workflowItem);
+        	Metadatum[] titles = workflowItem.getItem().getDC("title", null, Item.ANY);
+        	String collectionName = workflowItem.getCollection().getMetadata("name");
+        	Message state = getWorkflowStateMessage(workflowItem);
 
 
-            Row row = table.addRow();
+        	Row row = table.addRow();
 
-            // Add the title column
-            if (StringUtils.isNotBlank(title))
-            {
-                String displayTitle = title;
-    	        if (displayTitle.length() > 50)
+        	// Add the title column
+        	if (titles.length > 0)
+        	{
+        		String displayTitle = titles[0].value;
+    			if (displayTitle.length() > 50)
                 {
                     displayTitle = displayTitle.substring(0, 50) + " ...";
                 }
-                row.addCellContent(displayTitle);
-            }
-            else
+        		row.addCellContent(displayTitle);
+        	}
+        	else
             {
                 row.addCellContent(T_untitled);
             }
 
-            // Collection name column
-            row.addCellContent(collectionName);
+        	// Collection name column
+        	row.addCellContent(collectionName);
 
-            // Status column
-            row.addCellContent(state);
+        	// Status column
+        	row.addCellContent(state);
         }
     }
 
@@ -390,25 +386,25 @@ public class Submissions extends AbstractDSpaceTransformer
      *
      * FIXME: change to return type of message;
      */
-    private Message getWorkflowStateMessage(BasicWorkflowItem workflowItem)
+    private Message getWorkflowStateMessage(WorkflowItem workflowItem)
     {
 		switch (workflowItem.getState())
 		{
-			case BasicWorkflowService.WFSTATE_SUBMIT:
+			case WorkflowManager.WFSTATE_SUBMIT:
 				return T_status_0;
-			case BasicWorkflowService.WFSTATE_STEP1POOL:
+			case WorkflowManager.WFSTATE_STEP1POOL:
 				return T_status_1;
-    		case BasicWorkflowService.WFSTATE_STEP1:
+    		case WorkflowManager.WFSTATE_STEP1:
     			return T_status_2;
-    		case BasicWorkflowService.WFSTATE_STEP2POOL:
+    		case WorkflowManager.WFSTATE_STEP2POOL:
     			return T_status_3;
-    		case BasicWorkflowService.WFSTATE_STEP2:
+    		case WorkflowManager.WFSTATE_STEP2:
     			return T_status_4;
-    		case BasicWorkflowService.WFSTATE_STEP3POOL:
+    		case WorkflowManager.WFSTATE_STEP3POOL:
     			return T_status_5;
-    		case BasicWorkflowService.WFSTATE_STEP3:
+    		case WorkflowManager.WFSTATE_STEP3:
     			return T_status_6;
-    		case BasicWorkflowService.WFSTATE_ARCHIVE:
+    		case WorkflowManager.WFSTATE_ARCHIVE:
     			return T_status_7;
    			default:
    				return T_status_unknown;

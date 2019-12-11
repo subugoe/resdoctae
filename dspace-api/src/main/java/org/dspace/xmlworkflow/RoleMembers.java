@@ -10,13 +10,10 @@ package org.dspace.xmlworkflow;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.UUID;
 
 /**
  * The members from a role, can either
@@ -29,13 +26,12 @@ import java.util.UUID;
  */
 public class RoleMembers {
 
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
     private ArrayList<Group> groups;
     private ArrayList<EPerson> epersons;
 
     public RoleMembers(){
-        this.groups = new ArrayList<>();
-        this.epersons = new ArrayList<>();
+        this.groups = new ArrayList<Group>();
+        this.epersons = new ArrayList<EPerson>();
     }
 
     public ArrayList<Group> getGroups(){
@@ -51,22 +47,22 @@ public class RoleMembers {
     public void addEPerson(EPerson eperson){
         epersons.add(eperson);
     }
-    public void removeEperson(EPerson epersonToRemove){
+    public void removeEperson(int toRemoveID){
         for(EPerson eperson: epersons){
-            if(eperson.equals(epersonToRemove))
+            if(eperson.getID()==toRemoveID)
                 epersons.remove(eperson);
         }
     }
     public ArrayList<EPerson> getAllUniqueMembers(Context context) throws SQLException {
-        HashMap<UUID, EPerson> epersonsMap = new HashMap();
+        HashMap<Integer, EPerson> epersonsMap = new HashMap<Integer, EPerson>();
         for(EPerson eperson: epersons){
             epersonsMap.put(eperson.getID(), eperson);
         }
         for(Group group: groups){
-            for(EPerson eperson: groupService.allMembers(context, group)){
+            for(EPerson eperson: Group.allMembers(context, group)){
                 epersonsMap.put(eperson.getID(), eperson);
             }
         }
-        return new ArrayList<>(epersonsMap.values());
+        return new ArrayList<EPerson>(epersonsMap.values());
     }
 }

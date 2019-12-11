@@ -32,8 +32,6 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
 
 /**
  * Examine a collection of DSpace log files, building a table of last login
@@ -147,17 +145,15 @@ public class LoadLastLogin
         Context ctx = new Context();
         ctx.turnOffAuthorisationSystem();
 
-        EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-
         while(walker.getNext(stamp))
         {
             // Update an EPerson's last login
             String name = (String) stamp.getKey();
             Date date = (Date) stamp.getValue();
             EPerson ePerson;
-            ePerson = ePersonService.findByEmail(ctx, name);
+            ePerson = EPerson.findByEmail(ctx, name);
             if (null == ePerson)
-                ePerson = ePersonService.findByNetid(ctx, name);
+                ePerson = EPerson.findByNetid(ctx, name);
             if (null == ePerson)
             {
                 System.err.println("Skipping unknown user:  " + name);
@@ -168,8 +164,8 @@ public class LoadLastLogin
             {
                 if (PRETEND)
                 {
-                    System.out.printf("%s\t%s\t%s\t%s\t%s\n",
-                            ePerson.getID().toString(),
+                    System.out.printf("%d\t%s\t%s\t%s\t%s\n",
+                            ePerson.getID(),
                             date,
                             ePerson.getEmail(),
                             ePerson.getNetid(),
@@ -178,7 +174,8 @@ public class LoadLastLogin
                 else
                 {
                     ePerson.setLastActive(date);
-                    ePersonService.update(ctx, ePerson);
+                    ePerson.update();
+                    ctx.commit();
                 }
             }
         }

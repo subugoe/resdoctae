@@ -13,6 +13,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.dspace.content.Metadatum;
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.Format;
@@ -89,7 +90,7 @@ public class PubMedToImport {
 
     private static class PubMedHandler extends DefaultHandler {
         private static int recordCount = 1;
-        private static List<MockMetadataValue> dcValues;
+        private static List<Metadatum> dcValues;
 
         private static StringBuilder value;
         private static StringBuilder lastName;
@@ -101,10 +102,10 @@ public class PubMedToImport {
 
         private static void addDCValue(String element, String qualifier, String value) {
             if (dcValues == null) {
-                dcValues = new ArrayList<MockMetadataValue>();
+                dcValues = new ArrayList<Metadatum>();
             }
 
-            MockMetadataValue thisValue = new MockMetadataValue();
+            Metadatum thisValue = new Metadatum();
             thisValue.schema = "dc";
             thisValue.element = element;
             thisValue.qualifier = qualifier;
@@ -202,7 +203,7 @@ public class PubMedToImport {
 
             doc.setRootElement(root);
 
-            for (MockMetadataValue dcValue : dcValues)
+            for (Metadatum dcValue : dcValues)
             {
                 Element dcNode = new Element("dcvalue");
 
@@ -233,14 +234,5 @@ public class PubMedToImport {
 
             dcValues.clear();
         }
-    }
-
-
-    protected static class MockMetadataValue
-    {
-        public String schema;
-        public String element;
-        public String qualifier;
-        public String value;
     }
 }

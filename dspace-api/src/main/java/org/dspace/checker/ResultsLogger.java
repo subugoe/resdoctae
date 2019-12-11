@@ -7,14 +7,10 @@
  */
 package org.dspace.checker;
 
-import java.sql.SQLException;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import org.apache.log4j.Logger;
-import org.dspace.content.Bitstream;
-import org.dspace.core.Context;
 import org.dspace.core.I18nUtil;
 
 /**
@@ -39,16 +35,18 @@ public class ResultsLogger implements ChecksumResultsCollector
     /**
      * Utility date format.
      */
-    private static final ThreadLocal<DateFormat> DATE_FORMAT = new ThreadLocal<DateFormat>() {
-        @Override
-        protected DateFormat initialValue() {
-            return new SimpleDateFormat("MM/dd/yyyy hh:mm:ss");
-        }
-    };
+    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat(
+            "MM/dd/yyyy hh:mm:ss");
+
     /**
      * Date the current checking run started.
      */
     Date startDate = null;
+
+    /**
+     * ChecksumResultDAO dependency variable.
+     */
+    private ChecksumResultDAO resultDAO;
 
     /**
      * Blanked off, no-op constructor. Do not use.
@@ -65,7 +63,9 @@ public class ResultsLogger implements ChecksumResultsCollector
      */
     public ResultsLogger(Date startDt)
     {
-        LOG.info(msg("run-start-time") + ": " + DATE_FORMAT.get().format(startDt));
+        this.resultDAO = new ChecksumResultDAO();
+
+        LOG.info(msg("run-start-time") + ": " + DATE_FORMAT.format(startDt));
     }
 
     /**
@@ -75,7 +75,7 @@ public class ResultsLogger implements ChecksumResultsCollector
      *            to get the message.
      * @return the message found.
      */
-    protected String msg(String key)
+    private String msg(String key)
     {
         return I18nUtil.getMessage("org.dspace.checker.ResultsLogger." + key);
     }
@@ -83,40 +83,37 @@ public class ResultsLogger implements ChecksumResultsCollector
     /**
      * Collect a result for logging.
      * 
-     * @param context Context
      * @param info
      *            the BitstreamInfo representing the result.
-     * @throws SQLException if database error
-     * @see org.dspace.checker.ChecksumResultsCollector#collect(org.dspace.core.Context, org.dspace.checker.MostRecentChecksum)
+     * @see org.dspace.checker.ChecksumResultsCollector#collect(org.dspace.checker.BitstreamInfo)
      */
-    @Override
-    public void collect(Context context, MostRecentChecksum info) throws SQLException {
-        Bitstream bitstream = info.getBitstream();
+    public void collect(BitstreamInfo info)
+    {
         LOG.info("******************************************************");
-        LOG.info(msg("bitstream-id") + ": " + bitstream.getID());
-        LOG.info(msg("bitstream-info-found") + ": " + info.isInfoFound());
-        LOG.info(msg("bitstream-marked-deleted") + ": " + bitstream.isDeleted());
-        LOG.info(msg("bitstream-found") + ": " + info.isBitstreamFound());
-        LOG.info(msg("to-be-processed") + ": " + info.isToBeProcessed());
-        LOG.info(msg("internal-id") + ": " + bitstream.getInternalId());
-        LOG.info(msg("name") + ": " + bitstream.getName());
-        LOG.info(msg("store-number") + ": " + bitstream.getStoreNumber());
-        LOG.info(msg("size") + ": " + bitstream.getSize());
-        LOG.info(msg("bitstream-format") + ": " + (bitstream.getFormat(context) != null ? bitstream.getFormat(context).getID() : "-1"));
+        LOG.info(msg("bitstream-id") + ": " + info.getBitstreamId());
+        LOG.info(msg("bitstream-info-found") + ": " + info.getInfoFound());
+        LOG.info(msg("bitstream-marked-deleted") + ": " + info.getDeleted());
+        LOG.info(msg("bitstream-found") + ": " + info.getBitstreamFound());
+        LOG.info(msg("to-be-processed") + ": " + info.getToBeProcessed());
+        LOG.info(msg("internal-id") + ": " + info.getInternalId());
+        LOG.info(msg("name") + ": " + info.getName());
+        LOG.info(msg("store-number") + ": " + info.getStoreNumber());
+        LOG.info(msg("size") + ": " + info.getSize());
+        LOG.info(msg("bitstream-format") + ": " + info.getBitstreamFormatId());
         LOG.info(msg("user-format-description") + ": "
-                + bitstream.getUserFormatDescription());
-        LOG.info(msg("source") + ": " + bitstream.getSource());
+                + info.getUserFormatDescription());
+        LOG.info(msg("source") + ": " + info.getSource());
         LOG
                 .info(msg("checksum-algorithm") + ": "
                         + info.getChecksumAlgorithm());
-        LOG.info(msg("previous-checksum") + ": " + info.getExpectedChecksum());
+        LOG.info(msg("previous-checksum") + ": " + info.getStoredChecksum());
         LOG.info(msg("previous-checksum-date")
                 + ": "
-                + ((info.getProcessEndDate() != null) ? DATE_FORMAT.get().format(info
+                + ((info.getProcessEndDate() != null) ? DATE_FORMAT.format(info
                         .getProcessEndDate()) : "unknown"));
-        LOG.info(msg("new-checksum") + ": " + info.getCurrentChecksum());
+        LOG.info(msg("new-checksum") + ": " + info.getCalculatedChecksum());
         LOG.info(msg("checksum-comparison-result") + ": "
-                + (info.getChecksumResult().getResultCode()));
+                + resultDAO.getChecksumCheckStr(info.getChecksumCheckResult()));
         LOG.info("\n\n");
     }
 }

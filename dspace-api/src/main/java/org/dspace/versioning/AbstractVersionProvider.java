@@ -8,19 +8,14 @@
 package org.dspace.versioning;
 
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.service.AuthorizeService;
 import org.dspace.content.*;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.BundleService;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
-import org.dspace.storage.bitstore.service.BitstreamStorageService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.dspace.storage.bitstore.BitstreamStorageManager;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Set;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.authorize.ResourcePolicy;
 
 /**
@@ -34,38 +29,26 @@ public abstract class AbstractVersionProvider {
 
     private Set<String> ignoredMetadataFields;
 
-    @Autowired(required = true)
-    protected AuthorizeService authorizeService;
-    @Autowired(required = true)
-    protected BitstreamService bitstreamService;
-    @Autowired(required = true)
-    protected BitstreamStorageService bitstreamStorageService;
-    @Autowired(required = true)
-    protected BundleService bundleService;
-    @Autowired(required = true)
-    protected ItemService itemService;
-
-    protected void copyMetadata(Context context, Item itemNew, Item nativeItem) throws SQLException {
-        List<MetadataValue> md = itemService.getMetadata(nativeItem, Item.ANY, Item.ANY, Item.ANY, Item.ANY);
-        for (MetadataValue aMd : md) {
-            MetadataField metadataField = aMd.getMetadataField();
-            MetadataSchema metadataSchema = metadataField.getMetadataSchema();
-            String unqualifiedMetadataField = metadataSchema.getName() + "." + metadataField.getElement();
-            if(getIgnoredMetadataFields().contains(metadataField.toString('.')) ||
+    protected void copyMetadata(Item itemNew, Item nativeItem){
+        Metadatum[] md = nativeItem.getMetadata(Item.ANY, Item.ANY, Item.ANY, Item.ANY);
+        for (Metadatum aMd : md) {
+            String unqualifiedMetadataField = aMd.schema + "." + aMd.element;
+            String qualifiedMetadataField = unqualifiedMetadataField + (aMd.qualifier == null ? "" : "." + aMd.qualifier);
+            if(getIgnoredMetadataFields().contains(qualifiedMetadataField) ||
                     getIgnoredMetadataFields().contains(unqualifiedMetadataField + "." + Item.ANY))
             {
                 //Skip this metadata field
                 continue;
             }
 
-            itemService.addMetadata(context, itemNew, metadataField, aMd.getLanguage(), aMd.getValue(), aMd.getAuthority(), aMd.getConfidence());
+            itemNew.addMetadata(aMd.schema, aMd.element, aMd.qualifier, aMd.language, aMd.value, aMd.authority, aMd.confidence);
         }
     }
 
-    protected void createBundlesAndAddBitstreams(Context c, Item itemNew, Item nativeItem) throws SQLException, AuthorizeException, IOException {
+    protected void createBundlesAndAddBitstreams(Context c, Item itemNew, Item nativeItem) throws SQLException, AuthorizeException {
         for(Bundle nativeBundle : nativeItem.getBundles())
         {
-            Bundle bundleNew = bundleService.create(c, itemNew, nativeBundle.getName());
+            Bundle bundleNew = itemNew.createBundle(nativeBundle.getName());
             // DSpace knows several types of resource policies (see the class
             // org.dspace.authorize.ResourcePolicy): Submission, Workflow, Custom
             // and inherited. Submission, Workflow and Inherited policies will be
@@ -73,36 +56,43 @@ public abstract class AbstractVersionProvider {
             // only to preserve customly set policies and embargos (which are
             // realized by custom policies with a start date).
             List<ResourcePolicy> bundlePolicies = 
-                    authorizeService.findPoliciesByDSOAndType(c, nativeBundle, ResourcePolicy.TYPE_CUSTOM);
-            authorizeService.addPolicies(c, bundlePolicies, bundleNew);
+                    AuthorizeManager.findPoliciesByDSOAndType(c, nativeBundle, ResourcePolicy.TYPE_CUSTOM);
+            AuthorizeManager.addPolicies(c, bundlePolicies, bundleNew);
             
             for(Bitstream nativeBitstream : nativeBundle.getBitstreams())
             {
-                // Metadata and additional information like internal identifier, 
-                // file size, checksum, and checksum algorithm are set by the bitstreamStorageService.clone(...)
-                // and respectively bitstreamService.clone(...) method.
-                Bitstream bitstreamNew =  bitstreamStorageService.clone(c, nativeBitstream);
+                Bitstream bitstreamNew = createBitstream(c, nativeBitstream);
 
-                bundleService.addBitstream(c, bundleNew, bitstreamNew);
+                bundleNew.addBitstream(bitstreamNew);
 
                 // NOTE: bundle.addBitstream() causes Bundle policies to be inherited by default.
                 // So, we need to REMOVE any inherited TYPE_CUSTOM policies before copying over the correct ones.
-                authorizeService.removeAllPoliciesByDSOAndType(c, bitstreamNew, ResourcePolicy.TYPE_CUSTOM);
+                AuthorizeManager.removeAllPoliciesByDSOAndType(c, bitstreamNew, ResourcePolicy.TYPE_CUSTOM);
 
                 // Now, we need to copy the TYPE_CUSTOM resource policies from old bitstream
                 // to the new bitstream, like we did above for bundles
                 List<ResourcePolicy> bitstreamPolicies = 
-                        authorizeService.findPoliciesByDSOAndType(c, nativeBitstream, ResourcePolicy.TYPE_CUSTOM);
-                authorizeService.addPolicies(c, bitstreamPolicies, bitstreamNew);
+                        AuthorizeManager.findPoliciesByDSOAndType(c, nativeBitstream, ResourcePolicy.TYPE_CUSTOM);
+                AuthorizeManager.addPolicies(c, bitstreamPolicies, bitstreamNew);
 
-                if(nativeBundle.getPrimaryBitstream() != null && nativeBundle.getPrimaryBitstream().equals(nativeBitstream))
+                if(nativeBundle.getPrimaryBitstreamID() == nativeBitstream.getID())
                 {
-                    bundleNew.setPrimaryBitstreamID(bitstreamNew);
+                    bundleNew.setPrimaryBitstreamID(bitstreamNew.getID());
                 }
-                
-                bitstreamService.update(c, bitstreamNew);
             }
         }
+    }
+
+
+    protected Bitstream createBitstream(Context context, Bitstream nativeBitstream) throws AuthorizeException, SQLException {
+        int idNew = BitstreamStorageManager.clone(context, nativeBitstream.getID());
+	    Bitstream newBitstream = Bitstream.find(context, idNew);
+	    Metadatum[] bitstreamMeta = nativeBitstream.getMetadata(Item.ANY, Item.ANY, Item.ANY, Item.ANY);
+	    for (Metadatum value : bitstreamMeta) {
+		    newBitstream.addMetadata(value.schema, value.element, value.qualifier, value.language, value.value, value.authority, value.confidence);
+	    }
+	    newBitstream.updateMetadata();
+	    return newBitstream;
     }
 
     public void setIgnoredMetadataFields(Set<String> ignoredMetadataFields) {

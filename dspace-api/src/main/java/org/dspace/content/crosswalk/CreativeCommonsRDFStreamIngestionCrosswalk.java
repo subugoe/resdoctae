@@ -18,8 +18,7 @@ import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
-import org.dspace.license.factory.LicenseServiceFactory;
-import org.dspace.license.service.CreativeCommonsService;
+import org.dspace.license.CreativeCommons;
 
 /**
  * Ingest a Creative Commons license, RDF form.
@@ -40,10 +39,6 @@ public class CreativeCommonsRDFStreamIngestionCrosswalk
     /** log4j logger */
     private static Logger log = Logger.getLogger(CreativeCommonsRDFStreamIngestionCrosswalk.class);
 
-    protected CreativeCommonsService creativeCommonsService = LicenseServiceFactory.getInstance().getCreativeCommonsService();
-
-
-    @Override
     public void ingest(Context context, DSpaceObject dso, InputStream in, String MIMEType)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
@@ -55,7 +50,7 @@ public class CreativeCommonsRDFStreamIngestionCrosswalk
                 log.debug("Reading a Creative Commons license, MIMEtype=" + MIMEType);
             }
 
-            creativeCommonsService.setLicense(context, (Item) dso, in, MIMEType);
+            CreativeCommons.setLicense(context, (Item)dso, in, MIMEType);
         }
     }
 

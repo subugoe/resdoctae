@@ -17,13 +17,10 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.Utils;
-import org.dspace.license.factory.LicenseServiceFactory;
-import org.dspace.license.service.CreativeCommonsService;
+import org.dspace.license.CreativeCommons;
 
 /**
  * Export the item's Creative Commons license, RDF form.
@@ -36,16 +33,13 @@ public class CreativeCommonsRDFStreamDisseminationCrosswalk
 {
     /** log4j logger */
     private static Logger log = Logger.getLogger(CreativeCommonsRDFStreamDisseminationCrosswalk.class);
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected CreativeCommonsService creativeCommonsService = LicenseServiceFactory.getInstance().getCreativeCommonsService();
 
-    @Override
     public boolean canDisseminate(Context context, DSpaceObject dso)
     {
         try
         {
             return dso.getType() == Constants.ITEM &&
-                    creativeCommonsService.getLicenseRdfBitstream((Item) dso) != null;
+                   CreativeCommons.getLicenseRdfBitstream((Item)dso) != null;
         }
         catch (Exception e)
         {
@@ -54,22 +48,20 @@ public class CreativeCommonsRDFStreamDisseminationCrosswalk
         }
     }
 
-    @Override
     public void disseminate(Context context, DSpaceObject dso, OutputStream out)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         if (dso.getType() == Constants.ITEM)
         {
-            Bitstream cc = creativeCommonsService.getLicenseRdfBitstream((Item) dso);
+            Bitstream cc = CreativeCommons.getLicenseRdfBitstream((Item)dso);
             if (cc != null)
             {
-                Utils.copy(bitstreamService.retrieve(context, cc), out);
+                Utils.copy(cc.retrieve(), out);
                 out.close();
             }
         }
     }
 
-    @Override
     public String getMIMEType()
     {
         return "text/xml";

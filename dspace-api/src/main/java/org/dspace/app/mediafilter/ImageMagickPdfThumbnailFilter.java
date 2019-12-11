@@ -7,16 +7,13 @@
  */
 package org.dspace.app.mediafilter;
 
-import org.dspace.content.Item;
-
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 import java.nio.file.Files;
 
 public class ImageMagickPdfThumbnailFilter extends ImageMagickThumbnailFilter {
-   @Override
-   public InputStream getDestinationStream(Item currentItem, InputStream source, boolean verbose)
+   public InputStream getDestinationStream(InputStream source)
         throws Exception
     {
 		File f = inputStreamToTempFile(source, "impdfthumb", ".pdf");
@@ -24,8 +21,8 @@ public class ImageMagickPdfThumbnailFilter extends ImageMagickThumbnailFilter {
 	    File f3 = null;
 	    try
 	    {
-		    f2 = getImageFile(f, 0, verbose);
-		    f3 = getThumbnailFile(f2, verbose);
+		    f2 = getImageFile(f, 0);
+		    f3 = getThumbnailFile(f2);
 		    byte[] bytes = Files.readAllBytes(f3.toPath());
 		    return new ByteArrayInputStream(bytes);
 	    }

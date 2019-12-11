@@ -7,11 +7,10 @@
  */
 package org.dspace.content;
 
+import org.dspace.AbstractUnitTest;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-
 import static org.junit.Assert.* ;
 import static org.hamcrest.CoreMatchers.*;
 
@@ -19,7 +18,7 @@ import static org.hamcrest.CoreMatchers.*;
  * Tests DCPersonName class
  * @author pvillega
  */
-public class DCPersonNameTest
+public class DCPersonNameTest extends AbstractUnitTest
 {
 
     /**
@@ -36,8 +35,10 @@ public class DCPersonNameTest
      * but no execution order is guaranteed
      */
     @Before
+    @Override
     public void init()
     {
+        super.init();
         dc = new DCPersonName("");
     }
 
@@ -49,9 +50,11 @@ public class DCPersonNameTest
      * but no execution order is guaranteed
      */
     @After
+    @Override
     public void destroy()
     {
         dc = null;
+        super.destroy();
     }
 
     /**

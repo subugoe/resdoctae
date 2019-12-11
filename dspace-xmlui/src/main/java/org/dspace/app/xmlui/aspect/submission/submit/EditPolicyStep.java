@@ -67,6 +67,7 @@ public class EditPolicyStep extends AbstractStep
 
         Collection collection = submission.getCollection();
 		String actionURL = contextPath + "/handle/"+collection.getHandle() + "/submit/" + knot.getId() + ".continue";
+        Request request = ObjectModelHelper.getRequest(objectModel);
         Division div = body.addInteractiveDivision("submit-edit-policy", actionURL, Division.METHOD_POST, "primary submission");
         div.setHead(T_submission_head);
         addSubmissionProgressList(div);
@@ -77,11 +78,11 @@ public class EditPolicyStep extends AbstractStep
 
         // if come from EditBitstreamPolicies
         if(bitstream!=null)
-            div.addHidden("bitstream_id").setValue(bitstream.getID().toString());
+            div.addHidden("bitstream_id").setValue(bitstream.getID());
 
         AccessStepUtil asu = new AccessStepUtil(context);
 
-        asu.addListGroups(String.valueOf(resourcePolicy.getGroup()), edit, errorFlag, collection);
+        asu.addListGroups(Integer.toString(resourcePolicy.getGroupID()), edit, errorFlag, collection);
 
         // radio buttons: Item will be visible / Embargo Access + date
         String selectedRadio=Integer.toString(AccessStep.RADIO_OPEN_ACCESS_ITEM_VISIBLE);

@@ -15,6 +15,7 @@ import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.jstl.fmt.LocaleSupport;
@@ -184,15 +185,15 @@ public class LayoutTag extends BodyTagSupport
             else if (locbar.equalsIgnoreCase("commLink"))
             {
                 // "commLink" mode - show all parent communities
-                List<Community> comms = (List<Community>) request
+                Community[] comms = (Community[]) request
                         .getAttribute("dspace.communities");
 
                 if (comms != null)
                 {
-                    for (Community c : comms)
+                    for (int i = 0; i < comms.length; i++)
                     {
-                        parents.add(c.getName());
-                        parentLinks.add("/handle/" + c.getHandle());
+                        parents.add(comms[i].getMetadata("name"));
+                        parentLinks.add("/handle/" + comms[i].getHandle());
                     }
                 }
             }
@@ -212,20 +213,20 @@ public class LayoutTag extends BodyTagSupport
                 // by the HandleServlet
                 Collection col = (Collection) request
                         .getAttribute("dspace.collection");
-                List<Community> comms = (List<Community>) request
+                Community[] comms = (Community[]) request
                         .getAttribute("dspace.communities");
 
                 if (comms != null)
                 {
-                    for (Community c : comms)
+                    for (int i = 0; i < comms.length; i++)
                     {
-                        parents.add(c.getName());
-                        parentLinks.add("/handle/" + c.getHandle());
+                        parents.add(comms[i].getMetadata("name"));
+                        parentLinks.add("/handle/" + comms[i].getHandle());
                     }
 
                     if (col != null)
                     {
-                        parents.add(col.getName());
+                        parents.add(col.getMetadata("name"));
                         parentLinks.add("/handle/" + col.getHandle());
                     }
                 }

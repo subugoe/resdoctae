@@ -13,10 +13,10 @@ import java.io.IOException;
 import javax.servlet.jsp.JspException;
 import javax.servlet.jsp.tagext.TagSupport;
 
-import org.dspace.app.sfx.factory.SfxServiceFactory;
-import org.dspace.app.sfx.service.SFXFileReaderService;
 import org.dspace.content.Item;
 import org.dspace.core.ConfigurationManager;
+
+import org.dspace.app.sfx.SFXFileReader;
 
 
 /**
@@ -30,23 +30,19 @@ public class SFXLinkTag extends TagSupport
 {
     /** Item to display SFX link for */
 
-    private Item item;
+    private transient Item item;
 
     /** The fully qualified pathname of the SFX  XML file */
-    private final String sfxFile = ConfigurationManager.getProperty("dspace.dir") + File.separator
+    private String sfxFile = ConfigurationManager.getProperty("dspace.dir") + File.separator
     				+ "config" + File.separator + "sfx.xml";
 
     private static final long serialVersionUID = 7028793612957710128L;
 
-    private final transient SFXFileReaderService sfxFileReaderService
-            = SfxServiceFactory.getInstance().getSfxFileReaderService();
-    
     public SFXLinkTag()
     {
         super();
     }
 
-    @Override
     public int doStartTag() throws JspException
     {
         try
@@ -62,7 +58,7 @@ public class SFXLinkTag extends TagSupport
 
 	    String sfxQuery = "";
 
-            sfxQuery = sfxFileReaderService.loadSFXFile(sfxFile, item);
+            sfxQuery = SFXFileReader.loadSFXFile(sfxFile, item);
 
             // Remove initial &, if any
             if (sfxQuery.startsWith("&"))

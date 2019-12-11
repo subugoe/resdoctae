@@ -34,11 +34,9 @@ public class AuthorityTypes {
      */
     private static Logger log = Logger.getLogger(AuthorityTypes.class);
 
-    protected List<AuthorityValue> types = new ArrayList<AuthorityValue>();
+    private List<AuthorityValue> types = new ArrayList<AuthorityValue>();
 
-    protected Map<String, AuthorityValue> fieldDefaults = new HashMap<String, AuthorityValue>();
-
-
+    private Map<String, AuthorityValue> fieldDefaults = new HashMap<String, AuthorityValue>();
 
     public List<AuthorityValue> getTypes() {
         return types;

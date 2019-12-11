@@ -18,9 +18,9 @@ import org.dspace.app.webui.servlet.DSpaceServlet;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.core.service.NewsService;
+import org.dspace.core.NewsManager;
 
 /**
  * Servlet for editing the front page news
@@ -29,10 +29,6 @@ import org.dspace.core.service.NewsService;
  */
 public class NewsEditServlet extends DSpaceServlet
 {
-	private final transient NewsService newsService
-             = CoreServiceFactory.getInstance().getNewsService();
-	
-    @Override
     protected void doDSGet(Context c, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -41,7 +37,6 @@ public class NewsEditServlet extends DSpaceServlet
         JSPManager.showJSP(request, response, "/dspace-admin/news-main.jsp");
     }
 
-    @Override
     protected void doDSPost(Context c, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -57,7 +52,7 @@ public class NewsEditServlet extends DSpaceServlet
         if (button.equals("submit_edit"))
         {
             //get the existing text from the file
-            news = newsService.readNewsFile(position);
+            news = NewsManager.readNewsFile(position);
 
             //pass the position back to the JSP
             request.setAttribute("position", position);
@@ -75,7 +70,7 @@ public class NewsEditServlet extends DSpaceServlet
             news = (String) request.getParameter("news");
 
             //write the string out to file
-            newsService.writeNewsFile(position, news);
+            NewsManager.writeNewsFile(position, news);
 
             JSPManager
                     .showJSP(request, response, "/dspace-admin/news-main.jsp");

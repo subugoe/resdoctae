@@ -8,7 +8,7 @@
 
 package org.dspace.sword.client;
 
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 import org.purl.sword.base.Collection;
 import org.purl.sword.base.ServiceDocument;
 import org.purl.sword.base.SwordAcceptPackaging;
@@ -56,7 +56,8 @@ public class ServiceDocumentHelper {
 
     public static String[] getCommonFileTypes(ServiceDocument serviceDoc, String location)
     {
-        String[] clientFTsArray = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("sword-client.file-types");
+        String FTsString = ConfigurationManager.getProperty("sword-client", "file-types");
+        String[] clientFTsArray = FTsString.split(",");
         List<String> clientFTs = Arrays.asList(clientFTsArray);
 
         List<String> commonFTs = new ArrayList<String>();
@@ -76,7 +77,8 @@ public class ServiceDocumentHelper {
 
     public static String[] getCommonPackageFormats(ServiceDocument serviceDoc, String location)
     {
-        String[] clientPFsArray = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("sword-client.package-formats");
+        String PFsString = ConfigurationManager.getProperty("sword-client", "package-formats");
+        String[] clientPFsArray = PFsString.split(",");
         List<String> clientPFs = Arrays.asList(clientPFsArray);
 
         List<String> commonPFs = new ArrayList<String>();

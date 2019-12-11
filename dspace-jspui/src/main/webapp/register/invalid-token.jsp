@@ -37,7 +37,8 @@
         your special URL up into two lines, like this: --%>
 		<li><fmt:message key="jsp.register.invalid-token.info2"/>
         <pre>
-<%= ConfigurationManager.getProperty("dspace.url") %>/register?token=ABCDEFGHIJKLMNOP
+<%= ConfigurationManager.getProperty("dspace.url") %>/register?token=ABCDEFGHIJK
+LMNOP
         </pre>
 
         <%-- If it has, you should copy and paste the first line into your browser's

@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.registries;
 
 import java.sql.SQLException;
-import java.util.List;
 
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
@@ -21,8 +20,6 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
 import org.dspace.content.BitstreamFormat;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
 
 /**
  * Main management page for bitstream formats, this page lists all known formats
@@ -75,8 +72,6 @@ public class FormatRegistryMain
             message(
             "xmlui.administrative.registries.FormatRegistryMain.submit_delete");
 
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-
     public void addPageMeta(PageMeta pageMeta)
             throws WingException
     {
@@ -90,7 +85,7 @@ public class FormatRegistryMain
     {
         // Get our parameters & state
         int highlightID = parameters.getParameterAsInteger("highlightID", -1);
-        List<BitstreamFormat> formats = bitstreamFormatService.findAll(context);
+        BitstreamFormat[] formats = BitstreamFormat.findAll(context);
         String addURL = contextPath
                 + "/admin/format-registry?administrative-continue="
                 + knot.getId() + "&submit_add";
@@ -105,7 +100,7 @@ public class FormatRegistryMain
         main.addPara().addXref(addURL, T_new_link);
 
 
-        Table table = main.addTable("bitstream-format-registry", formats.size()
+        Table table = main.addTable("bitstream-format-registry", formats.length
                 + 1, 5);
 
         Row header = table.addRow(Row.ROLE_HEADER);

@@ -11,11 +11,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.UUID;
-
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
 import org.dspace.core.Context;
 import org.junit.*;
 import static org.junit.Assert.* ;
@@ -23,6 +18,7 @@ import static org.hamcrest.CoreMatchers.*;
 import mockit.*;
 import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.core.Constants;
 
 /**
@@ -33,9 +29,6 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
 {
     /** log4j category */
     private static final Logger log = Logger.getLogger(BitstreamTest.class);
-
-
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
 
     /**
      * BitStream instance for the tests
@@ -58,9 +51,10 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
         {
             //we have to create a new bitstream in the database
             File f = new File(testProps.get("test.bitstream").toString());
-            this.bs = bitstreamService.create(context, new FileInputStream(f));
+            this.bs = Bitstream.create(context, new FileInputStream(f));            
             this.dspaceObject = bs;   
             //we need to commit the changes so we don't block the table for testing
+            context.commit();
         }
         catch (IOException ex) {
             log.error("IO Error in init", ex);
@@ -94,11 +88,11 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     @Test
     public void testBSFind() throws SQLException
     {
-        UUID id = this.bs.getID();
-        Bitstream found =  bitstreamService.find(context, id);
+        int id = this.bs.getID();
+        Bitstream found =  Bitstream.find(context, id);
         assertThat("testBSFind 0", found, notNullValue());
         //the item created by default has no name nor type set
-        assertThat("testBSFind 1", found.getFormat(context).getMIMEType(), equalTo("application/octet-stream"));
+        assertThat("testBSFind 1", found.getFormat().getMIMEType(), equalTo("application/octet-stream"));
         assertThat("testBSFind 2", found.getName(), nullValue());
         assertThat("testBSFind 3", found.getID(), equalTo(id));
     }
@@ -109,11 +103,11 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     @Test
     public void testFindAll() throws SQLException
     {
-        List<Bitstream> found =  bitstreamService.findAll(context);
+        Bitstream[] found =  Bitstream.findAll(context);
         assertThat("testFindAll 0", found, notNullValue());
         //we have many bs, one created per test run, so at least we have 1 if
         //this test is run first
-        assertTrue("testFindAll 1", found.size() >= 1);
+        assertTrue("testFindAll 1", found.length >= 1);
 
         boolean added = false;
         for(Bitstream b: found)
@@ -133,10 +127,11 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testCreate() throws IOException, SQLException
     {
         File f = new File(testProps.get("test.bitstream").toString());
-        Bitstream created = bitstreamService.create(context, new FileInputStream(f));
-
+        Bitstream created = Bitstream.create(context, new FileInputStream(f));
+        context.commit();
+        
         //the item created by default has no name nor type set
-        assertThat("testCreate 0", created.getFormat(context).getMIMEType(), equalTo("application/octet-stream"));
+        assertThat("testCreate 0", created.getFormat().getMIMEType(), equalTo("application/octet-stream"));
         assertThat("testCreate 1", created.getName(), nullValue());
     }
 
@@ -144,38 +139,28 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
      * Test of register method, of class Bitstream.
      */
     @Test
-    public void testRegister() throws IOException, SQLException, AuthorizeException
+    public void testRegister() throws IOException, SQLException
     {
-        new NonStrictExpectations(authorizeService.getClass())
-        {{
-            authorizeService.authorizeAction((Context) any, (Bitstream) any,
-                    Constants.WRITE); result = null;
-        }};
         int assetstore = 0;
         File f = new File(testProps.get("test.bitstream").toString());
-        Bitstream registered = bitstreamService.register(context,assetstore, f.getName());
+        Bitstream registered = Bitstream.register(context,assetstore, f.getName());
         //the item created by default has no name nor type set
-        assertThat("testRegister 0", registered.getFormat(context).getMIMEType(), equalTo("application/octet-stream"));
+        assertThat("testRegister 0", registered.getFormat().getMIMEType(), equalTo("application/octet-stream"));
         assertThat("testRegister 1", registered.getName(), nullValue());
     }
 
     /**
      * Test of getID method, of class Bitstream.
      */
-    @Override
     @Test
     public void testGetID()
     {
-        assertTrue("testGetID 0", bs.getID() != null);
+        assertTrue("testGetID 0", bs.getID() >= 0);
     }
-
-    @Test
-    public void testLegacyID() { assertTrue("testGetLegacyID 0", bs.getLegacyId() == null);}
 
     /**
      * Test of getHandle method, of class Bitstream.
      */
-    @Override
     @Test
     public void testGetHandle()
     {
@@ -207,7 +192,6 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     /**
      * Test of getName method, of class Bitstream.
      */
-    @Override
     @Test
     public void testGetName()
     {
@@ -219,10 +203,10 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
      * Test of setName method, of class Bitstream.
      */
     @Test
-    public void testSetName() throws SQLException
+    public void testSetName()
     {
         String name = "new name";
-        bs.setName(context, name);
+        bs.setName(name);
         assertThat("testGetName 0", bs.getName(), notNullValue());
         assertThat("testGetName 1", bs.getName(), not(equalTo("")));
         assertThat("testGetName 2", bs.getName(), equalTo(name));
@@ -242,10 +226,10 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
      * Test of setSource method, of class Bitstream.
      */
     @Test
-    public void testSetSource() throws SQLException
+    public void testSetSource()
     {
         String source = "new source";
-        bs.setSource(context, source);
+        bs.setSource(source);
         assertThat("testSetSource 0", bs.getSource(), notNullValue());
         assertThat("testSetSource 1", bs.getSource(), not(equalTo("")));
         assertThat("testSetSource 2", bs.getSource(), equalTo(source));
@@ -265,10 +249,10 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
      * Test of setDescription method, of class Bitstream.
      */
     @Test
-    public void testSetDescription() throws SQLException
+    public void testSetDescription()
     {
         String description = "new description";
-        bs.setDescription(context, description);
+        bs.setDescription(description);
         assertThat("testSetDescription 0", bs.getDescription(), notNullValue());
         assertThat("testSetDescription 1", bs.getDescription(), not(equalTo("")));
         assertThat("testSetDescription 2", bs.getDescription(), equalTo(description));
@@ -318,7 +302,7 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testSetUserFormatDescription() throws SQLException
     {
         String userdescription = "user format description";
-        bs.setUserFormatDescription(context, userdescription);
+        bs.setUserFormatDescription(userdescription);
         assertThat("testSetUserFormatDescription 0", bs.getUserFormatDescription()
                 , notNullValue());
         assertThat("testSetUserFormatDescription 1", bs.getUserFormatDescription()
@@ -342,14 +326,15 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
      * Test of getFormatDescription method, of class Bitstream.
      */
     @Test
-    public void testGetFormatDescription() throws SQLException {
+    public void testGetFormatDescription()
+    {
         //format is unknown by default
         String format = "Unknown";
-        assertThat("testGetFormatDescription 0", bs.getFormatDescription(context),
+        assertThat("testGetFormatDescription 0", bs.getFormatDescription(),
                 notNullValue());
-        assertThat("testGetFormatDescription 1", bs.getFormatDescription(context),
+        assertThat("testGetFormatDescription 1", bs.getFormatDescription(),
                 not(equalTo("")));
-        assertThat("testGetFormatDescription 2", bs.getFormatDescription(context),
+        assertThat("testGetFormatDescription 2", bs.getFormatDescription(),
                 equalTo(format));
     }
 
@@ -359,8 +344,8 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     @Test
     public void testGetFormat() throws SQLException
     {
-        assertThat("testGetFormat 0", bs.getFormat(context), notNullValue());
-        assertThat("testGetFormat 1", bs.getFormat(context), equalTo(bitstreamFormatService.findUnknown(context)));
+        assertThat("testGetFormat 0", bs.getFormat(), notNullValue());
+        assertThat("testGetFormat 1", bs.getFormat(), equalTo(BitstreamFormat.findUnknown(context)));
     }
 
     /**
@@ -370,10 +355,10 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testSetFormat() throws SQLException
     {
         int id = 3;
-        BitstreamFormat format = bitstreamFormatService.find(context, id);
+        BitstreamFormat format = BitstreamFormat.find(context, id);
         bs.setFormat(format);
-        assertThat("testSetFormat 0", bs.getFormat(context), notNullValue());
-        assertThat("testSetFormat 1", bs.getFormat(context), equalTo(bitstreamFormatService.find(context, id)));
+        assertThat("testSetFormat 0", bs.getFormat(), notNullValue());
+        assertThat("testSetFormat 1", bs.getFormat(), equalTo(BitstreamFormat.find(context, id)));
     }
 
     /**
@@ -382,15 +367,15 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     @Test(expected=AuthorizeException.class)
     public void testUpdateNotAdmin() throws SQLException, AuthorizeException
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Disallow Bitstream WRITE perms
-                authorizeService.authorizeAction((Context) any, (Bitstream) any,
+            AuthorizeManager.authorizeAction((Context) any, (Bitstream) any,
                     Constants.WRITE); result = new AuthorizeException();
 
         }};
         //TODO: we need to verify the update, how?
-        bitstreamService.update(context, bs);
+        bs.update();
     }
 
     /**
@@ -399,47 +384,32 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     @Test
     public void testUpdateAdmin() throws SQLException, AuthorizeException
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow Bitstream WRITE perms
-                authorizeService.authorizeAction((Context) any, (Bitstream) any,
+            AuthorizeManager.authorizeAction((Context) any, (Bitstream) any,
                     Constants.WRITE); result = null;
 
         }};
         
         //TODO: we need to verify the update, how?
-        bitstreamService.update(context, bs);
+        bs.update();
     }
 
     /**
      * Test of delete method, of class Bitstream.
      */
     @Test
-    public void testDeleteAndExpunge() throws IOException, SQLException, AuthorizeException
-    {
-        new NonStrictExpectations(authorizeService.getClass())
-        {{
-            // Allow Bitstream WRITE perms
-                authorizeService.authorizeAction((Context) any, (Bitstream) any,
-                    Constants.WRITE); result = null;
-                authorizeService.authorizeAction((Context) any, (Bitstream) any,
-                    Constants.DELETE); result = null;
-
-        }};
-        // Create a new bitstream, which we can delete. As ordering of these
+    public void testDelete() throws IOException, SQLException
+    {      
+        // Create a new bitstream, which we can delete. As ordering of these 
         // tests is unpredictable we don't want to delete the global bitstream
         File f = new File(testProps.get("test.bitstream").toString());
-        Bitstream delBS = bitstreamService.create(context, new FileInputStream(f));
-        UUID bitstreamId = delBS.getID();
-
-        // Test that delete will flag the bitstream as deleted
+        Bitstream delBS = Bitstream.create(context, new FileInputStream(f));
+        
         assertFalse("testIsDeleted 0", delBS.isDeleted());
-        bitstreamService.delete(context, delBS);
+        delBS.delete();
         assertTrue("testDelete 0", delBS.isDeleted());
-
-        // Now test expunge actually removes the bitstream
-        bitstreamService.expunge(context, delBS);
-        assertThat("testExpunge 0", bitstreamService.find(context, bitstreamId), nullValue());
     }
 
     /**
@@ -449,14 +419,14 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testRetrieveCanRead() throws IOException, SQLException,
             AuthorizeException
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow Bitstream READ perms
-                authorizeService.authorizeAction((Context) any, (Bitstream) any,
+            AuthorizeManager.authorizeAction((Context) any, (Bitstream) any,
                     Constants.READ); result = null;
         }};
 
-        assertThat("testRetrieveCanRead 0", bitstreamService.retrieve(context, bs), notNullValue());
+        assertThat("testRetrieveCanRead 0", bs.retrieve(), notNullValue());
     }
 
     /**
@@ -466,14 +436,14 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testRetrieveNoRead() throws IOException, SQLException,
             AuthorizeException
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Disallow Bitstream READ perms
-            authorizeService.authorizeAction((Context) any, (Bitstream) any,
+            AuthorizeManager.authorizeAction((Context) any, (Bitstream) any,
                     Constants.READ); result = new AuthorizeException();
         }};
 
-        assertThat("testRetrieveNoRead 0", bitstreamService.retrieve(context, bs), notNullValue());
+        assertThat("testRetrieveNoRead 0", bs.retrieve(), notNullValue());
     }
 
     /**
@@ -484,13 +454,12 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     {
         assertThat("testGetBundles 0", bs.getBundles(), notNullValue());
         //by default no bundles
-        assertTrue("testGetBundles 1", bs.getBundles().size() == 0);
+        assertTrue("testGetBundles 1", bs.getBundles().length == 0);
     }
 
     /**
      * Test of getType method, of class Bitstream.
      */
-    @Override
     @Test
     public void testGetType()
     {
@@ -504,7 +473,7 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testIsRegisteredBitstream()
     {
         //false by default
-        assertThat("testIsRegisteredBitstream 0", bitstreamService.isRegisteredBitstream(bs),
+        assertThat("testIsRegisteredBitstream 0", bs.isRegisteredBitstream(),
                 equalTo(false));
     }
 
@@ -525,7 +494,7 @@ public class BitstreamTest extends AbstractDSpaceObjectTest
     public void testGetParentObject() throws SQLException
     {
         //by default this bitstream is not linked to any object
-        assertThat("testGetParentObject 0", bitstreamService.getParentObject(context, bs),
+        assertThat("testGetParentObject 0", bs.getParentObject(),
                     nullValue());
     }
     

@@ -16,7 +16,6 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.core.Context;
-import org.dspace.workflow.WorkflowException;
 
 
 /**
@@ -70,16 +69,11 @@ public interface PackageIngester
      *
      * @throws PackageValidationException if package is unacceptable or there is
      *  a fatal error turning it into a DSpaceObject.
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws WorkflowException if workflow error
      */
     DSpaceObject ingest(Context context, DSpaceObject parent, File pkgFile,
                          PackageParameters params, String license)
-            throws PackageException, CrosswalkException,
-            AuthorizeException, SQLException, IOException, WorkflowException;
+        throws PackageException, CrosswalkException,
+               AuthorizeException, SQLException, IOException;
 
 
     /**
@@ -117,17 +111,12 @@ public interface PackageIngester
      *          is unacceptable or there is a fatal error in creating a DSpaceObject
      * @throws UnsupportedOperationException if this packager does not
      *  implement <code>ingestAll</code>
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws WorkflowException if workflow error
      */
     List<String> ingestAll(Context context, DSpaceObject parent, File pkgFile,
                                 PackageParameters params, String license)
-            throws PackageException, UnsupportedOperationException,
-            CrosswalkException, AuthorizeException,
-            SQLException, IOException, WorkflowException;
+        throws PackageException, UnsupportedOperationException,
+               CrosswalkException, AuthorizeException,
+               SQLException, IOException;
 
     /**
      * Replace an existing DSpace Object with contents of the ingested package.
@@ -149,17 +138,12 @@ public interface PackageIngester
      *  a fatal error turning it into an Item.
      * @throws UnsupportedOperationException if this packager does not
      *  implement <code>replace</code>.
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws WorkflowException if workflow error
      */
     DSpaceObject replace(Context context, DSpaceObject dso,
                             File pkgFile, PackageParameters params)
-            throws PackageException, UnsupportedOperationException,
-            CrosswalkException, AuthorizeException,
-            SQLException, IOException, WorkflowException;
+        throws PackageException, UnsupportedOperationException,
+               CrosswalkException, AuthorizeException,
+               SQLException, IOException;
 
     /**
      * Recursively replace one or more DSpace Objects out of the contents
@@ -194,17 +178,12 @@ public interface PackageIngester
      *          is unacceptable or there is a fatal error in creating a DSpaceObject
      * @throws UnsupportedOperationException if this packager does not
      *  implement <code>replaceAll</code>
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws WorkflowException if workflow error
      */
     List<String> replaceAll(Context context, DSpaceObject dso,
                                 File pkgFile, PackageParameters params)
-            throws PackageException, UnsupportedOperationException,
-            CrosswalkException, AuthorizeException,
-            SQLException, IOException, WorkflowException;
+        throws PackageException, UnsupportedOperationException,
+               CrosswalkException, AuthorizeException,
+               SQLException, IOException;
 
 
     /**

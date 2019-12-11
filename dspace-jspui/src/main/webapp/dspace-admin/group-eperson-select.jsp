@@ -30,12 +30,11 @@
 
 <%@ page import="org.dspace.eperson.EPerson" %>
 <%@ page import="org.dspace.eperson.Group"   %>
-<%@ page import="java.util.List" %>
 
 <%
     Group group = (Group) request.getAttribute("group");
-    List<EPerson> epeople =
-        (List<EPerson>) request.getAttribute("epeople");
+    EPerson [] epeople = 
+        (EPerson []) request.getAttribute("epeople");
 %>
 
 <dspace:layout style="submission" titlekey="jsp.dspace-admin.group-eperson-select.title"
@@ -56,9 +55,9 @@
                 <input type="hidden" name="group_id" value="<%=group.getID()%>"/>
     			<div class="row col-md-4 col-md-offset-4">
                     <select class="form-control" size="15" name="eperson_id" multiple="multiple">
-                        <%  for (int i = 0; i < epeople.size(); i++) { %>
-                            <option value="<%= epeople.get(i).getID()%>">
-                                <%= epeople.get(i).getEmail()%>
+                        <%  for (int i = 0; i < epeople.length; i++) { %>
+                            <option value="<%= epeople[i].getID()%>">
+                                <%= epeople[i].getEmail()%>
                             </option>
                         <%  } %>
                 </select>

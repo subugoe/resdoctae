@@ -8,39 +8,34 @@
 package org.dspace.app.bulkedit;
 
 import org.dspace.authority.AuthorityValue;
+import org.dspace.authority.AuthorityValueFinder;
+import org.dspace.authority.AuthorityValueGenerator;
 import org.apache.commons.cli.*;
 import org.apache.commons.lang.StringUtils;
 
 import org.apache.log4j.Logger;
-import org.dspace.authority.factory.AuthorityServiceFactory;
-import org.dspace.authority.service.AuthorityValueService;
 import org.dspace.content.*;
-import org.dspace.content.Collection;
 import org.dspace.content.authority.Choices;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.InstallItemService;
-import org.dspace.content.service.ItemService;
-import org.dspace.content.service.WorkspaceItemService;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.core.Constants;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.LogManager;
+import org.dspace.handle.HandleManager;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.workflow.WorkflowItem;
-import org.dspace.workflow.WorkflowService;
-import org.dspace.workflow.factory.WorkflowServiceFactory;
+import org.dspace.workflow.WorkflowManager;
+import org.dspace.xmlworkflow.XmlWorkflowManager;
 
-import java.util.*;
+import java.util.ArrayList;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * Metadata importer to allow the batch import of metadata from a file
@@ -59,25 +54,19 @@ public class MetadataImport
     List<DSpaceCSVLine> toImport;
 
     /** The authority controlled fields */
-    protected static Set<String> authorityControlled;
+    private static Set<String> authorityControlled;
     static
     {
         setAuthorizedMetadataFields();
     }
 
     /** The prefix of the authority controlled field */
-    protected static final String AC_PREFIX = "authority.controlled.";
+    private static final String AC_PREFIX = "authority.controlled.";
 
     /** Logger */
-    protected static final Logger log = Logger.getLogger(MetadataImport.class);
+    private static final Logger log = Logger.getLogger(MetadataImport.class);
 
-    protected final AuthorityValueService authorityValueService;
-
-    protected final ItemService itemService;
-    protected final InstallItemService installItemService;
-    protected final CollectionService collectionService;
-    protected final HandleService handleService;
-    protected final WorkspaceItemService workspaceItemService;
+    private AuthorityValueFinder authorityValueFinder = new AuthorityValueFinder();
 
     /**
      * Create an instance of the metadata importer. Requires a context and an array of CSV lines
@@ -92,12 +81,6 @@ public class MetadataImport
         this.c = c;
         csv = toImport;
         this.toImport = toImport.getCSVLines();
-        installItemService = ContentServiceFactory.getInstance().getInstallItemService();
-        itemService = ContentServiceFactory.getInstance().getItemService();
-        collectionService = ContentServiceFactory.getInstance().getCollectionService();
-        handleService = HandleServiceFactory.getInstance().getHandleService();
-        authorityValueService = AuthorityServiceFactory.getInstance().getAuthorityValueService();
-        workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
     }
 
     /**
@@ -123,30 +106,23 @@ public class MetadataImport
         // Make the changes
         try
         {
-            Context.Mode originalMode = c.getCurrentMode();
-            c.setMode(Context.Mode.BATCH_EDIT);
-
             // Process each change
             for (DSpaceCSVLine line : toImport)
             {
                 // Get the DSpace item to compare with
-                UUID id = line.getID();
+                int id = line.getID();
 
                 // Is there an action column?
-                if (csv.hasActions() && (!"".equals(line.getAction())) && (id == null))
+                if (csv.hasActions() && (!"".equals(line.getAction())) && (id == -1))
                 {
                     throw new MetadataImportException("'action' not allowed for new items!");
                 }
 
-                WorkspaceItem wsItem = null;
-                WorkflowItem wfItem = null;
-                Item item = null;
-
                 // Is this a new item?
-                if (id != null)
+                if (id != -1)
                 {
                     // Get the item
-                    item = itemService.find(c, id);
+                    Item item = Item.find(c, id);
                     if (item == null)
                     {
                         throw new MetadataImportException("Unknown item ID " + id);
@@ -164,7 +140,7 @@ public class MetadataImport
                         {
                             throw new MetadataImportException("Missing collection from item " + item.getHandle());
                         }
-                        List<Collection> actualCollections = item.getCollections();
+                        Collection[] actualCollections = item.getCollections();
                         compare(item, collections, actualCollections, whatHasChanged, change);
                     }
 
@@ -181,7 +157,7 @@ public class MetadataImport
                             { 
                                 for (int i=0; i<fromCSV.length; i++)
                                 {
-                                    int pos = fromCSV[i].indexOf(csv.getAuthoritySeparator());
+                                    int pos = fromCSV[i].indexOf(DSpaceCSV.authoritySeparator);
                                     if (pos > -1)
                                     {
                                         fromCSV[i] = fromCSV[i].substring(0, pos);
@@ -211,11 +187,14 @@ public class MetadataImport
                             }
 
                             // Remove the item
-
-							if (change) {
-								itemService.delete(c, item);
-							}
-                            
+                            Collection[] owners = item.getCollections();
+                            for (Collection owner : owners)
+                            {
+                                if (change)
+                                {
+                                    owner.removeItem(item);
+                                }
+                            }
                             whatHasChanged.setDeleted();
                         }
                         else if ("withdraw".equals(action))
@@ -225,7 +204,7 @@ public class MetadataImport
                             {
                                 if (change)
                                 {
-                                    itemService.withdraw(c, item);
+                                    item.withdraw();
                                 }
                                 whatHasChanged.setWithdrawn();
                             }
@@ -237,7 +216,7 @@ public class MetadataImport
                             {
                                 if (change)
                                 {
-                                    itemService.reinstate(c, item);
+                                    item.reinstate();
                                 }
                                 whatHasChanged.setReinstated();
                             }
@@ -279,7 +258,7 @@ public class MetadataImport
                             { 
                                 for (int i=0; i<fromCSV.length; i++)
                                 {
-                                    int pos = fromCSV[i].indexOf(csv.getAuthoritySeparator());
+                                    int pos = fromCSV[i].indexOf(DSpaceCSV.authoritySeparator);
                                     if (pos > -1)
                                     {
                                         fromCSV[i] = fromCSV[i].substring(0, pos);
@@ -307,7 +286,7 @@ public class MetadataImport
                         try
                         {
                             // Resolve the handle to the collection
-                            collection = (Collection) handleService.resolveToObject(c, handle);
+                            collection = (Collection)HandleManager.resolveToObject(c, handle);
 
                             // Check it resolved OK
                             if (collection == null)
@@ -335,7 +314,7 @@ public class MetadataImport
                     boolean first = true;
                     for (String handle : collections)
                     {
-                        Collection extra = (Collection) handleService.resolveToObject(c, handle);
+                        Collection extra = (Collection)HandleManager.resolveToObject(c, handle);
                         if (first)
                         {
                             whatHasChanged.setOwningCollection(extra);
@@ -352,35 +331,42 @@ public class MetadataImport
                     {
                         // Create the item
                         String collectionHandle = line.get("collection").get(0);
-                        collection = (Collection) handleService.resolveToObject(c, collectionHandle);
-                        wsItem = workspaceItemService.create(c, collection, useTemplate);
-                        item = wsItem.getItem();
+                        collection = (Collection)HandleManager.resolveToObject(c, collectionHandle);
+                        WorkspaceItem wsItem = WorkspaceItem.create(c, collection, useTemplate);
+                        Item item = wsItem.getItem();
 
                         // Add the metadata to the item
-                        for (BulkEditMetadataValue dcv : whatHasChanged.getAdds())
+                        for (Metadatum dcv : whatHasChanged.getAdds())
                         {
-                            itemService.addMetadata(c, item, dcv.getSchema(),
-                                             dcv.getElement(),
-                                             dcv.getQualifier(),
-                                             dcv.getLanguage(),
-                                             dcv.getValue(),
-                                             dcv.getAuthority(),
-                                             dcv.getConfidence());
+                            item.addMetadata(dcv.schema,
+                                             dcv.element,
+                                             dcv.qualifier,
+                                             dcv.language,
+                                             dcv.value,
+                                             dcv.authority,
+                                             dcv.confidence);
                         }
 
                         // Should the workflow be used?
                         if(useWorkflow){
-                            WorkflowService workflowService = WorkflowServiceFactory.getInstance().getWorkflowService();
-                            if (workflowNotify) {
-                                wfItem = workflowService.start(c, wsItem);
+                            if (ConfigurationManager.getProperty("workflow", "workflow.framework").equals("xmlworkflow")) {
+                                if (workflowNotify) {
+                                    XmlWorkflowManager.start(c, wsItem);
+                                } else {
+                                    XmlWorkflowManager.startWithoutNotify(c, wsItem);
+                                }
                             } else {
-                                wfItem = workflowService.startWithoutNotify(c, wsItem);
+                                if (workflowNotify) {
+                                    WorkflowManager.start(c, wsItem);
+                                } else {
+                                    WorkflowManager.startWithoutNotify(c, wsItem);
+                                }
                             }
                         }
                         else
                         {
                             // Install the item
-                            installItemService.installItem(c, wsItem);
+                            InstallItem.installItem(c, wsItem);
                         }
 
                         // Add to extra collections
@@ -389,29 +375,20 @@ public class MetadataImport
                             for (int i = 1; i < collections.size(); i++)
                             {
                                 String handle = collections.get(i);
-                                Collection extra = (Collection) handleService.resolveToObject(c, handle);
-                                collectionService.addItem(c, extra, item);
+                                Collection extra = (Collection)HandleManager.resolveToObject(c, handle);
+                                extra.addItem(item);
                             }
                         }
 
                         // Commit changes to the object
-//                        c.commit();
+                        c.commit();
                         whatHasChanged.setItem(item);
                     }
 
                     // Record the changes
                     changes.add(whatHasChanged);
                 }
-
-                if (change) {
-                    //only clear cache if changes have been made.
-                    c.uncacheEntity(wsItem);
-                    c.uncacheEntity(wfItem);
-                    c.uncacheEntity(item);
-                }
             }
-
-            c.setMode(originalMode);
         }
         catch (MetadataImportException mie)
         {
@@ -434,11 +411,12 @@ public class MetadataImport
      * @param change Whether or not to make the update
      * @param md The element to compare
      * @param changes The changes object to populate
-     * @param line line in CSV file
+     *
+     * @param line
      * @throws SQLException if there is a problem accessing a Collection from the database, from its handle
      * @throws AuthorizeException if there is an authorization problem with permissions
      */
-    protected void compare(Item item, String[] fromCSV, boolean change,
+    private void compare(Item item, String[] fromCSV, boolean change,
                          String md, BulkEditChange changes, DSpaceCSVLine line) throws SQLException, AuthorizeException
     {
         // Log what metadata element we're looking at
@@ -466,7 +444,7 @@ public class MetadataImport
             language = bits[1].substring(0, bits[1].length() - 1);
         }
 
-        AuthorityValue fromAuthority = authorityValueService.getAuthorityValueType(md);
+        AuthorityValue fromAuthority = getAuthorityValueType(md);
         if (md.indexOf(':') > 0) {
             md = md.substring(md.indexOf(':') + 1);
         }
@@ -496,34 +474,33 @@ public class MetadataImport
                                        ",looking_for_element=" + element +
                                        ",looking_for_qualifier=" + qualifier +
                                        ",looking_for_language=" + language));
-        String[] dcvalues;
+        String[] dcvalues = new String[0];
         if(fromAuthority==null) {
-            List<MetadataValue> current = itemService.getMetadata(item, schema, element, qualifier, language);
-            dcvalues = new String[current.size()];
+            Metadatum[] current = item.getMetadata(schema, element, qualifier, language);
+            dcvalues = new String[current.length];
             int i = 0;
-            for (MetadataValue dcv : current) {
-                if (dcv.getAuthority() == null || !isAuthorityControlledField(md)) {
-                    dcvalues[i] = dcv.getValue();
+            for (Metadatum dcv : current) {
+                if (dcv.authority == null || !isAuthorityControlledField(md)) {
+                    dcvalues[i] = dcv.value;
                 } else {
-                    dcvalues[i] = dcv.getValue() + csv.getAuthoritySeparator() + dcv.getAuthority();
-                    dcvalues[i] += csv.getAuthoritySeparator() + (dcv.getConfidence() != -1 ? dcv.getConfidence() : Choices.CF_ACCEPTED);
+                    dcvalues[i] = dcv.value + DSpaceCSV.authoritySeparator + dcv.authority;
+                    dcvalues[i] += DSpaceCSV.authoritySeparator + (dcv.confidence != -1 ? dcv.confidence : Choices.CF_ACCEPTED);
                 }
                 i++;
                 log.debug(LogManager.getHeader(c, "metadata_import",
                         "item_id=" + item.getID() + ",fromCSV=" + all +
-                                ",found=" + dcv.getValue()));
+                                ",found=" + dcv.value));
             }
         }else{
             dcvalues = line.get(md).toArray(new String[line.get(md).size()]);
         }
 
-
         // Compare from current->csv
         for (int v = 0; v < fromCSV.length; v++) {
             String value = fromCSV[v];
-            BulkEditMetadataValue dcv = getBulkEditValueFromCSV(language, schema, element, qualifier, value, fromAuthority);
+            Metadatum dcv = getDcValueFromCSV(language, schema, element, qualifier, value, fromAuthority);
             if (fromAuthority!=null) {
-                value = dcv.getValue() + csv.getAuthoritySeparator() + dcv.getAuthority() + csv.getAuthoritySeparator() + dcv.getConfidence();
+                value = dcv.value + DSpaceCSV.authoritySeparator + dcv.authority + DSpaceCSV.authoritySeparator + dcv.confidence;
                 fromCSV[v] = value;
             }
 
@@ -539,19 +516,19 @@ public class MetadataImport
         for (String value : dcvalues)
         {
             // Look to see if it should be removed
-            BulkEditMetadataValue dcv = new BulkEditMetadataValue();
-            dcv.setSchema(schema);
-            dcv.setElement(element);
-            dcv.setQualifier(qualifier);
-            dcv.setLanguage(language);
-            if (value == null || !value.contains(csv.getAuthoritySeparator()))
+            Metadatum dcv = new Metadatum();
+            dcv.schema = schema;
+            dcv.element = element;
+            dcv.qualifier = qualifier;
+            dcv.language = language;
+            if (value == null || value.indexOf(DSpaceCSV.authoritySeparator) < 0)
                 simplyCopyValue(value, dcv);
             else
             {
-                String[] parts = value.split(csv.getAuthoritySeparator());
-                dcv.setValue(parts[0]);
-                dcv.setAuthority(parts[1]);
-                dcv.setConfidence((parts.length > 2 ? Integer.valueOf(parts[2]) : Choices.CF_ACCEPTED));
+                String[] parts = value.split(DSpaceCSV.escapedAuthoritySeparator);
+                dcv.value = parts[0];
+                dcv.authority = parts[1];
+                dcv.confidence = (parts.length > 2 ? Integer.valueOf(parts[2]) : Choices.CF_ACCEPTED);
             }
 
             if ((value != null) && (!"".equals(value)) && (!contains(value, fromCSV)) && fromAuthority==null)
@@ -574,66 +551,73 @@ public class MetadataImport
             ((changes.getAdds().size() > 0) || (changes.getRemoves().size() > 0)))
         {
             // Get the complete list of what values should now be in that element
-            List<BulkEditMetadataValue> list = changes.getComplete();
+            List<Metadatum> list = changes.getComplete();
             List<String> values = new ArrayList<String>();
             List<String> authorities = new ArrayList<String>();
             List<Integer> confidences = new ArrayList<Integer>();
-            for (BulkEditMetadataValue value : list)
+            for (Metadatum value : list)
             {
                 if ((qualifier == null) && (language == null))
                 {
-                    if ((schema.equals(value.getSchema())) &&
-                        (element.equals(value.getElement())) &&
-                         (value.getQualifier() == null) &&
-                         (value.getLanguage() == null))
+                    if ((schema.equals(value.schema)) &&
+                        (element.equals(value.element)) &&
+                         (value.qualifier == null) &&
+                         (value.language == null))
                     {
-                        values.add(value.getValue());
-                        authorities.add(value.getAuthority());
-                        confidences.add(value.getConfidence());
+                        values.add(value.value);
+                        authorities.add(value.authority);
+                        confidences.add(value.confidence);
                     }
                 }
                 else if (qualifier == null)
                 {
-                    if ((schema.equals(value.getSchema())) &&
-                        (element.equals(value.getElement())) &&
-                        (language.equals(value.getLanguage())) &&
-                        (value.getQualifier() == null))
+                    if ((schema.equals(value.schema)) &&
+                        (element.equals(value.element)) &&
+                        (language.equals(value.language)) &&
+                        (value.qualifier == null))
                     {
-                        values.add(value.getValue());
-                        authorities.add(value.getAuthority());
-                        confidences.add(value.getConfidence());
+                        values.add(value.value);
+                        authorities.add(value.authority);
+                        confidences.add(value.confidence);
                     }
                 }
                 else if (language == null)
                 {
-                    if ((schema.equals(value.getSchema())) &&
-                        (element.equals(value.getElement())) &&
-                        (qualifier.equals(value.getQualifier())) &&
-                        (value.getLanguage() == null))
+                    if ((schema.equals(value.schema)) &&
+                        (element.equals(value.element)) &&
+                        (qualifier.equals(value.qualifier)) &&
+                        (value.language == null))
                     {
-                        values.add(value.getValue());
-                        authorities.add(value.getAuthority());
-                        confidences.add(value.getConfidence());
+                        values.add(value.value);
+                        authorities.add(value.authority);
+                        confidences.add(value.confidence);
                     }
                 }
                 else
                 {
-                    if ((schema.equals(value.getSchema())) &&
-                        (element.equals(value.getElement())) &&
-                        (qualifier.equals(value.getQualifier())) &&
-                        (language.equals(value.getLanguage())))
+                    if ((schema.equals(value.schema)) &&
+                        (element.equals(value.element)) &&
+                        (qualifier.equals(value.qualifier)) &&
+                        (language.equals(value.language)))
                     {
-                        values.add(value.getValue());
-                        authorities.add(value.getAuthority());
-                        confidences.add(value.getConfidence());
+                        values.add(value.value);
+                        authorities.add(value.authority);
+                        confidences.add(value.confidence);
                     }
                 }
             }
 
             // Set those values
-            itemService.clearMetadata(c, item, schema, element, qualifier, language);
-            itemService.addMetadata(c, item, schema, element, qualifier, language, values, authorities, confidences);
-            itemService.update(c, item);
+            item.clearMetadata(schema, element, qualifier, language);
+            String[] theValues = values.toArray(new String[values.size()]);
+            String[] theAuthorities = authorities.toArray(new String[authorities.size()]);
+            int[] theConfidences = new int[confidences.size()];
+            for (int k=0; k< confidences.size(); k++)
+            {
+                theConfidences[k] = confidences.get(k).intValue();
+            }
+            item.addMetadata(schema, element, qualifier, language, theValues, theAuthorities, theConfidences);
+            item.update();
         }
     }
 
@@ -652,9 +636,9 @@ public class MetadataImport
      * @throws IOException Can be thrown when moving items in communities
      * @throws MetadataImportException If something goes wrong to be reported back to the user
      */
-    protected void compare(Item item,
+    private void compare(Item item,
                          List<String> collections,
-                         List<Collection> actualCollections,
+                         Collection[] actualCollections,
                          BulkEditChange bechange,
                          boolean change) throws SQLException, AuthorizeException, IOException, MetadataImportException
     {
@@ -662,7 +646,7 @@ public class MetadataImport
         String oldOwner = item.getOwningCollection().getHandle();
         String newOwner = collections.get(0);
         // Resolve the handle to the collection
-        Collection newCollection = (Collection) handleService.resolveToObject(c, newOwner);
+        Collection newCollection = (Collection)HandleManager.resolveToObject(c, newOwner);
 
         // Check it resolved OK
         if (newCollection == null)
@@ -673,7 +657,7 @@ public class MetadataImport
         if (!oldOwner.equals(newOwner))
         {
             // Register the old and new owning collections
-            bechange.changeOwningCollection(item.getOwningCollection(), (Collection) handleService.resolveToObject(c, newOwner));
+            bechange.changeOwningCollection(item.getOwningCollection(), (Collection)HandleManager.resolveToObject(c, newOwner));
         }
 
         // Second, loop through the strings from the CSV of mapped collections
@@ -697,7 +681,7 @@ public class MetadataImport
                 }
 
                 // Was it found?
-                DSpaceObject dso = handleService.resolveToObject(c, csvcollection);
+                DSpaceObject dso = HandleManager.resolveToObject(c, csvcollection);
                 if ((dso == null) || (dso.getType() != Constants.COLLECTION))
                 {
                     throw new MetadataImportException("Collection defined for item " + item.getID() +
@@ -722,7 +706,7 @@ public class MetadataImport
             for (String csvcollection : collections)
             {
                 // Don't check the owning collection
-                if ((first) && (collection.getID().equals(item.getOwningCollection().getID())))
+                if ((first) && (collection.getID() == item.getOwningCollection().getID()))
                 {
                     found = true;
                 }
@@ -749,17 +733,17 @@ public class MetadataImport
         if (change)
         {
             // Remove old mapped collections
-            for (Collection collection : bechange.getOldMappedCollections())
+            for (Collection c : bechange.getOldMappedCollections())
             {
-                collectionService.removeItem(c, collection, item);
+                c.removeItem(item);
             }
 
             // Add to new owned collection
             if (bechange.getNewOwningCollection() != null)
             {
-                collectionService.addItem(c, bechange.getNewOwningCollection(), item);
+                bechange.getNewOwningCollection().addItem(item);
                 item.setOwningCollection(bechange.getNewOwningCollection());
-                itemService.update(c, item);
+                item.update();
             }
 
             // Remove from old owned collection (if still a member)
@@ -768,7 +752,7 @@ public class MetadataImport
                 boolean found = false;
                 for (Collection c : item.getCollections())
                 {
-                    if (c.getID().equals(bechange.getOldOwningCollection().getID()))
+                    if (c.getID() == bechange.getOldOwningCollection().getID())
                     {
                         found = true;
                     }
@@ -776,14 +760,14 @@ public class MetadataImport
 
                 if (found)
                 {
-                    collectionService.removeItem(c, bechange.getOldOwningCollection(), item);
+                    bechange.getOldOwningCollection().removeItem(item);
                 }
             }
 
             // Add to new mapped collections
-            for (Collection collection : bechange.getNewMappedCollections())
+            for (Collection c : bechange.getNewMappedCollections())
             {
-                collectionService.addItem(c, collection, item);
+                c.addItem(item);
             }
 
         }
@@ -799,7 +783,7 @@ public class MetadataImport
      * @throws SQLException when an SQL error has occurred (querying DSpace)
      * @throws AuthorizeException If the user can't make the changes
      */
-    protected void add(String[] fromCSV, String md, BulkEditChange changes)
+    private void add(String[] fromCSV, String md, BulkEditChange changes)
                                             throws SQLException, AuthorizeException
     {
         // Don't add owning collection or action
@@ -816,7 +800,7 @@ public class MetadataImport
             String[] bits = md.split("\\[");
             language = bits[1].substring(0, bits[1].length() - 1);
         }
-        AuthorityValue fromAuthority = authorityValueService.getAuthorityValueType(md);
+        AuthorityValue fromAuthority = getAuthorityValueType(md);
         if (md.indexOf(':') > 0) {
             md = md.substring(md.indexOf(':')+1);
         }
@@ -844,9 +828,9 @@ public class MetadataImport
         // Add all the values
         for (String value : fromCSV)
         {
-            BulkEditMetadataValue dcv = getBulkEditValueFromCSV(language, schema, element, qualifier, value, fromAuthority);
+            Metadatum dcv = getDcValueFromCSV(language, schema, element, qualifier, value, fromAuthority);
             if(fromAuthority!=null){
-                value = dcv.getValue() + csv.getAuthoritySeparator() + dcv.getAuthority() + csv.getAuthoritySeparator() + dcv.getConfidence();
+                value = dcv.value + DSpaceCSV.authoritySeparator + dcv.authority + DSpaceCSV.authoritySeparator + dcv.confidence;
             }
 
             // Add it
@@ -857,48 +841,60 @@ public class MetadataImport
         }
     }
 
-    protected BulkEditMetadataValue getBulkEditValueFromCSV(String language, String schema, String element, String qualifier, String value, AuthorityValue fromAuthority) {
+    public static AuthorityValue getAuthorityValueType(String md) {
+        AuthorityValue fromAuthority = null;
+        List<AuthorityValue> types = AuthorityValue.getAuthorityTypes().getTypes();
+        for (AuthorityValue type : types) {
+            if (StringUtils.startsWithIgnoreCase(md,type.getAuthorityType())) {
+                fromAuthority = type;
+            }
+        }
+        return fromAuthority;
+    }
+
+    private Metadatum getDcValueFromCSV(String language, String schema, String element, String qualifier, String value, AuthorityValue fromAuthority) {
         // Look to see if it should be removed
-        BulkEditMetadataValue dcv = new BulkEditMetadataValue();
-        dcv.setSchema(schema);
-        dcv.setElement(element);
-        dcv.setQualifier(qualifier);
-        dcv.setLanguage(language);
+        Metadatum dcv = new Metadatum();
+        dcv.schema = schema;
+        dcv.element = element;
+        dcv.qualifier = qualifier;
+        dcv.language = language;
         if (fromAuthority != null) {
             if (value.indexOf(':') > 0) {
                 value = value.substring(0, value.indexOf(':'));
             }
 
             // look up the value and authority in solr
-            List<AuthorityValue> byValue = authorityValueService.findByValue(c, schema, element, qualifier, value);
+            AuthorityValue example = fromAuthority.newInstance(value);
+            List<AuthorityValue> byValue = authorityValueFinder.findByValue(c, schema, element, qualifier, example.getValue());
             AuthorityValue authorityValue = null;
             if (byValue.isEmpty()) {
                 String toGenerate = fromAuthority.generateString() + value;
                 String field = schema + "_" + element + (StringUtils.isNotBlank(qualifier) ? "_" + qualifier : "");
-                authorityValue = authorityValueService.generate(c, toGenerate, value, field);
-                dcv.setAuthority(toGenerate);
+                authorityValue = AuthorityValueGenerator.generate(c, toGenerate, value, field);
+                dcv.authority = toGenerate;
             } else {
                 authorityValue = byValue.get(0);
-                dcv.setAuthority(authorityValue.getId());
+                dcv.authority = authorityValue.getId();
             }
 
-            dcv.setValue(authorityValue.getValue());
-            dcv.setConfidence(Choices.CF_ACCEPTED);
-        } else if (value == null || !value.contains(csv.getAuthoritySeparator())) {
+            dcv.value = authorityValue.getValue();
+            dcv.confidence = Choices.CF_ACCEPTED;
+        } else if (value == null || !value.contains(DSpaceCSV.authoritySeparator)) {
             simplyCopyValue(value, dcv);
         } else {
-            String[] parts = value.split(csv.getEscapedAuthoritySeparator());
-            dcv.setValue(parts[0]);
-            dcv.setAuthority(parts[1]);
-            dcv.setConfidence((parts.length > 2 ? Integer.valueOf(parts[2]) : Choices.CF_ACCEPTED));
+            String[] parts = value.split(DSpaceCSV.escapedAuthoritySeparator);
+            dcv.value = parts[0];
+            dcv.authority = parts[1];
+            dcv.confidence = (parts.length > 2 ? Integer.valueOf(parts[2]) : Choices.CF_ACCEPTED);
         }
         return dcv;
     }
 
-    protected void simplyCopyValue(String value, BulkEditMetadataValue dcv) {
-        dcv.setValue(value);
-        dcv.setAuthority(null);
-        dcv.setConfidence(Choices.CF_UNSET);
+    private void simplyCopyValue(String value, Metadatum dcv) {
+        dcv.value = value;
+        dcv.authority = null;
+        dcv.confidence = Choices.CF_UNSET;
     }
 
     /**
@@ -908,7 +904,7 @@ public class MetadataImport
      * @param haystack The array of Strings to search through
      * @return Whether or not it is contained
      */
-    protected boolean contains(String needle, String[] haystack)
+    private boolean contains(String needle, String[] haystack)
     {
         // Look for the needle in the haystack
         for (String examine : haystack)
@@ -927,7 +923,7 @@ public class MetadataImport
      * @param in The element to clean
      * @return The cleaned up element
      */
-    protected String clean(String in)
+    private String clean(String in)
     {
         // Check for nulls
         if (in == null)
@@ -968,8 +964,8 @@ public class MetadataImport
         for (BulkEditChange change : changes)
         {
             // Get the changes
-            List<BulkEditMetadataValue> adds = change.getAdds();
-            List<BulkEditMetadataValue> removes = change.getRemoves();
+            List<Metadatum> adds = change.getAdds();
+            List<Metadatum> removes = change.getRemoves();
             List<Collection> newCollections = change.getNewMappedCollections();
             List<Collection> oldCollections = change.getOldMappedCollections();
             if ((adds.size() > 0) || (removes.size() > 0) ||
@@ -1107,16 +1103,16 @@ public class MetadataImport
             }
 
             // Show additions
-            for (BulkEditMetadataValue metadataValue : adds)
+            for (Metadatum dcv : adds)
             {
-                String md = metadataValue.getSchema() + "." + metadataValue.getElement();
-                if (metadataValue.getQualifier() != null)
+                String md = dcv.schema + "." + dcv.element;
+                if (dcv.qualifier != null)
                 {
-                    md += "." + metadataValue.getQualifier();
+                    md += "." + dcv.qualifier;
                 }
-                if (metadataValue.getLanguage() != null)
+                if (dcv.language != null)
                 {
-                    md += "[" + metadataValue.getLanguage() + "]";
+                    md += "[" + dcv.language + "]";
                 }
                 if (!changed)
                 {
@@ -1126,26 +1122,26 @@ public class MetadataImport
                 {
                     System.out.print(" + Added   (" + md + "): ");
                 }
-                System.out.print(metadataValue.getValue());
+                System.out.print(dcv.value);
                 if (isAuthorityControlledField(md))
                 {
-                    System.out.print(", authority = " + metadataValue.getAuthority());
-                    System.out.print(", confidence = " + metadataValue.getConfidence());
+                    System.out.print(", authority = " + dcv.authority);
+                    System.out.print(", confidence = " + dcv.confidence);
                 }
                 System.out.println("");
             }
 
             // Show removals
-            for (BulkEditMetadataValue metadataValue : removes)
+            for (Metadatum dcv : removes)
             {
-                String md = metadataValue.getSchema() + "." + metadataValue.getElement();
-                if (metadataValue.getQualifier() != null)
+                String md = dcv.schema + "." + dcv.element;
+                if (dcv.qualifier != null)
                 {
-                    md += "." + metadataValue.getQualifier();
+                    md += "." + dcv.qualifier;
                 }
-                if (metadataValue.getLanguage() != null)
+                if (dcv.language != null)
                 {
-                    md += "[" + metadataValue.getLanguage() + "]";
+                    md += "[" + dcv.language + "]";
                 }
                 if (!changed)
                 {
@@ -1155,11 +1151,11 @@ public class MetadataImport
                 {
                     System.out.print(" - Removed (" + md + "): ");
                 }
-                System.out.print(metadataValue.getValue());
+                System.out.print(dcv.value);
                 if (isAuthorityControlledField(md))
                 {
-                    System.out.print(", authority = " + metadataValue.getAuthority());
-                    System.out.print(", confidence = " + metadataValue.getConfidence());
+                    System.out.print(", authority = " + dcv.authority);
+                    System.out.print(", confidence = " + dcv.confidence);
                 }
                 System.out.println("");
             }
@@ -1290,10 +1286,11 @@ public class MetadataImport
                 String e = line.getOptionValue('e');
                 if (e.indexOf('@') != -1)
                 {
-                    eperson = EPersonServiceFactory.getInstance().getEPersonService().findByEmail(c, e);
-                } else
+                    eperson = EPerson.findByEmail(c, e);
+                }
+                else
                 {
-                    eperson = EPersonServiceFactory.getInstance().getEPersonService().find(c, UUID.fromString(e));
+                    eperson = EPerson.find(c, Integer.parseInt(e));
                 }
 
                 if (eperson == null)
@@ -1409,7 +1406,7 @@ public class MetadataImport
                 displayChanges(changes, true);
 
                 // Commit the change to the DB
-//                c.commit();
+                c.commit();
             }
 
             // Finsh off and tidy up

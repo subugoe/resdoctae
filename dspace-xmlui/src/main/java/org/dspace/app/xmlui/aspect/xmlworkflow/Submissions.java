@@ -7,7 +7,6 @@
  */
 package org.dspace.app.xmlui.aspect.xmlworkflow;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.utils.UIException;
@@ -15,25 +14,22 @@ import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.content.*;
+import org.dspace.content.Item;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.EPerson;
 import org.dspace.xmlworkflow.WorkflowConfigurationException;
-import org.dspace.xmlworkflow.factory.XmlWorkflowFactory;
-import org.dspace.xmlworkflow.factory.XmlWorkflowServiceFactory;
+import org.dspace.xmlworkflow.WorkflowFactory;
 import org.dspace.xmlworkflow.state.Step;
 import org.dspace.xmlworkflow.state.Workflow;
 import org.dspace.xmlworkflow.state.actions.WorkflowActionConfig;
 import org.dspace.xmlworkflow.storedcomponents.ClaimedTask;
 import org.dspace.xmlworkflow.storedcomponents.PoolTask;
 import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
-import org.dspace.xmlworkflow.storedcomponents.service.ClaimedTaskService;
-import org.dspace.xmlworkflow.storedcomponents.service.PoolTaskService;
-import org.dspace.xmlworkflow.storedcomponents.service.XmlWorkflowItemService;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.*;
 
 /**
  * @author Bram De Schouwer (bram.deschouwer at dot com)
@@ -99,11 +95,6 @@ public class Submissions extends AbstractDSpaceTransformer
 
     private static final Logger log = Logger.getLogger(Submissions.class);
 
-    protected ClaimedTaskService claimedTaskService = XmlWorkflowServiceFactory.getInstance().getClaimedTaskService();
-    protected PoolTaskService poolTaskService = XmlWorkflowServiceFactory.getInstance().getPoolTaskService();
-    protected XmlWorkflowItemService xmlWorkflowItemService = XmlWorkflowServiceFactory.getInstance().getXmlWorkflowItemService();
-    protected XmlWorkflowFactory workflowFactory = XmlWorkflowServiceFactory.getInstance().getWorkflowFactory();
-
 
 	public void addPageMeta(PageMeta pageMeta) throws SAXException,
 	WingException, SQLException, IOException,
@@ -143,9 +134,9 @@ public class Submissions extends AbstractDSpaceTransformer
      */
     private void addWorkflowTasks(Division division) throws SQLException, WingException, AuthorizeException, IOException {
     	@SuppressWarnings("unchecked") // This cast is correct
-    	java.util.List<ClaimedTask> ownedItems = claimedTaskService.findByEperson(context, context.getCurrentUser());
+    	java.util.List<ClaimedTask> ownedItems = ClaimedTask.findByEperson(context, context.getCurrentUser().getID());
     	@SuppressWarnings("unchecked") // This cast is correct.
-    	java.util.List<PoolTask> pooledItems = poolTaskService.findByEperson(context, context.getCurrentUser());
+    	java.util.List<PoolTask> pooledItems = PoolTask.findByEperson(context, context.getCurrentUser().getID());
 
     	if (!(ownedItems.size() > 0 || pooledItems.size() > 0))
     		// No tasks, so don't show the table.
@@ -172,16 +163,18 @@ public class Submissions extends AbstractDSpaceTransformer
         {
         	for (ClaimedTask owned : ownedItems)
         	{
+                int workflowItemID = owned.getWorkflowItemID();
                 String stepID = owned.getStepID();
                 String actionID = owned.getActionID();
-                XmlWorkflowItem item = owned.getWorkflowItem();
+                XmlWorkflowItem item = null;
                 try {
-                    Workflow wf = workflowFactory.getWorkflow(item.getCollection());
+                    item = XmlWorkflowItem.find(context, workflowItemID);
+                    Workflow wf = WorkflowFactory.getWorkflow(item.getCollection());
                     Step step = wf.getStep(stepID);
                     WorkflowActionConfig action = step.getActionConfig(actionID);
-                    String url = contextPath+"/handle/"+item.getCollection().getHandle()+"/xmlworkflow?workflowID="+item.getID()+"&stepID="+stepID+"&actionID="+actionID;
-                    String title = item.getItem().getName();
-                    String collectionName = item.getCollection().getName();
+                    String url = contextPath+"/handle/"+item.getCollection().getHandle()+"/xmlworkflow?workflowID="+workflowItemID+"&stepID="+stepID+"&actionID="+actionID;
+                    Metadatum[] titles = item.getItem().getDC("title", null, Item.ANY);
+                    String collectionName = item.getCollection().getMetadata("name");
                     EPerson submitter = item.getSubmitter();
                     String submitterName = submitter.getFullName();
                     String submitterEmail = submitter.getEmail();
@@ -200,16 +193,16 @@ public class Submissions extends AbstractDSpaceTransformer
                     if(taskHasPool){
                         CheckBox remove = firstCell.addCheckBox("workflowandstepID");
                         remove.setLabel("selected");
-                        remove.addOption(item.getID() + ":" + step.getId());
+                        remove.addOption(workflowItemID + ":" + step.getId());
                     }
 
                     // The task description
                     row.addCell().addXref(url,message("xmlui.XMLWorkflow." + wf.getID() + "." + stepID + "." + actionID));
 
                     // The item description
-                    if (title != null && title.length() > 0)
+                    if (titles != null && titles.length > 0)
                     {
-                        String displayTitle = title;
+                        String displayTitle = titles[0].value;
                         if (displayTitle.length() > 50)
                             displayTitle = displayTitle.substring(0,50)+ " ...";
                         row.addCell().addXref(url,displayTitle);
@@ -266,13 +259,15 @@ public class Submissions extends AbstractDSpaceTransformer
         	for (PoolTask pooled : pooledItems)
         	{
                 String stepID = pooled.getStepID();
+                int workflowItemID = pooled.getWorkflowItemID();
                 String actionID = pooled.getActionID();
+                    XmlWorkflowItem item;
                 try {
-                    XmlWorkflowItem item = pooled.getWorkflowItem();
-                    Workflow wf = workflowFactory.getWorkflow(item.getCollection());
-                    String url = contextPath+"/handle/"+item.getCollection().getHandle()+"/xmlworkflow?workflowID="+item.getID()+"&stepID="+stepID+"&actionID="+actionID;
-                    String title = item.getItem().getName();
-                    String collectionName = item.getCollection().getName();
+                    item = XmlWorkflowItem.find(context, workflowItemID);
+                    Workflow wf = WorkflowFactory.getWorkflow(item.getCollection());
+                    String url = contextPath+"/handle/"+item.getCollection().getHandle()+"/xmlworkflow?workflowID="+workflowItemID+"&stepID="+stepID+"&actionID="+actionID;
+                    Metadatum[] titles = item.getItem().getDC("title", null, Item.ANY);
+                    String collectionName = item.getCollection().getMetadata("name");
                     EPerson submitter = item.getSubmitter();
                     String submitterName = submitter.getFullName();
                     String submitterEmail = submitter.getEmail();
@@ -284,16 +279,16 @@ public class Submissions extends AbstractDSpaceTransformer
 
                     CheckBox claimTask = row.addCell().addCheckBox("workflowID");
                     claimTask.setLabel("selected");
-                    claimTask.addOption(item.getID());
+                    claimTask.addOption(workflowItemID);
 
                     // The task description
 //                    row.addCell().addXref(url,message("xmlui.Submission.Submissions.claimAction"));
                     row.addCell().addXref(url,message("xmlui.XMLWorkflow." + wf.getID() + "." + stepID + "." + actionID));
 
                     // The item description
-                    if (title != null && title.length() > 0)
+                    if (titles != null && titles.length > 0)
                     {
-                        String displayTitle = title;
+                        String displayTitle = titles[0].value;
                         if (displayTitle.length() > 50)
                             displayTitle = displayTitle.substring(0,50)+ " ...";
 
@@ -353,11 +348,11 @@ public class Submissions extends AbstractDSpaceTransformer
      * If the user has none, this nothing is displayed.
      */
     private void addSubmissionsInWorkflow(Division division) throws SQLException, WingException, AuthorizeException, IOException {
-        java.util.List<XmlWorkflowItem> inprogressItems;
+        XmlWorkflowItem[] inprogressItems;
         try {
-            inprogressItems = xmlWorkflowItemService.findBySubmitter(context, context.getCurrentUser());
+            inprogressItems = XmlWorkflowItem.findByEPerson(context,context.getCurrentUser());
             // If there is nothing in progress then don't add anything.
-            if (!(inprogressItems.size() > 0))
+            if (!(inprogressItems.length > 0))
                     return;
 
             Division inprogress = division.addDivision("submissions-inprogress");
@@ -365,7 +360,7 @@ public class Submissions extends AbstractDSpaceTransformer
             inprogress.addPara(T_p_info1);
 
 
-            Table table = inprogress.addTable("submissions-inprogress",inprogressItems.size()+1,3);
+            Table table = inprogress.addTable("submissions-inprogress",inprogressItems.length+1,3);
             Row header = table.addRow(Row.ROLE_HEADER);
             header.addCellContent(T_p_column1);
             header.addCellContent(T_p_column2);
@@ -374,28 +369,28 @@ public class Submissions extends AbstractDSpaceTransformer
 
             for (XmlWorkflowItem workflowItem : inprogressItems)
             {
-                String title = workflowItem.getItem().getName();
-                String collectionName = workflowItem.getCollection().getName();
-                java.util.List<PoolTask> pooltasks = poolTaskService.find(context,workflowItem);
-                java.util.List<ClaimedTask> claimedtasks = claimedTaskService.find(context, workflowItem);
+                Metadatum[] titles = workflowItem.getItem().getDC("title", null, Item.ANY);
+                String collectionName = workflowItem.getCollection().getMetadata("name");
+                java.util.List<PoolTask> pooltasks = PoolTask.find(context,workflowItem);
+                java.util.List<ClaimedTask> claimedtasks = ClaimedTask.find(context, workflowItem);
 
                 Message state = message("xmlui.XMLWorkflow.step.unknown");
                 for(PoolTask task: pooltasks){
-                    Workflow wf = workflowFactory.getWorkflow(workflowItem.getCollection());
+                    Workflow wf = WorkflowFactory.getWorkflow(workflowItem.getCollection());
                     Step step = wf.getStep(task.getStepID());
                     state = message("xmlui.XMLWorkflow." + wf.getID() + "." + step.getId() + "." + task.getActionID());
                 }
                 for(ClaimedTask task: claimedtasks){
-                    Workflow wf = workflowFactory.getWorkflow(workflowItem.getCollection());
+                    Workflow wf = WorkflowFactory.getWorkflow(workflowItem.getCollection());
                     Step step = wf.getStep(task.getStepID());
                     state = message("xmlui.XMLWorkflow." + wf.getID() + "." + step.getId() + "." + task.getActionID());
                 }
                 Row row = table.addRow();
 
                 // Add the title column
-                if (StringUtils.isNotBlank(title))
+                if (titles.length > 0)
                 {
-                    String displayTitle = title;
+                    String displayTitle = titles[0].value;
                     if (displayTitle.length() > 50)
                         displayTitle = displayTitle.substring(0,50)+ " ...";
                     row.addCellContent(displayTitle);

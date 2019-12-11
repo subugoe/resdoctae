@@ -25,9 +25,9 @@ public class XMLUtils
 {
     /**
      * 
-     * @param dataRoot
+     * @param rootElement
      *            the starting node
-     * @param name
+     * @param subElementName
      *            the name of the subelement to find
      * @return the list of all DOM Element with the provided name direct child
      *         of the starting node

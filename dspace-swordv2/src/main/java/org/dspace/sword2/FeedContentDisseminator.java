@@ -12,7 +12,10 @@ import org.apache.abdera.i18n.iri.IRI;
 import org.apache.abdera.model.Entry;
 import org.apache.abdera.model.Feed;
 import org.apache.abdera.model.Link;
-import org.dspace.content.*;
+import org.dspace.content.Bitstream;
+import org.dspace.content.BitstreamFormat;
+import org.dspace.content.Bundle;
+import org.dspace.content.Item;
 import org.dspace.core.*;
 import org.swordapp.server.SwordError;
 import org.swordapp.server.SwordServerException;
@@ -23,11 +26,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.SQLException;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
-public class FeedContentDisseminator extends AbstractSimpleDC
-        implements SwordContentDisseminator
+public class FeedContentDisseminator extends AbstractSimpleDC implements SwordContentDisseminator
 {
     public InputStream disseminate(Context context, Item item)
             throws DSpaceSwordException, SwordError, SwordServerException
@@ -39,25 +40,25 @@ public class FeedContentDisseminator extends AbstractSimpleDC
 
             this.addMetadata(feed, item);
 
-            List<Bundle> bundles = item.getBundles();
-            for (Bundle bundle : bundles)
+            Bundle[] originals = item.getBundles("ORIGINAL");
+            for (Bundle original : originals)
             {
-                if (Constants.CONTENT_BUNDLE_NAME.equals(bundle.getName()))
+                Bitstream[] bss = original.getBitstreams();
+                for (Bitstream bitstream : bss)
                 {
-                    List<Bitstream> bitstreams = bundle
-                            .getBitstreams();
-                    for (Bitstream bitstream : bitstreams)
-                    {
-                        Entry entry = feed.addEntry();
-                        this.populateEntry(context, entry,
-                                bitstream);
-                    }
+                    Entry entry = feed.addEntry();
+                    this.populateEntry(context, entry, bitstream);
                 }
             }
 
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             feed.writeTo(baos);
-            return new ByteArrayInputStream(baos.toByteArray());
+            ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+            return bais;
+        }
+        catch (SQLException e)
+        {
+            throw new DSpaceSwordException(e);
         }
         catch (IOException e)
         {
@@ -94,27 +95,17 @@ public class FeedContentDisseminator extends AbstractSimpleDC
         }
     }
 
-    private void populateEntry(Context context, Entry entry,
-            Bitstream bitstream)
+    private void populateEntry(Context context, Entry entry, Bitstream bitstream)
             throws DSpaceSwordException
     {
-        BitstreamFormat format = null;
-        try
-        {
-            format = bitstream.getFormat(context);
-        }
-        catch (SQLException e)
-        {
-            throw new DSpaceSwordException(e);
-        }
+        BitstreamFormat format = bitstream.getFormat();
         String contentType = null;
         if (format != null)
         {
             contentType = format.getMIMEType();
         }
 
-        SwordUrlManager urlManager = new SwordUrlManager(
-                new SwordConfigurationDSpace(), context);
+        SwordUrlManager urlManager = new SwordUrlManager(new SwordConfigurationDSpace(), context);
         String bsUrl = urlManager.getBitstreamUrl(bitstream);
 
         entry.setId(bsUrl);
@@ -142,12 +133,10 @@ public class FeedContentDisseminator extends AbstractSimpleDC
     public boolean disseminatesContentType(String contentType)
             throws DSpaceSwordException, SwordError, SwordServerException
     {
-        return "application/atom+xml".equals(contentType) ||
-                "application/atom+xml;type=feed".equals(contentType);
+        return "application/atom+xml".equals(contentType) || "application/atom+xml;type=feed".equals(contentType);
     }
 
-    public boolean disseminatesPackage(String contentType)
-            throws DSpaceSwordException, SwordError, SwordServerException
+    public boolean disseminatesPackage(String contentType) throws DSpaceSwordException, SwordError, SwordServerException
     {
         // we're just going to ignore packaging formats here
         return true;

@@ -34,24 +34,22 @@ import org.dspace.app.xmlui.utils.ContextUtil;
 import org.dspace.app.xmlui.utils.DSpaceValidity;
 import org.dspace.app.xmlui.utils.FeedUtils;
 import org.dspace.app.util.SyndicationFeed;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.browse.BrowseEngine;
 import org.dspace.browse.BrowseException;
 import org.dspace.browse.BrowseIndex;
 import org.dspace.browse.BrowserScope;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
 import org.dspace.sort.SortException;
 import org.dspace.sort.SortOption;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.eperson.Group;
+import org.dspace.handle.HandleManager;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -98,7 +96,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
     private String handle = null;
     
     /** number of DSpace items per feed */
-    private static final int ITEM_COUNT = DSpaceServicesFactory.getInstance().getConfigurationService().getIntProperty("webui.feed.items");
+    private static final int ITEM_COUNT = ConfigurationManager.getIntProperty("webui.feed.items");
     
     /**
      * How long should RSS feed cache entries be valid? milliseconds * seconds *
@@ -109,23 +107,20 @@ public class DSpaceFeedGenerator extends AbstractGenerator
     static
     {
         final String ageCfgName = "webui.feed.cache.age";
-        final long ageCfg = DSpaceServicesFactory.getInstance().getConfigurationService().getIntProperty(ageCfgName, 24);
+        final long ageCfg = ConfigurationManager.getIntProperty(ageCfgName, 24);
         CACHE_AGE = 1000 * 60 * 60 * ageCfg;
     }
     
     /** configuration option to include Item which does not have READ by Anonymous enabled **/
-    private static boolean includeRestrictedItems = DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("harvest.includerestricted.rss", true);
+    private static boolean includeRestrictedItems = ConfigurationManager.getBooleanProperty("harvest.includerestricted.rss", true);
 
 
     /** Cache of this object's validitity */
     private DSpaceValidity validity = null;
     
     /** The cache of recently submitted items */
-    private List<Item> recentSubmissionItems;
-
-    protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    protected HandleService handleService = HandleServiceFactory.getInstance().getHandleService();
-
+    private Item recentSubmissionItems[];
+    
     /**
      * Generate the unique caching key.
      * This key must be unique inside the space of this component.
@@ -157,15 +152,15 @@ public class DSpaceFeedGenerator extends AbstractGenerator
                 
                 if (handle != null && !handle.contains("site"))
                 {
-                    dso = handleService.resolveToObject(context, handle);
+                    dso = HandleManager.resolveToObject(context, handle);
                 }
                 
-                validity.add(context, dso);
+                validity.add(dso);
                 
                 // add recently submitted items
                 for(Item item : getRecentlySubmittedItems(context,dso))
                 {
-                    validity.add(context, item);
+                    validity.add(item);
                 }
 
                 this.validity = validity.complete();
@@ -218,7 +213,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
             
             if (handle != null && !handle.contains("site"))
             {
-                dso = handleService.resolveToObject(context, handle);
+                dso = HandleManager.resolveToObject(context, handle);
                 if (dso == null)
                 {
                     // If we were unable to find a handle then return page not found.
@@ -233,7 +228,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
             }
         
             SyndicationFeed feed = new SyndicationFeed(SyndicationFeed.UITYPE_XMLUI);
-            feed.populate(ObjectModelHelper.getRequest(objectModel), context,
+            feed.populate(ObjectModelHelper.getRequest(objectModel),
                           dso, getRecentlySubmittedItems(context,dso), FeedUtils.i18nLabels);
             feed.setType(this.format);
             Document dom = feed.outputW3CDom();
@@ -259,7 +254,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
      * @return recently submitted Items within the indicated scope
      */
     @SuppressWarnings("unchecked")
-    private List<Item> getRecentlySubmittedItems(Context context, DSpaceObject dso)
+    private Item[] getRecentlySubmittedItems(Context context, DSpaceObject dso)
             throws SQLException
     {
         if (recentSubmissionItems != null)
@@ -267,7 +262,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
             return recentSubmissionItems;
         }
 
-        String source = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("recent.submissions.sort-option");
+        String source = ConfigurationManager.getProperty("recent.submissions.sort-option");
         BrowserScope scope = new BrowserScope(context);
         if (dso instanceof Collection)
         {
@@ -293,8 +288,7 @@ public class DSpaceFeedGenerator extends AbstractGenerator
             }
 
             BrowseEngine be = new BrowseEngine(context);
-            List<Item> browseItemResults = be.browseMini(scope).getBrowseItemResults();
-            this.recentSubmissionItems = browseItemResults;
+            this.recentSubmissionItems = be.browseMini(scope).getItemResults(context);
 
             // filter out Items that are not world-readable
             if (!includeRestrictedItems)
@@ -303,16 +297,16 @@ public class DSpaceFeedGenerator extends AbstractGenerator
                 for (Item item : this.recentSubmissionItems)
                 {
                 checkAccess:
-                    for (Group group : authorizeService.getAuthorizedGroups(context, item, Constants.READ))
+                    for (Group group : AuthorizeManager.getAuthorizedGroups(context, item, Constants.READ))
                     {
-                        if ((group.getName().equals(Group.ANONYMOUS)))
+                        if ((group.getID() == Group.ANONYMOUS_ID))
                         {
                             result.add(item);
                             break checkAccess;
                         }
                     }
                 }
-                this.recentSubmissionItems = result;
+                this.recentSubmissionItems = result.toArray(new Item[result.size()]);
             }
         }
         catch (BrowseException bex)

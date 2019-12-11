@@ -7,8 +7,7 @@
  */
 package org.dspace.app.webui.util;
 
-import org.dspace.services.factory.DSpaceServicesFactory;
-
+import org.dspace.core.ConfigurationManager;
 /**
  * Simple abstract class that provide utility method for get/check style configuration from dspace.cfg file 
  * @author Andrea Bollini
@@ -17,15 +16,13 @@ import org.dspace.services.factory.DSpaceServicesFactory;
  */
 public abstract class AKeyBasedStyleSelection implements StyleSelection
 {   
-    public String[] getConfigurationForStyle(String style)
+    public String getConfigurationForStyle(String style)
     {
-        return DSpaceServicesFactory.getInstance().getConfigurationService()
-                .getArrayProperty("webui.itemdisplay." + style);
+        return ConfigurationManager.getProperty("webui.itemdisplay." + style);
     }
     
     protected boolean isConfigurationDefinedForStyle(String style)
     {
-        return DSpaceServicesFactory.getInstance().getConfigurationService()
-                .getProperty("webui.itemdisplay." + style) != null;
+        return ConfigurationManager.getProperty("webui.itemdisplay." + style) == null;
     }
 }

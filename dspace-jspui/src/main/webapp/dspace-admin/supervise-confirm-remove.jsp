@@ -29,7 +29,6 @@
 <%@ page import="org.dspace.eperson.Group" %>
 <%@ page import="org.dspace.content.WorkspaceItem" %>
 <%@ page import="org.dspace.core.Utils" %>
-<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%
     // get item and group out of the request
@@ -50,7 +49,7 @@
 <p class="help-block"><fmt:message key="jsp.dspace-admin.supervise-confirm-remove.subheading"/></p>
 
 <%
-        String title = wsItem.getItem().getName();
+        Metadatum[] titleArray = wsItem.getItem().getDC("title", null, Item.ANY);
 //        String title = (titleArray.length > 0 ? titleArray[0].value : "Untitled");
         EPerson submitter = wsItem.getItem().getSubmitter();
 %>
@@ -58,10 +57,10 @@
 <label class="col-md-2"><fmt:message key="jsp.dspace-admin.supervise-confirm-remove.titleheader"/>:</label>
 <span>
 <%
-		if (StringUtils.isNotBlank(title))
+		if (titleArray.length > 0)
 		{
 %>
-			<%= title %>
+			<%= titleArray[0].value %>
 <%
 		}
 		else

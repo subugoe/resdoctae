@@ -27,9 +27,10 @@ public class Option extends TextContainer
 
     /** The name of the return value attribute */
     public static final String A_RETURN_VALUE = "returnValue";
-
-    /** The submitted value for this option */
-    private final String returnValue;
+    
+   
+    /** The submited value for this option */
+    private String returnValue;
 
     /**
      *
@@ -38,7 +39,6 @@ public class Option extends TextContainer
      *            (Required) The context this element is contained in
      * @param returnValue
      *            (may be null) The options return value.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Option(WingContext context, String returnValue) throws WingException
     {
@@ -60,9 +60,8 @@ public class Option extends TextContainer
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
+
     public void toSAX(ContentHandler contentHandler,
             LexicalHandler lexicalHandler, NamespaceSupport namespaces)
             throws SAXException

@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.community;
 
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.aspect.administrative.FlowContainerUtils;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
@@ -23,12 +22,8 @@ import org.dspace.app.xmlui.wing.element.Para;
 import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.app.xmlui.wing.element.TextArea;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.authorize.AuthorizeServiceImpl;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Community;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CommunityService;
 import org.dspace.core.Constants;
 
 /**
@@ -65,8 +60,6 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
     private static final Message T_submit_update = message("xmlui.general.update");
     private static final Message T_submit_return = message("xmlui.general.return");
 
-    protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
 
     @Override
     public void addPageMeta(PageMeta pageMeta)
@@ -82,15 +75,15 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
     public void addBody(Body body)
             throws WingException, SQLException, AuthorizeException
 	{
-		UUID communityID = UUID.fromString(parameters.getParameter("communityID", null));
-		Community thisCommunity = communityService.find(context, communityID);
+		int communityID = parameters.getParameterAsInteger("communityID", -1);
+		Community thisCommunity = Community.find(context, communityID);
 
 		String baseURL = contextPath + "/admin/community?administrative-continue=" + knot.getId();
 
-	    String short_description_error = FlowContainerUtils.checkXMLFragment(communityService.getMetadata(thisCommunity, "short_description"));
-	    String introductory_text_error = FlowContainerUtils.checkXMLFragment(communityService.getMetadata(thisCommunity, "introductory_text"));
-	    String copyright_text_error = FlowContainerUtils.checkXMLFragment(communityService.getMetadata(thisCommunity, "copyright_text"));
-	    String side_bar_text_error = FlowContainerUtils.checkXMLFragment(communityService.getMetadata(thisCommunity, "side_bar_text"));
+	    String short_description_error = FlowContainerUtils.checkXMLFragment(thisCommunity.getMetadata("short_description"));
+	    String introductory_text_error = FlowContainerUtils.checkXMLFragment(thisCommunity.getMetadata("introductory_text"));
+	    String copyright_text_error = FlowContainerUtils.checkXMLFragment(thisCommunity.getMetadata("copyright_text"));
+	    String side_bar_text_error = FlowContainerUtils.checkXMLFragment(thisCommunity.getMetadata("side_bar_text"));
 	    
 		// DIVISION: main
 	    Division main = body.addInteractiveDivision("community-metadata-edit",contextPath+"/admin/community",Division.METHOD_MULTIPART,"primary administrative community");
@@ -108,12 +101,12 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
 	    metadataList.addLabel(T_label_name);
 	    Text name = metadataList.addItem().addText("name");
 	    name.setSize(40);
-	    name.setValue(communityService.getMetadata(thisCommunity, "name"));
+	    name.setValue(thisCommunity.getMetadata("name"));
 	    
 	    // short description
 	    metadataList.addLabel(T_label_short_description);
 	    Text short_description = metadataList.addItem().addText("short_description");
-	    short_description.setValue(communityService.getMetadata(thisCommunity, "short_description"));
+	    short_description.setValue(thisCommunity.getMetadata("short_description"));
 	    short_description.setSize(40);
 	    if (short_description_error != null)
         {
@@ -123,7 +116,7 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
 	    // introductory text
 	    metadataList.addLabel(T_label_introductory_text);
 	    TextArea introductory_text = metadataList.addItem().addTextArea("introductory_text");
-	    introductory_text.setValue(communityService.getMetadata(thisCommunity, "introductory_text"));
+	    introductory_text.setValue(thisCommunity.getMetadata("introductory_text"));
 	    introductory_text.setSize(6, 40);
 	    if (introductory_text_error != null)
         {
@@ -133,7 +126,7 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
 	    // copyright text
 	    metadataList.addLabel(T_label_copyright_text);
 	    TextArea copyright_text = metadataList.addItem().addTextArea("copyright_text");
-	    copyright_text.setValue(communityService.getMetadata(thisCommunity, "copyright_text"));
+	    copyright_text.setValue(thisCommunity.getMetadata("copyright_text"));
 	    copyright_text.setSize(6, 40);
 	    if (copyright_text_error != null)
         {
@@ -143,7 +136,7 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
 	    // legacy sidebar text; may or may not be used for news 
 	    metadataList.addLabel(T_label_side_bar_text);
 	    TextArea side_bar_text = metadataList.addItem().addTextArea("side_bar_text");
-	    side_bar_text.setValue(communityService.getMetadata(thisCommunity, "side_bar_text"));
+	    side_bar_text.setValue(thisCommunity.getMetadata("side_bar_text"));
 	    side_bar_text.setSize(6, 40);
 	    if (side_bar_text_error != null)
         {
@@ -171,7 +164,7 @@ public class EditCommunityMetadataForm extends AbstractDSpaceTransformer
 	    Para buttonList = main.addPara();
 	    buttonList.addButton("submit_save").setValue(T_submit_update);
 
-	    if (authorizeService.authorizeActionBoolean(context, thisCommunity, Constants.DELETE))
+	    if (AuthorizeManager.authorizeActionBoolean(context, thisCommunity, Constants.DELETE))
         {
 	         buttonList.addButton("submit_delete").setValue(T_submit_delete);
         }

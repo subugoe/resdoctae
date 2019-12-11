@@ -34,19 +34,15 @@ public final class DSpaceBeanPostProcessor implements BeanPostProcessor, Destruc
     /* (non-Javadoc)
      * @see org.springframework.beans.factory.config.BeanPostProcessor#postProcessBeforeInitialization(java.lang.Object, java.lang.String)
      */
-    @Override
     public Object postProcessBeforeInitialization(Object bean, String beanName)
             throws BeansException {
-        // Before initializing the service, first configure it based on any related settings in the configurationService
-        // NOTE: configs related to this bean MUST be prefixed with the bean's name (e.g. [beanName].setting = value)
-        DSpaceServiceManager.configureService(beanName, bean, configurationService);
+        DSpaceServiceManager.configureService(beanName, bean, configurationService.getServiceNameConfigs());
         return bean;
     }
 
     /* (non-Javadoc)
      * @see org.springframework.beans.factory.config.BeanPostProcessor#postProcessAfterInitialization(java.lang.Object, java.lang.String)
      */
-    @Override
     public Object postProcessAfterInitialization(Object bean, String beanName)
             throws BeansException {
         DSpaceServiceManager.initService(bean);
@@ -56,7 +52,6 @@ public final class DSpaceBeanPostProcessor implements BeanPostProcessor, Destruc
     /* (non-Javadoc)
      * @see org.springframework.beans.factory.config.DestructionAwareBeanPostProcessor#postProcessBeforeDestruction(java.lang.Object, java.lang.String)
      */
-    @Override
     public void postProcessBeforeDestruction(Object bean, String beanName) throws BeansException {
         DSpaceServiceManager.shutdownService(bean);
     }

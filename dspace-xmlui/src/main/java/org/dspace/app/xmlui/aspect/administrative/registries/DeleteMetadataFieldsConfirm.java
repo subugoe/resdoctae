@@ -7,18 +7,21 @@
  */
 package org.dspace.app.xmlui.aspect.administrative.registries;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
-import org.dspace.app.xmlui.wing.element.*;
+import org.dspace.app.xmlui.wing.element.Body;
+import org.dspace.app.xmlui.wing.element.Division;
+import org.dspace.app.xmlui.wing.element.PageMeta;
+import org.dspace.app.xmlui.wing.element.Para;
+import org.dspace.app.xmlui.wing.element.Row;
+import org.dspace.app.xmlui.wing.element.Table;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataSchema;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataFieldService;
-
-import java.sql.SQLException;
-import java.util.ArrayList;
 
 /**
  * Prompt the user with a list of to-be-deleted metadata fields and
@@ -56,9 +59,7 @@ public class DeleteMetadataFieldsConfirm extends AbstractDSpaceTransformer
 		message("xmlui.administrative.registries.DeleteMetadataFieldsConfirm.column2");
 	private static final Message T_column3 =
 		message("xmlui.administrative.registries.DeleteMetadataFieldsConfirm.column3");
-
-	protected MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-
+	
 	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
@@ -77,7 +78,7 @@ public class DeleteMetadataFieldsConfirm extends AbstractDSpaceTransformer
 		ArrayList<MetadataField> fields = new ArrayList<MetadataField>();
 		for (String id : idsString.split(","))
 		{
-			MetadataField field = metadataFieldService.find(context,Integer.valueOf(id));
+			MetadataField field = MetadataField.find(context,Integer.valueOf(id));
 			fields.add(field);
 		}
  
@@ -102,11 +103,11 @@ public class DeleteMetadataFieldsConfirm extends AbstractDSpaceTransformer
                 continue;
             }
     		
-    		String fieldID = String.valueOf(field.getID());
+    		String fieldID = String.valueOf(field.getFieldID());
 			String fieldEelement = field.getElement();
 			String fieldQualifier = field.getQualifier();
 			
-			MetadataSchema schema = field.getMetadataSchema();
+			MetadataSchema schema = MetadataSchema.find(context, field.getSchemaID());
 			String schemaName = schema.getName();
 			
 			StringBuilder fieldName = new StringBuilder()

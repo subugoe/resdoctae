@@ -17,10 +17,12 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamFormatService;
-import org.dspace.content.service.BitstreamService;
+import org.dspace.content.Bitstream;
+import org.dspace.content.BitstreamFormat;
+import org.dspace.content.Bundle;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.FormatIdentifier;
+import org.dspace.content.Item;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
@@ -54,24 +56,19 @@ public class PREMISCrosswalk
 
     private static final Namespace namespaces[] = { PREMIS_NS };
 
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-
     /*----------- Submission functions -------------------*/
 
-    @Override
-    public void ingest(Context context, DSpaceObject dso, Element root, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, Element root)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         if (!(root.getName().equals("premis")))
         {
             throw new MetadataValidationException("Wrong root element for PREMIS: " + root.toString());
         }
-        ingest(context, dso, root.getChildren(), createMissingMetadataFields);
+        ingest(context, dso, root.getChildren());
     }
 
-    @Override
-    public void ingest(Context context, DSpaceObject dso, List<Element> ml, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, List<Element> ml)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         // we only understand how to crosswalk PREMIS to a Bitstream.
@@ -88,7 +85,7 @@ public class PREMISCrosswalk
             if (me.getName().equals("premis"))
             {
                 // if we're fed a <premis> wrapper object, recurse on its guts:
-                ingest(context, dso, me.getChildren(), createMissingMetadataFields);
+                ingest(context, dso, me.getChildren());
             }
             else if (me.getName().equals("object"))
             {
@@ -166,7 +163,7 @@ public class PREMISCrosswalk
                 // Apply new bitstream name if we found it.
                 if (bsName != null)
                 {
-                    bitstream.setName(context, bsName);
+                    bitstream.setName(bsName);
                     log.debug("Changing bitstream id="+String.valueOf(bitstream.getID())+"name and source to: "+bsName);
                 }
 
@@ -174,15 +171,15 @@ public class PREMISCrosswalk
                 // get it from that, otherwise try to divine from file extension
                 // (guessFormat() looks at bitstream Name, which we just set)
                 BitstreamFormat bf = (MIMEType == null) ? null :
-                        bitstreamFormatService.findByMIMEType(context, MIMEType);
+                        BitstreamFormat.findByMIMEType(context, MIMEType);
                 if (bf == null)
                 {
-                    bf = bitstreamFormatService.guessFormat(context, bitstream);
+                    bf = FormatIdentifier.guessFormat(context, bitstream);
                 }
 
                 if (bf != null)
                 {
-                    bitstream.setFormat(context, bf);
+                    bitstream.setFormat(bf);
                 }
             }
             else
@@ -190,32 +187,28 @@ public class PREMISCrosswalk
                 log.debug("Skipping element: " + me.toString());
             }
         }
-        bitstreamService.update(context, bitstream);
+        bitstream.update();
     }
 
     /*----------- Dissemination functions -------------------*/
 
-    @Override
     public Namespace[] getNamespaces()
     {
         return (Namespace[]) ArrayUtils.clone(namespaces);
     }
 
-    @Override
     public String getSchemaLocation()
     {
         return schemaLocation;
     }
 
-    @Override
     public boolean canDisseminate(DSpaceObject dso)
     {
         //PREMISCrosswalk can only crosswalk a Bitstream
         return (dso.getType() == Constants.BITSTREAM);
     }
 
-    @Override
-    public Element disseminateElement(Context context, DSpaceObject dso)
+    public Element disseminateElement(DSpaceObject dso)
         throws CrosswalkException,
                IOException, SQLException, AuthorizeException
     {
@@ -244,21 +237,21 @@ public class PREMISCrosswalk
         String baseUrl = ConfigurationManager.getProperty("dspace.url");
         String handle = null;
         // get handle of parent Item of this bitstream, if there is one:
-        List<Bundle> bn = bitstream.getBundles();
-        if (bn.size() > 0)
+        Bundle[] bn = bitstream.getBundles();
+        if (bn.length > 0)
         {
-            List<Item> bi = bn.get(0).getItems();
-            if (bi.size() > 0)
+            Item bi[] = bn[0].getItems();
+            if (bi.length > 0)
             {
-                handle = bi.get(0).getHandle();
+                handle = bi[0].getHandle();
             }
         }
         // get or make up name for bitstream:
         String bsName = bitstream.getName();
         if (bsName == null)
         {
-            List<String> ext = bitstream.getFormat(context).getExtensions();
-            bsName = "bitstream_"+sid+ (ext.size() > 0 ? ext.get(0) : "");
+            String ext[] = bitstream.getFormat().getExtensions();
+            bsName = "bitstream_"+sid+ (ext.length > 0 ? ext[0] : "");
         }
         if (handle != null && baseUrl != null)
         {
@@ -314,7 +307,7 @@ public class PREMISCrosswalk
         Element format = new Element("format", PREMIS_NS);
         Element formatDes = new Element("formatDesignation", PREMIS_NS);
         Element formatName = new Element("formatName", PREMIS_NS);
-        formatName.setText(bitstream.getFormat(context).getMIMEType());
+        formatName.setText(bitstream.getFormat().getMIMEType());
         formatDes.addContent(formatName);
         format.addContent(formatDes);
         ochar.addContent(format);
@@ -335,17 +328,15 @@ public class PREMISCrosswalk
         return premis;
     }
 
-    @Override
-    public List<Element> disseminateList(Context context, DSpaceObject dso)
+    public List<Element> disseminateList(DSpaceObject dso)
         throws CrosswalkException,
                IOException, SQLException, AuthorizeException
     {
         List<Element> result = new ArrayList<Element>(1);
-        result.add(disseminateElement(context, dso));
+        result.add(disseminateElement(dso));
         return result;
     }
 
-    @Override
     public boolean preferList()
     {
         return false;

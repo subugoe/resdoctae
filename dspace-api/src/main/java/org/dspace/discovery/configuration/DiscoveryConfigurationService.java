@@ -7,7 +7,7 @@
  */
 package org.dspace.discovery.configuration;
 
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 import java.util.HashMap;
 import java.util.List;
@@ -38,8 +38,9 @@ public class DiscoveryConfigurationService {
     }
 
     public static void main(String[] args) {
-        System.out.println(DSpaceServicesFactory.getInstance().getServiceManager().getServicesNames().size());
-        DiscoveryConfigurationService mainService = DSpaceServicesFactory.getInstance().getServiceManager().getServiceByName(DiscoveryConfigurationService.class.getName(), DiscoveryConfigurationService.class);
+        DSpace dspace = new DSpace();
+        System.out.println(dspace.getServiceManager().getServicesNames().size());
+        DiscoveryConfigurationService mainService = dspace.getServiceManager().getServiceByName(DiscoveryConfigurationService.class.getName(), DiscoveryConfigurationService.class);
 
         for(String key : mainService.getMap().keySet()){
             System.out.println(key);

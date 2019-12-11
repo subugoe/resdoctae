@@ -50,20 +50,20 @@ public class UsageEvent extends Event {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private HttpServletRequest request;
+	private transient HttpServletRequest request;
 	
-	private String ip;
+	private transient String ip;
 	
-	private String userAgent;
+	private transient String userAgent;
 	
-	private String xforwardedfor;
+	private transient String xforwardedfor;
 	
-	private Context context;
+	private transient Context context;
 	
-	private DSpaceObject object;
+	private transient DSpaceObject object;
 
 	private Action action;
-
+			
 	private static String checkParams(Action action, HttpServletRequest request, Context context, DSpaceObject object)
 	{
         StringBuilder eventName = new StringBuilder();
@@ -221,11 +221,11 @@ public class UsageEvent extends Event {
 		this.userAgent = userAgent;
 	}
 
-	public String getXforwardedfor() {
+	public String getXforwarderfor() {
 		return xforwardedfor;
 	}
 
-	public void setXforwardedfor(String xforwardedfor) {
+	public void setXforwarderfor(String xforwardedfor) {
 		this.xforwardedfor = xforwardedfor;
 	}
 

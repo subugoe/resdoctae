@@ -57,7 +57,7 @@ public class CrossRefService
 
     private static final Logger log = Logger.getLogger(CrossRefService.class);
 
-    protected int timeout = 1000;
+    private int timeout = 1000;
 
     public void setTimeout(int timeout)
     {

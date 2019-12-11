@@ -10,22 +10,21 @@ package org.dspace.rdf;
 
 import com.hp.hpl.jena.rdf.model.Model;
 import java.sql.SQLException;
-import java.util.*;
-
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.NoSuchElementException;
 import org.apache.log4j.Logger;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.BundleService;
-import org.dspace.content.service.SiteService;
-import org.dspace.content.service.WorkspaceItemService;
+import org.dspace.content.Bitstream;
+import org.dspace.content.Bundle;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
+import org.dspace.content.Site;
+import org.dspace.content.WorkspaceItem;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.event.Consumer;
 import org.dspace.event.Event;
-import org.dspace.workflow.WorkflowItemService;
-import org.dspace.workflow.factory.WorkflowServiceFactory;
 
 /**
  *
@@ -38,31 +37,18 @@ public class RDFConsumer implements Consumer
     protected Deque<DSOIdentifier> toConvert;
     protected Deque<DSOIdentifier> toDelete;
 
-    protected BitstreamService bitstreamService;
-    protected BundleService bundleService;
-    protected SiteService siteService;
-    protected WorkspaceItemService workspaceItemService;
-    protected WorkflowItemService workflowItemService;
-    
-    @Override
-    public void initialize() throws Exception {
-        bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-        bundleService = ContentServiceFactory.getInstance().getBundleService();
-        siteService = ContentServiceFactory.getInstance().getSiteService();
-        workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
-        workflowItemService = WorkflowServiceFactory.getInstance().getWorkflowItemService();
-    }
-
     @Override
     public void consume(Context ctx, Event event)
             throws SQLException
     {
         if (this.toConvert == null)
         {
+            log.debug("Initalized first queue.");
             this.toConvert = new LinkedList<>();
         }
         if (this.toDelete == null)
         {
+            log.debug("Initalized second queue.");
             this.toDelete = new LinkedList<>();
         }
         
@@ -114,7 +100,7 @@ public class RDFConsumer implements Consumer
         if (event.getEventType() == Event.MODIFY
                 || event.getEventType() == Event.MODIFY_METADATA)
         {
-            Bitstream bitstream = bitstreamService.find(ctx, event.getSubjectID());
+            Bitstream bitstream = Bitstream.find(ctx, event.getSubjectID());
             if (bitstream == null)
             {
                 log.debug("Cannot find bitstream " + event.getSubjectID() + "! "
@@ -122,16 +108,15 @@ public class RDFConsumer implements Consumer
                         + "and we'll cover it by a REMOVE event on its bundle.");
                 return;
             }
-            List<Bundle> bundles = bitstream.getBundles();
+            Bundle[] bundles = bitstream.getBundles();
             for (Bundle b : bundles)
             {
-                List<Item> items = b.getItems();
+                Item[] items = b.getItems();
                 for (Item i : items)
                 {
-                    if (workspaceItemService.findByItem(ctx, i) != null
-                            || workflowItemService.findByItem(ctx, i) != null)
+                    if (WorkspaceItem.findByItem(ctx, i) != null)
                     {
-                        log.debug("Ignoring Item " + i.getID() + " as a corresponding workspace or workflow item exists.");
+                        log.debug("Ignoring Item " + i.getID() + " as a corresponding workspace item exists.");
                         continue;
                     }
                     DSOIdentifier id = new DSOIdentifier(i, ctx);
@@ -168,7 +153,7 @@ public class RDFConsumer implements Consumer
         {
             // either a Bitstream was added or removed or the Bundle was changed
             // update its item.
-            Bundle bundle = bundleService.find(ctx, event.getSubjectID());
+            Bundle bundle = Bundle.find(ctx, event.getSubjectID());
             if (bundle == null)
             {
                 log.debug("Cannot find bundle " + event.getSubjectID() + "! "
@@ -176,15 +161,14 @@ public class RDFConsumer implements Consumer
                         + "and we'll cover it by a REMOVE event on its item.");
                 return;
             }
-            List<Item> items = bundle.getItems();
+            Item[] items = bundle.getItems();
             for (Item i : items)
             {
-                if (workspaceItemService.findByItem(ctx, i) != null
-                            || workflowItemService.findByItem(ctx, i) != null)
-                    {
-                        log.debug("Ignoring Item " + i.getID() + " as a corresponding workspace or workflow item exists.");
-                        continue;
-                    }
+                if (WorkspaceItem.findByItem(ctx, i) != null)
+                {
+                    log.debug("Ignoring Item " + i.getID() + " as a corresponding workspace item exists.");
+                    continue;
+                }
                 DSOIdentifier id = new DSOIdentifier(i, ctx);
                 if (!this.toDelete.contains(id) && !this.toConvert.contains(id))
                 {
@@ -255,14 +239,11 @@ public class RDFConsumer implements Consumer
             // ignore unfinished submissions here. Every unfinished submission
             // has an workspace item. The item flag "in_archive" doesn't help us
             // here as this is also set to false if a newer version was submitted.
-            if (dso instanceof Item)
+            if (dso instanceof Item
+                    && WorkspaceItem.findByItem(ctx, (Item) dso) != null)
             {
-                if (workspaceItemService.findByItem(ctx, (Item) dso) != null
-                        || workflowItemService.findByItem(ctx, (Item) dso) != null)
-                {
-                    log.debug("Ignoring Item " + dso.getID() + " as a corresponding workspace or workflow item exists.");
-                    return;
-                }
+                log.debug("Ignoring Item " + dso.getID() + " as a corresponding workspace item exists.");
+                return;
             }
 
             DSOIdentifier id = new DSOIdentifier(dso, ctx);
@@ -293,21 +274,17 @@ public class RDFConsumer implements Consumer
         }
     }
     
-    public void consumeSite(Context ctx, Event event) throws SQLException {
+    public void consumeSite(Context ctx, Event event)
+    {
+        // in case a top level community was added or remove.
+        // event type remove won't be thrown until DS-1966 is fixed (f.e. by
+        // merging PR #517).
         if (event.getEventType() == Event.ADD
-                || event.getEventType() == Event.REMOVE
-                || event.getEventType() == Event.MODIFY
-                || event.getEventType() == Event.MODIFY_METADATA)
+                || event.getEventType() == Event.REMOVE)
         {
-            Site site = siteService.findSite(ctx);
-            
             DSOIdentifier id = new DSOIdentifier(Constants.SITE,
-                    site.getID(), site.getHandle(), Arrays.asList(site.getHandle()));
-            
-            if (!this.toConvert.contains(id))
-            {
-                this.toConvert.add(id);
-            }
+                    Site.SITE_ID, Site.getSiteHandle(), new String[] {Site.getSiteHandle()});
+            if (!this.toConvert.contains(id)) this.toConvert.add(id);
             return;
         }
         log.warn("Got an unexpected Event for the SITE. Event type is " 
@@ -320,7 +297,7 @@ public class RDFConsumer implements Consumer
         // create a new context, to be sure to work as anonymous user
         // we don't want to store private data in a triplestore with public
         // SPARQL endpoint.
-        ctx = new Context(Context.Mode.READ_ONLY);
+        ctx = new Context(Context.READ_ONLY);
         if (toDelete == null) 
         {
             log.debug("Deletion queue does not exists, creating empty queue.");
@@ -338,12 +315,12 @@ public class RDFConsumer implements Consumer
                 if (toDelete.contains(id))
                 {
                     log.debug("Skipping " + Constants.typeText[id.type] + " " 
-                            + id.id.toString() + " as it is marked for "
+                            + Integer.toString(id.id) + " as it is marked for "
                             + "deletion as well.");
                     continue;
                 }
                 log.debug("Converting " + Constants.typeText[id.type] + " " 
-                            + id.id.toString() + ".");
+                            + Integer.toString(id.id) + ".");
                 convert(ctx, id);
             }
             log.debug("Conversion ended.");
@@ -357,7 +334,7 @@ public class RDFConsumer implements Consumer
             
             log.debug("Going to delete data from " +
                     Constants.typeText[id.type] + " " 
-                    + id.id.toString() + ".");
+                    + Integer.toString(id.id) + ".");
             delete(ctx, id);
         }
         ctx.abort();
@@ -371,11 +348,11 @@ public class RDFConsumer implements Consumer
         {
             if (id.type == Constants.SITE)
             {
-                m = RDFUtil.convertAndStore(ctx, siteService.findSite(ctx));
+                m = RDFUtil.convertAndStore(ctx, Site.find(ctx, 0));
                 return;
             }
 
-            DSpaceObject dso = ContentServiceFactory.getInstance().getDSpaceObjectService(id.type).find(ctx, id.id);
+            DSpaceObject dso = DSpaceObject.find(ctx, id.type, id.id);
             if (dso == null)
             {
                 log.error("Cannot find " + Constants.typeText[id.type] 
@@ -389,7 +366,7 @@ public class RDFConsumer implements Consumer
         catch(AuthorizeException ex)
         {
             log.debug(Constants.typeText[id.type] + " " + 
-                    id.id.toString() + " couldn't be converted: "
+                    Integer.toString(id.id) + " couldn't be converted: "
                     + "anonymous user doesn't have read permsission. " 
                     + ex.getMessage());
             toDelete.add(id);
@@ -403,26 +380,26 @@ public class RDFConsumer implements Consumer
         {
             log.info("Anonymous user cannot read " 
                     + Constants.typeText[id.type] + " " 
-                    + id.id.toString() 
+                    + Integer.toString(id.id) 
                     + ": deleting it from the triplestore.");
             toDelete.add(id);
         }
         catch (ItemNotDiscoverableException ex)
         {
-            log.info("Item " + id.id.toString() + " is not "
+            log.info("Item " + Integer.toString(id.id) + " is not "
                     + "discoverable: deleting it from the triplestore.");
             toDelete.add(id);
         }
         catch (ItemWithdrawnException ex)
         {
-            log.info("Item " + id.id.toString() + " is withdrawn: "
+            log.info("Item " + Integer.toString(id.id) + " is withdrawn: "
                     + "deleting it from the triplestore.");
             toDelete.add(id);
         }
         catch (RDFMissingIdentifierException ex)
         {
             log.warn("Cannot convert " + Constants.typeText[id.type] 
-                    + " " + id.id.toString() + ", as no RDF "
+                    + " " + Integer.toString(id.id) + ", as no RDF "
                     + "identifier could be generated: "
                     + ex.getMessage(), ex);
         }
@@ -444,7 +421,7 @@ public class RDFConsumer implements Consumer
         catch (RDFMissingIdentifierException ex)
         {
             log.warn("Cannot delete " + Constants.typeText[id.type] + " " 
-                    + id.id.toString() + ": " 
+                    + Integer.toString(id.id) + ": " 
                     + ex.getMessage(), ex);
         }
     }
@@ -453,15 +430,18 @@ public class RDFConsumer implements Consumer
     public void finish(Context ctx) throws Exception {
     }
 
+    @Override
+    public void initialize() throws Exception {
+    }
     
     class DSOIdentifier
     {
         int type;
-        UUID id;
+        int id;
         String handle;
-        List<String> identifiers;
+        String[] identifiers;
         
-        DSOIdentifier(int type, UUID id, String handle, List<String> identifiers)
+        DSOIdentifier(int type, int id, String handle, String[] identifiers)
         {
             this.type = type;
             this.id = id;
@@ -476,30 +456,38 @@ public class RDFConsumer implements Consumer
                     && dso.getType() != Constants.COLLECTION
                     && dso.getType() != Constants.ITEM)
             {
-                throw new IllegalArgumentException(
-                        ContentServiceFactory.getInstance().getDSpaceObjectService(dso).getTypeText(dso)
-                                + " is currently not supported as independent entity by dspace-rdf.");
+                throw new IllegalArgumentException("Provided DSpaceObject does"
+                        + " not have a handle!");
             }
             this.type = dso.getType();
             this.id = dso.getID();
             this.handle = dso.getHandle();
-            this.identifiers = ContentServiceFactory.getInstance().getDSpaceObjectService(dso).getIdentifiers(ctx, dso);
+            this.identifiers = dso.getIdentifiers(ctx);
         }
         
         @Override
         public boolean equals(Object o)
         {
             if (!(o instanceof DSOIdentifier)) return false;
-            // Cast o to DSOIdentifier and compare the UUIDs for equality.
-            return this.id.equals(((DSOIdentifier) o).id);
+            DSOIdentifier dsoId = (DSOIdentifier) o;
+            
+            /*
+            log.warn("Testing if " + Constants.typeText[this.type] + " " 
+                    + Integer.toString(this.id) + " and " 
+                    + Constants.typeText[dsoId.type] + " " 
+                    + Integer.toString(dsoId.id) + " are equal.");
+            */
+            return (this.type == dsoId.type && this.id == dsoId.id);
         }
         
         @Override
         public int hashCode()
         {
-            // as at least up to DSpace version 5.3 DSpaceObjectType is a 
+            /* log.debug("Created hash " + Integer.toString(this.type + (10*this.id)));*/
+
+            // as at least up to DSpace version 4.1 DSpaceObjectType is a 
             // one-digit number, this should produce an distinct hash.
-            return this.type + (10*this.id.hashCode());
+            return this.type + (10*this.id);
         }
     }
 }

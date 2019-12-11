@@ -8,10 +8,7 @@
 package org.dspace.content.authority;
 
 import java.io.IOException;
-
-import org.dspace.content.Collection;
-import org.dspace.AbstractDSpaceTest;
-import org.dspace.core.factory.CoreServiceFactory;
+import org.dspace.core.PluginManager;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import org.junit.*;
@@ -21,7 +18,7 @@ import org.junit.*;
  *
  * @author mwood
  */
-public class DSpaceControlledVocabularyTest extends AbstractDSpaceTest
+public class DSpaceControlledVocabularyTest
 {
     public DSpaceControlledVocabularyTest()
     {
@@ -78,15 +75,15 @@ public class DSpaceControlledVocabularyTest extends AbstractDSpaceTest
         // Ensure that 'id' attribute is optional
         String field = null; // not used
         String text = "north 40";
-        Collection collection = null;
+        int collection = 0;
         int start = 0;
         int limit = 0;
         String locale = null;
         // This "farm" Controlled Vocab is included in TestEnvironment data 
         // (under /src/test/data/dspaceFolder/) and it should be auto-loaded
-        // by test configs in /src/test/data/dspaceFolder/config/local.cfg
+        // by test configs in /src/test/data/dspace.cfg.more
         DSpaceControlledVocabulary instance = (DSpaceControlledVocabulary)
-                CoreServiceFactory.getInstance().getPluginService().getNamedPlugin(Class.forName(PLUGIN_INTERFACE), "farm");
+                PluginManager.getNamedPlugin(Class.forName(PLUGIN_INTERFACE), "farm");
         assertNotNull(instance);
         Choices result = instance.getMatches(field, text, collection, start,
                 limit, locale);

@@ -16,13 +16,11 @@ import com.ibm.icu.text.Normalizer;
  */
 public class DecomposeDiactritics implements TextFilter
 {
-    @Override
     public String filter(String str)
     {
         return Normalizer.normalize(str, Normalizer.NFD);
     }
 
-    @Override
     public String filter(String str, String lang)
     {
         return Normalizer.normalize(str, Normalizer.NFD);

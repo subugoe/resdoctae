@@ -20,12 +20,10 @@ import org.dspace.core.Constants;
  *   Lacking a spec or full documentation for the file format, 
  *   it looks from the source code that the ordering or elements is not fixed
  * 
- *   e.g.:
- *      {@code
+ *   e.g.:    
  *      48217870-MIT.pdf\tbundle: bundlename\tpermissions: -r 'MIT Users'\tdescription: Full printable version (MIT only)
  *      permissions: -[r|w] ['group name']
  *      description: <the description of the file>
- *      }
  * 
  *
  */
@@ -43,7 +41,7 @@ public class ContentsEntry
 	final int permissionsActionId;
 	final String description;
 	
-	protected ContentsEntry(String filename,
+	private ContentsEntry(String filename, 
 			             String bundlename,
 			             int permissionsActionId,
 			             String permissionsGroupName,
@@ -59,9 +57,9 @@ public class ContentsEntry
 	/**
 	 *   Factory method parses a line from the Contents Entry file
 	 *   
-	 * @param line line as string
+	 * @param line
 	 * @return the parsed ContentsEntry object 
-	 * @throws ParseException if parse error
+	 * @throws ParseException
 	 */
 	public static ContentsEntry parse(String line)
 	throws ParseException

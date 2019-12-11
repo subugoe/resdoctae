@@ -8,17 +8,13 @@
 package org.dspace.app.itemupdate;
 
 import java.sql.SQLException;
-import java.util.List;
 
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataSchema;
 
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataFieldService;
-import org.dspace.content.service.MetadataSchemaService;
 import org.dspace.core.Context;
 
 /**
@@ -26,22 +22,18 @@ import org.dspace.core.Context;
  *
  */
 public class AddMetadataAction extends UpdateMetadataAction {
-
-    protected MetadataSchemaService metadataSchemaService = ContentServiceFactory.getInstance().getMetadataSchemaService();
-    protected MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-
+	
 	/**
-	 *  Adds metadata specified in the source archive
+	 * 	Adds metadata specified in the source archive
 	 * 
-	 *  @param context DSpace Context
-	 *  @param itarch item archive
-	 *  @param isTest test flag
-	 *  @param suppressUndo undo flag
-	 *  @throws AuthorizeException if authorization error
-	 *  @throws SQLException if database error
+	 *  @param context
+	 *  @param itarch
+	 *  @param isTest
+	 *  @param suppressUndo
+	 *  @throws AuthorizeException
+	 *  @throws SQLException
 	 */
-	@Override
-    public void execute(Context context, ItemArchive itarch, boolean isTest,
+	public void execute(Context context, ItemArchive itarch, boolean isTest,
             boolean suppressUndo) throws AuthorizeException, SQLException
 	{
 		Item item = itarch.getItem();
@@ -55,13 +47,13 @@ public class AddMetadataAction extends UpdateMetadataAction {
 				{
 					// match against metadata for this field/value in repository
 					// qualifier must be strictly matched, possibly null					
-					List<MetadataValue> ardcv = null;
-					ardcv = itemService.getMetadata(item, dtom.schema, dtom.element, dtom.qualifier, Item.ANY);
+					Metadatum[] ardcv = null;
+					ardcv = item.getMetadata(dtom.schema, dtom.element, dtom.qualifier, Item.ANY);
 					
 					boolean found = false;
-					for (MetadataValue dcv : ardcv)
+					for (Metadatum dcv : ardcv)
 					{
-						if (dcv.getValue().equals(dtom.value))
+						if (dcv.value.equals(dtom.value))
 						{
 							found = true;
 							break;
@@ -80,7 +72,7 @@ public class AddMetadataAction extends UpdateMetadataAction {
 							ItemUpdate.pr("Metadata to add: " + dtom.toString());
 							   //validity tests that would occur in actual processing
 	        	            // If we're just test the import, let's check that the actual metadata field exists.
-	        	        	MetadataSchema foundSchema = metadataSchemaService.find(context, dtom.schema);
+	        	        	MetadataSchema foundSchema = MetadataSchema.find(context, dtom.schema);
 	        	        	
 	        	        	if (foundSchema == null)
 	        	        	{
@@ -89,7 +81,8 @@ public class AddMetadataAction extends UpdateMetadataAction {
 	        	        	}
 	        	        	else
 	        	        	{
-		        	        	MetadataField foundField = metadataFieldService.findByElement(context, foundSchema, dtom.element, dtom.qualifier);
+		        	        	int schemaID = foundSchema.getSchemaID();
+		        	        	MetadataField foundField = MetadataField.findByElement(context, schemaID, dtom.element, dtom.qualifier);
 		        	        	
 		        	        	if (foundField == null)
 		        	        	{
@@ -100,7 +93,7 @@ public class AddMetadataAction extends UpdateMetadataAction {
 						}
 						else
 						{
-							itemService.addMetadata(context, item, dtom.schema, dtom.element, dtom.qualifier, dtom.language, dtom.value);
+							item.addMetadata(dtom.schema, dtom.element, dtom.qualifier, dtom.language, dtom.value);
 							ItemUpdate.pr("Metadata added: " + dtom.toString());
 	
 							if (!suppressUndo)
@@ -109,12 +102,10 @@ public class AddMetadataAction extends UpdateMetadataAction {
 								//ItemUpdate.pr("Undo metadata: " + dtom);
 								
 								// add all as a replace record to be preceded by delete
-								for (MetadataValue dcval : ardcv)
-								{
-                                    MetadataField metadataField = dcval.getMetadataField();
-                                    MetadataSchema metadataSchema = metadataField.getMetadataSchema();
-                                    itarch.addUndoMetadataField(DtoMetadata.create(metadataSchema.getName(), metadataField.getElement(),
-                                            metadataField.getQualifier(), dcval.getLanguage(), dcval.getValue()));
+								for (Metadatum dcval : ardcv)
+								{							
+									itarch.addUndoMetadataField(DtoMetadata.create(dcval.schema, dcval.element, 
+											dcval.qualifier, dcval.language, dcval.value));
 								}
 								
 							}

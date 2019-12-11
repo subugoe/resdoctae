@@ -8,35 +8,30 @@
 package org.dspace.sword2;
 
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.content.InProgressSubmission;
 import org.dspace.content.Item;
 import org.dspace.content.WorkspaceItem;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.WorkspaceItemService;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.dspace.workflow.WorkflowException;
+import org.dspace.storage.rdbms.DatabaseManager;
+import org.dspace.storage.rdbms.TableRow;
+import org.dspace.storage.rdbms.TableRowIterator;
 import org.dspace.workflow.WorkflowItem;
-import org.dspace.workflow.WorkflowItemService;
-import org.dspace.workflow.WorkflowService;
-import org.dspace.workflow.factory.WorkflowServiceFactory;
+import org.dspace.workflow.WorkflowManager;
+import org.dspace.xmlworkflow.WorkflowConfigurationException;
+import org.dspace.xmlworkflow.WorkflowException;
+import org.dspace.xmlworkflow.XmlWorkflowManager;
+import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
 
+import javax.mail.MessagingException;
 import java.io.IOException;
 import java.sql.SQLException;
 
 public class WorkflowTools
 {
-    protected WorkspaceItemService workspaceItemService = ContentServiceFactory
-            .getInstance().getWorkspaceItemService();
-
-    protected WorkflowItemService workflowItemService = WorkflowServiceFactory
-            .getInstance().getWorkflowItemService();
-
-    protected WorkflowService workflowService = WorkflowServiceFactory
-            .getInstance().getWorkflowService();
-
     /**
      * Is the given item in the DSpace workflow?
-     * <p>
+     *
      * This method queries the database directly to determine if this is the
      * case rather than using the DSpace API (which is very slow).
      *
@@ -49,7 +44,11 @@ public class WorkflowTools
     {
         try
         {
-            return workflowItemService.findByItem(context, item) != null;
+            if(ConfigurationManager.getProperty("workflow","workflow.framework").equals("xmlworkflow")){
+                return XmlWorkflowItem.findByItem(context, item) != null;
+            }else{
+                return WorkflowItem.findByItem(context, item) != null;
+            }
         }
         catch (SQLException e)
         {
@@ -59,7 +58,7 @@ public class WorkflowTools
 
     /**
      * Is the given item in a DSpace workspace?
-     * <p>
+     *
      * This method queries the database directly to determine if this is the
      * case rather than using the DSpace API (which is very slow).
      *
@@ -72,7 +71,7 @@ public class WorkflowTools
     {
         try
         {
-            return workspaceItemService.findByItem(context, item) != null;
+            return WorkspaceItem.findByItem(context, item) != null;
         }
         catch (SQLException e)
         {
@@ -82,7 +81,7 @@ public class WorkflowTools
 
     /**
      * Obtain the WorkflowItem object which wraps the given Item.
-     * <p>
+     *
      * This method queries the database directly to determine if this is the
      * case rather than using the DSpace API (which is very slow).
      *
@@ -90,12 +89,16 @@ public class WorkflowTools
      * @param item
      * @throws DSpaceSwordException
      */
-    public WorkflowItem getWorkflowItem(Context context, Item item)
+    public InProgressSubmission getWorkflowItem(Context context, Item item)
             throws DSpaceSwordException
     {
         try
         {
-            return workflowItemService.findByItem(context, item);
+            if(ConfigurationManager.getProperty("workflow","workflow.framework").equals("xmlworkflow")){
+                return XmlWorkflowItem.findByItem(context, item);
+            }else{
+                return WorkflowItem.findByItem(context, item);
+            }
         }
         catch (SQLException e)
         {
@@ -105,7 +108,7 @@ public class WorkflowTools
 
     /**
      * Obtain the WorkspaceItem object which wraps the given Item.
-     * <p>
+     *
      * This method queries the database directly to determine if this is the
      * case rather than using the DSpace API (which is very slow).
      *
@@ -118,7 +121,7 @@ public class WorkflowTools
     {
         try
         {
-            return workspaceItemService.findByItem(context, item);
+            return WorkspaceItem.findByItem(context, item);
         }
         catch (SQLException e)
         {
@@ -141,19 +144,37 @@ public class WorkflowTools
             WorkspaceItem wsi = this.getWorkspaceItem(context, item);
 
             // kick off the workflow
-            boolean notify = ConfigurationManager
-                    .getBooleanProperty("swordv2-server", "workflow.notify");
-            if (notify)
-            {
-                workflowService.start(context, wsi);
-            }
-            else
-            {
-                workflowService.startWithoutNotify(context, wsi);
+            boolean notify = ConfigurationManager.getBooleanProperty("swordv2-server", "workflow.notify");
+            if (ConfigurationManager.getProperty("workflow", "workflow.framework").equals("xmlworkflow")) {
+                if (notify) {
+                    XmlWorkflowManager.start(context, wsi);
+                } else {
+                    XmlWorkflowManager.startWithoutNotify(context, wsi);
+                }
+            } else {
+                if (notify) {
+                    WorkflowManager.start(context, wsi);
+                } else {
+                    WorkflowManager.startWithoutNotify(context, wsi);
+                }
             }
         }
-        catch (SQLException | WorkflowException | IOException | AuthorizeException e)
+        catch (SQLException e)
         {
+            throw new DSpaceSwordException(e);
+        }
+        catch (AuthorizeException e)
+        {
+            throw new DSpaceSwordException(e);
+        }
+        catch (IOException e)
+        {
+            throw new DSpaceSwordException(e);
+        } catch (WorkflowException e) {
+            throw new DSpaceSwordException(e);
+        } catch (WorkflowConfigurationException e) {
+            throw new DSpaceSwordException(e);
+        } catch (MessagingException e) {
             throw new DSpaceSwordException(e);
         }
     }
@@ -170,15 +191,28 @@ public class WorkflowTools
         try
         {
             // find the item in the workflow if it exists
-            WorkflowItem wfi = this.getWorkflowItem(context, item);
+            InProgressSubmission wfi = this.getWorkflowItem(context, item);
 
             // abort the workflow
             if (wfi != null)
             {
-                workflowService.abort(context, wfi, context.getCurrentUser());
+                if(wfi instanceof WorkflowItem)
+                {
+                    WorkflowManager.abort(context, (WorkflowItem) wfi, context.getCurrentUser());
+                }else{
+                    XmlWorkflowManager.abort(context, (XmlWorkflowItem) wfi, context.getCurrentUser());
+                }
             }
         }
-        catch (SQLException | AuthorizeException | IOException e)
+        catch (SQLException e)
+        {
+            throw new DSpaceSwordException(e);
+        }
+        catch (AuthorizeException e)
+        {
+            throw new DSpaceSwordException(e);
+        }
+        catch (IOException e)
         {
             throw new DSpaceSwordException(e);
         }

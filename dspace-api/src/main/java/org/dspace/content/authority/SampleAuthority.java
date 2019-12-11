@@ -7,15 +7,13 @@
  */
 package org.dspace.content.authority;
 
-import org.dspace.content.Collection;
-
 /**
  * This is a *very* stupid test fixture for authority control, and also
  * serves as a trivial example of an authority plugin implementation.
  */
 public class SampleAuthority implements ChoiceAuthority
 {
-    protected static String values[] = {
+    private static String values[] = {
         "sun",
         "mon",
         "tue",
@@ -25,7 +23,7 @@ public class SampleAuthority implements ChoiceAuthority
         "sat"
     };
 
-    protected static String labels[] = {
+    private static String labels[] = {
         "Sunday",
         "Monday",
         "Tuesday",
@@ -35,8 +33,7 @@ public class SampleAuthority implements ChoiceAuthority
         "Saturday"
     };
 
-    @Override
-    public Choices getMatches(String field, String query, Collection collection, int start, int limit, String locale)
+    public Choices getMatches(String field, String query, int collection, int start, int limit, String locale)
     {
         int dflt = -1;
         Choice v[] = new Choice[values.length];
@@ -51,8 +48,7 @@ public class SampleAuthority implements ChoiceAuthority
         return new Choices(v, 0, v.length, Choices.CF_AMBIGUOUS, false, dflt);
     }
 
-    @Override
-    public Choices getBestMatch(String field, String text, Collection collection, String locale)
+    public Choices getBestMatch(String field, String text, int collection, String locale)
     {
         for (int i = 0; i < values.length; ++i)
         {
@@ -66,7 +62,6 @@ public class SampleAuthority implements ChoiceAuthority
         return new Choices(Choices.CF_NOTFOUND);
     }
 
-    @Override
     public String getLabel(String field, String key, String locale)
     {
         return labels[Integer.parseInt(key)];

@@ -24,11 +24,11 @@
 
 <%@ page import="org.dspace.app.webui.servlet.MyDSpaceServlet" %>
 <%@ page import="org.dspace.eperson.EPerson" %>
-<%@ page import="org.dspace.workflowbasic.BasicWorkflowItem" %>
+<%@ page import="org.dspace.workflow.WorkflowItem" %>
 
 <%
-    BasicWorkflowItem workflowItem =
-        (BasicWorkflowItem) request.getAttribute("workflow.item");
+    WorkflowItem workflowItem =
+        (WorkflowItem) request.getAttribute("workflow.item");
 %>
 
 <dspace:layout style="submission" locbar="link"

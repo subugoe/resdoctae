@@ -20,22 +20,22 @@ import org.dspace.app.xmlui.wing.Message;
  * and returns an object of type FlowResult, then the flow script can inspect
  * the results object to determine what the next course of action is.
  * 
- * <p>Basically, this results object stores all the errors and continuation states
+ * Basically, this results object stores all the errors and continuation states
  * that need to be represented. There are four types of information stored:
  * 
- * <p>1) Continuation, this is a simple boolean variable that indicates whether
+ * 1) Continuation, this is a simple boolean variable that indicates whether
  * the required operation is complete and the user may continue on to the next step.
  * 
- * <p>2) Notice information, this is a simple encoding of a notice message to be displayed
+ * 2) Notice information, this is a simple encoding of a notice message to be displayed
  * to the user on their next step. There are four parts: outcome, header, message, and
  * characters. See each field for more description on each part. Note: either a message
  * or characters are required.
  * 
- * <p>3) Errors, this is a list of errors that were encountered during processing.
+ * 3) Errors, this is a list of errors that were encountered during processing. 
  * Typically, it just consists of a list of errored fields. However occasionally there 
  * may be other specialized errors listed.
  * 
- * <p>4) Parameters, this is a map of attached parameters that may be relevant to the
+ * 4) Parameters, this is a map of attached parameters that may be relevant to the 
  * result. This should be used for things such as generated id's when objects are newly
  * created.
  * 
@@ -45,7 +45,7 @@ public class FlowResult {
 
 	/**
 	 * Determine whether the operation has been completed enough that the user
-	 * may successfully continue on to the next step.
+	 * may successufully continue on to the next step.
 	 */
 	private boolean continuep;
 	
@@ -73,6 +73,7 @@ public class FlowResult {
 	 */
 	private List<String> errors;
 	
+	
 	/**
 	 * Any parameters that may be attached to this result.
 	 */
@@ -81,7 +82,6 @@ public class FlowResult {
 	/**
 	 * Set the continuation parameter determining if the
 	 * user should progress to the next step in the flow.
-     * @param continuep true if should continue.
 	 */
 	public void setContinue(boolean continuep)
 	{
@@ -123,7 +123,6 @@ public class FlowResult {
 	/**
 	 * Get the notice outcome in string form, either success 
 	 * or failure. If the outcome is neutral then null is returned.
-     * @return the outcome.
 	 */
 	public String getOutcome()
 	{
@@ -142,7 +141,6 @@ public class FlowResult {
 	 * Set the notice header.
 	 * 
 	 * This must be an i18n dictionary key
-     * @param header the header.
 	 */
 	public void setHeader(Message header)
 	{
@@ -150,8 +148,7 @@ public class FlowResult {
 	}
 	
 	/**
-	 * Return the notice header.
-     * @return the header.
+	 * Return the notice header
 	 */
 	public String getHeader()
 	{
@@ -163,10 +160,9 @@ public class FlowResult {
 	}
 	
 	/**
-	 * Set the notice message.
+	 * Set the notice message
 	 * 
-	 * This must be an i18n dictionary key.
-     * @param message the message.
+	 * This must be an i18n dictionary key
 	 */
 	public void setMessage(Message message)
 	{
@@ -174,8 +170,7 @@ public class FlowResult {
 	}
 	
 	/**
-	 * return the notice message.
-     * @return the notice.
+	 * return the notice message
 	 */
 	public String getMessage()
 	{
@@ -187,8 +182,7 @@ public class FlowResult {
 	}
 	
 	/**
-	 * Set the notice characters.
-     * @param characters the notice.
+	 * Set the notice characters
 	 */
 	public void setCharacters(String characters)
 	{
@@ -197,7 +191,6 @@ public class FlowResult {
 	
 	/**
 	 * Return the notice characters
-     * @return the notice.
 	 */
 	public String getCharacters()
 	{
@@ -223,7 +216,7 @@ public class FlowResult {
 	{
 		if (this.errors == null)
         {
-            this.errors = new ArrayList<>();
+            this.errors = new ArrayList<String>();
         }
 		
 		this.errors.add(newError);
@@ -231,7 +224,6 @@ public class FlowResult {
 	
 	/**
 	 * Return the current list of errors.
-     * @return a list of errors.
 	 */
 	public List<String> getErrors()
 	{
@@ -241,11 +233,10 @@ public class FlowResult {
 	/**
 	 * Return the list of errors in string form, i.e. a comma-separated list
 	 * of errors. If there are no errors then null is returned.
-     * @return a list of errors.
 	 */
 	public String getErrorString()
 	{
-		if (errors == null || errors.isEmpty())
+		if (errors == null || errors.size() == 0)
         {
             return null;
         }
@@ -268,8 +259,8 @@ public class FlowResult {
 	
 	/**
 	 * Attach a new parameter to this result object with the specified
-	 * name and value.
-	 *
+	 * name & value.
+	 * 
 	 * @param name The parameter's name
 	 * @param value The parameter's value.
 	 */
@@ -277,7 +268,7 @@ public class FlowResult {
 	{
 		if (this.parameters == null)
         {
-            this.parameters = new HashMap<>();
+            this.parameters = new HashMap<String, Object>();
         }
 		
 		this.parameters.put(name, value);

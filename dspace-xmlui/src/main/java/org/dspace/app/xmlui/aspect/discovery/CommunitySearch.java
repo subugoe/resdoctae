@@ -10,7 +10,6 @@ package org.dspace.app.xmlui.aspect.discovery;
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.SQLException;
-import java.util.List;
 
 import org.apache.cocoon.caching.CacheableProcessingComponent;
 import org.apache.cocoon.util.HashUtil;
@@ -111,19 +110,19 @@ public class CommunitySearch extends AbstractDSpaceTransformer implements Cachea
 	            community = (Community) dso;
 
 	            DSpaceValidity validity = new DSpaceValidity();
-	            validity.add(context, community);
+	            validity.add(community);
 
-	            List<Community> subCommunities = community.getSubcommunities();
-	            List<Collection> collections = community.getCollections();
+	            Community[] subCommunities = community.getSubcommunities();
+	            Collection[] collections = community.getCollections();
 	            // Sub communities
 	            for (Community subCommunity : subCommunities)
 	            {
-	                validity.add(context, subCommunity);
+	                validity.add(subCommunity);
 	            }
 	            // Sub collections
 	            for (Collection collection : collections)
 	            {
-	                validity.add(context, collection);
+	                validity.add(collection);
 	            }
 
 	            this.validity = validity.complete();
@@ -169,7 +168,7 @@ public class CommunitySearch extends AbstractDSpaceTransformer implements Cachea
 
         // Build the community viewer division.
         Division home = body.addDivision("community-home", "primary repository community");
-        String name = community.getName();
+        String name = community.getMetadata("name");
         if (name == null || name.length() == 0)
         {
             home.setHead(T_untitled);

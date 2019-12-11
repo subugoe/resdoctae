@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.group;
 
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.aspect.administrative.FlowGroupUtils;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
@@ -27,12 +26,7 @@ import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 
 /**
  * Manage groups page is the entry point for group management. From here the user
@@ -97,10 +91,6 @@ public class ManageGroupsMain
     /** The maximum size of a collection or community name allowed */
     private static final int MAX_COLLECTION_OR_COMMUNITY_NAME = 30;
 
-    protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-   	protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-
     public void addPageMeta(PageMeta pageMeta)
             throws WingException
     {
@@ -115,11 +105,11 @@ public class ManageGroupsMain
         // Get all our parameters
         String baseURL = contextPath + "/admin/groups?administrative-continue="
                 + knot.getId();
-        String query = decodeFromURL(parameters.getParameter("query", null));
+        String query = decodeFromURL(parameters.getParameter("query", ""));
         int page = parameters.getParameterAsInteger("page", 0);
-        String highlightID = parameters.getParameter("highlightID", null);
-        int resultCount = groupService.searchResultCount(context, query);
-        java.util.List<Group> groups = groupService.search(context, query, page * PAGE_SIZE,
+        int highlightID = parameters.getParameterAsInteger("highlightID", -1);
+        int resultCount = Group.searchResultCount(context, query);
+        Group[] groups = Group.search(context, query, page * PAGE_SIZE,
                 PAGE_SIZE);
 
 
@@ -165,7 +155,7 @@ public class ManageGroupsMain
         {
             // If there are enough results then paginate the results
             int firstIndex = page * PAGE_SIZE + 1;
-            int lastIndex = page * PAGE_SIZE + groups.size();
+            int lastIndex = page * PAGE_SIZE + groups.length;
 
             String nextURL = null, prevURL = null;
             if (page < (resultCount / PAGE_SIZE))
@@ -182,7 +172,7 @@ public class ManageGroupsMain
         }
 
 
-        Table table = search.addTable("groups-search-table", groups.size() + 1,
+        Table table = search.addTable("groups-search-table", groups.length + 1,
                 1);
         Row header = table.addRow(Row.ROLE_HEADER);
         header.addCell().addContent(T_search_column1);
@@ -194,7 +184,7 @@ public class ManageGroupsMain
         for (Group group : groups)
         {
             Row row;
-            if (group.getID().toString().equals(highlightID))
+            if (group.getID() == highlightID)
             {
                 row = table.addRow(null, null, "highlight");
             }
@@ -203,11 +193,11 @@ public class ManageGroupsMain
                 row = table.addRow();
             }
 
-            if (group.getID() != null)
+            if (group.getID() > 1)
             {
                 CheckBox select = row.addCell().addCheckBox("select_group");
-                select.setLabel(group.getID().toString());
-                select.addOption(group.getID().toString());
+                select.setLabel(Integer.valueOf(group.getID()).toString());
+                select.addOption(Integer.valueOf(group.getID()).toString());
             }
             else
             {
@@ -216,12 +206,12 @@ public class ManageGroupsMain
                 row.addCell();
             }
 
-            row.addCell().addContent(group.getID().toString());
+            row.addCell().addContent(group.getID());
             row.addCell().addXref(baseURL + "&submit_edit&groupID="
                     + group.getID(), group.getName());
 
-            int memberCount = group.getMembers().size()
-                    + group.getMemberGroups().size();
+            int memberCount = group.getMembers().length
+                    + group.getMemberGroups().length;
             row.addCell().addContent(memberCount == 0 ? "-" : String.valueOf(
                     memberCount));
 
@@ -229,26 +219,26 @@ public class ManageGroupsMain
             String groupName = group.getName();
             DSpaceObject collectionOrCommunity = null;
             String collectionOrCommunityName = null;
-            UUID id;
-            id = FlowGroupUtils.getCollectionId(context, groupName);
-            if (id != null)
+            int id;
+            id = FlowGroupUtils.getCollectionId(groupName);
+            if (id > -1)
             {
-                Collection collection = collectionService.find(context, id);
+                Collection collection = Collection.find(context, id);
                 if (collection != null)
                 {
-                    collectionOrCommunityName = collection.getName();
+                    collectionOrCommunityName = collection.getMetadata("name");
                     collectionOrCommunity = collection;
                 }
             }
             else
             {
-                id = FlowGroupUtils.getCommunityId(context, groupName);
-                if (id != null)
+                id = FlowGroupUtils.getCommunityId(groupName);
+                if (id > -1)
                 {
-                    Community community = communityService.find(context, id);
+                    Community community = Community.find(context, id);
                     if (community != null)
                     {
-                        collectionOrCommunityName = community.getName();
+                        collectionOrCommunityName = community.getMetadata("name");
                         collectionOrCommunity = community;
                     }
                 }
@@ -278,7 +268,7 @@ public class ManageGroupsMain
 
         }
 
-        if (groups.size() <= 0)
+        if (groups.length <= 0)
         {
             Cell cell = table.addRow().addCell(1, 5);
             cell.addHighlight("italic").addContent(T_no_results);

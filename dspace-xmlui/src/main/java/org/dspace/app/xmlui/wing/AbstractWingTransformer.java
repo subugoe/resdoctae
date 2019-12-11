@@ -80,7 +80,6 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * framework. It must be called after the component's setup has been called
      * and the implementing object setup.
      * 
-     * @throws org.dspace.app.xmlui.wing.WingException if setup is impossible.
      */
     public void setupWing() throws WingException
     {
@@ -90,14 +89,12 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
         this.wingContext.setObjectManager(this.getObjectManager());
 
         feederDocument = this.createWingDocument(wingContext);
-        this.stack = new Stack<>();
+        this.stack = new Stack<WingMergeableElement>();
     }
 
     /**
      * Receive notification of the beginning of a document.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void startDocument() throws SAXException
     {
         needNewNamespaceContext = true;
@@ -108,9 +105,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
 
     /**
      * Receive notification of the end of a document.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void endDocument() throws SAXException
     {
         wingContext.dispose();
@@ -124,9 +119,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      *            The Namespace prefix being declared.
      * @param uri
      *            The Namespace URI the prefix is mapped to.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void startPrefixMapping(String prefix, String uri)
             throws SAXException
     {
@@ -145,9 +138,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * 
      * @param prefix
      *            The prefix that was being mapping.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void endPrefixMapping(String prefix) throws SAXException
     {
         if (!needNewNamespaceContext)
@@ -174,9 +165,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * @param attributes
      *            The attributes attached to the element. If there are no
      *            attributes, it shall be an empty Attributes object.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void startElement(String namespaceURI, String localName,
             String qName, Attributes attributes) throws SAXException
     {
@@ -192,7 +181,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
             
             // Deal with the stack jump start issue of having a document all
             // ready on the stack.
-            if (stack.isEmpty())
+            if (stack.size() == 0)
             {
                 if (feederDocument.mergeEqual(namespaceURI, localName, qName,
                         attributes))
@@ -274,9 +263,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * @param qName
      *            The raw XML 1.0 name (with prefix), or the empty string if raw
      *            names are not available.
-     * @throws org.xml.sax.SAXException if document is malformed.
      */
-    @Override
     public void endElement(String namespaceURI, String localName, String qName)
             throws SAXException
     {
@@ -313,13 +300,12 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * 
      * @param e
      *            The thrown exception
-     * @throws org.xml.sax.SAXException unconditionally.
      */
 
     protected void handleException(Exception e) throws SAXException
     {
         throw new SAXException(
-                "An error was encountered while processing the Wing based component: "
+                "An error was incountered while processing the Wing based component: "
                         + this.getClass().getName(), e);
     }
 
@@ -328,8 +314,6 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
      * 
      * @param wingContext
      *            The current wing context this transformer is operating under.
-     * @return an empty document.
-     * @throws org.dspace.app.xmlui.wing.WingException if it can't.
      */
     protected WingDocument createWingDocument(WingContext wingContext)
             throws WingException
@@ -337,44 +321,23 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
         return new WingDocument(wingContext);
     }
 
-    /** Abstract implementations of WingTransformer.
-     * @param body to be added.
-     * @throws java.lang.Exception if something went wrong.
-     */
-    @Override
+    /** Abstract implementations of WingTransformer */
+
     public void addBody(Body body) throws Exception
     {
         // Do nothing
     }
 
-    /**
-     * Abstract implementation of WingTransformer.
-     * @param options to be added.
-     * @throws Exception if something went wrong.
-     */
-    @Override
     public void addOptions(Options options) throws Exception
     {
         // do nothing
     }
 
-    /**
-     * Abstract implementation of WingTransformer.
-     * @param userMeta to be added.
-     * @throws Exception if something went wrong.
-     */
-    @Override
     public void addUserMeta(UserMeta userMeta) throws Exception
     {
         // Do nothing
     }
 
-    /**
-     * Abstract implementation of WingTransformer.
-     * @param pageMeta to be added.
-     * @throws Exception if something went wrong.
-     */
-    @Override
     public void addPageMeta(PageMeta pageMeta) throws Exception
     {
         // Do nothing
@@ -383,7 +346,6 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
     /** 
      * Return the ObjectManager associated with this component. If no 
      * objectManager needed then return null.
-     * @return the ObjectManager, or null.
      */
     public ObjectManager getObjectManager()
     {
@@ -393,9 +355,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
     /**
      * Return the name of this component. Typically the name is just 
      * the class name of the component.
-     * @return the name.
      */
-    @Override
     public String getComponentName()
     {
         return this.getClass().getName();
@@ -404,7 +364,6 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
     /**
      * Return the default i18n message catalogue that should be used 
      * when no others are specified.
-     * @return the default catalog.
      */
     public static String getDefaultMessageCatalogue()
     {
@@ -443,9 +402,8 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
     }
     
     /**
-     * Recycle.
+     * Recyle
      */
-    @Override
     public void recycle() 
     {
         this.namespaces = null;
@@ -456,7 +414,7 @@ public abstract class AbstractWingTransformer extends AbstractTransformer
     }
 
     /**
-     * Dispose.
+     * Dispose
      */
     public void dispose() {
         this.namespaces = null;

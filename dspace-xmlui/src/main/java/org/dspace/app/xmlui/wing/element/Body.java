@@ -21,10 +21,10 @@ import org.xml.sax.helpers.NamespaceSupport;
 
 /**
  * A class representing the page division.
- *
- * <p>The body contains any number of divisions ({@code div} elements) which
- * group content into interactive and non interactive display blocks.
- *
+ * 
+ * The body contains any number of divisions (div elements) which group content
+ * into interactive and non interactive display blocks.
+ * 
  * @author Scott Phillips
  */
 public class Body extends AbstractWingElement implements WingMergeableElement
@@ -36,7 +36,7 @@ public class Body extends AbstractWingElement implements WingMergeableElement
     private boolean merged = false;
 
     /** The divisions contained within this body */
-    private final List<Division> divisions = new ArrayList<>();
+    private List<Division> divisions = new ArrayList<Division>();
 
     /**
      * Generate a new Body framework element. This method will NOT open or close
@@ -46,8 +46,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      * 
      * @param context
      *            (Required) The context this element is contained in.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
     protected Body(WingContext context) throws WingException
     {
@@ -66,8 +64,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return a new division.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
     public Division addDivision(String name, String rend) throws WingException
     {
@@ -87,8 +83,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      *            a local identifier used to differentiate the element from its
      *            siblings
      * @return A new division.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
     public Division addDivision(String name) throws WingException
     {
@@ -116,8 +110,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
      * @return A new division.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
     public Division addInteractiveDivision(String name, String action,
             String method, String rend) throws WingException
@@ -125,6 +117,7 @@ public class Body extends AbstractWingElement implements WingMergeableElement
         Division div = new Division(context, name, action, method, rend);
         divisions.add(div);
         return div;
+
     }
 
     /**
@@ -139,12 +132,7 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      * @param attributes
      *            The element's attributes
      * @return True if it is equivalent.
-     * @throws org.xml.sax.SAXException
-     *            passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
-    @Override
     public boolean mergeEqual(String namespace, String localName, String qName,
             Attributes attributes) throws SAXException, WingException
     {
@@ -152,7 +140,11 @@ public class Body extends AbstractWingElement implements WingMergeableElement
         {
             return false;
         }
-        return E_BODY.equals(localName);
+        if (!E_BODY.equals(localName))
+        {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -167,12 +159,7 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      * @param attributes
      *            The element's attributes
      * @return the matching Division, or null.
-     * @throws org.xml.sax.SAXException
-     *            passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException
-     *            passed through.
      */
-    @Override
     public WingMergeableElement mergeChild(String namespace, String localName,
             String qName, Attributes attributes)
 	throws SAXException, WingException
@@ -195,10 +182,7 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      * 
      * @param attributes
      *            The to-be-merged attributes
-     * @throws org.xml.sax.SAXException never.
-     * @throws org.dspace.app.xmlui.wing.WingException never.
      */
-    @Override
     public Attributes merge(Attributes attributes) throws SAXException,
             WingException
     {
@@ -219,7 +203,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler,
             LexicalHandler lexicalHandler, NamespaceSupport namespaces)
             throws SAXException
@@ -243,7 +226,6 @@ public class Body extends AbstractWingElement implements WingMergeableElement
     /**
      * dispose
      */
-    @Override
     public void dispose()
     {
         for (Division division : divisions)

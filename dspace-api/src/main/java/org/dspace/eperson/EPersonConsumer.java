@@ -9,14 +9,11 @@ package org.dspace.eperson;
 
 import org.apache.log4j.Logger;
 import org.dspace.core.*;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
 import org.dspace.event.Consumer;
 import org.dspace.event.Event;
 
 import javax.mail.MessagingException;
 import java.util.Date;
-import java.util.UUID;
 
 /**
  * Class for handling updates to EPersons
@@ -32,14 +29,11 @@ public class EPersonConsumer implements Consumer
     /** log4j logger */
     private static Logger log = Logger.getLogger(EPersonConsumer.class);
 
-    protected EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-
     /**
      * Initalise the consumer
      *
-     * @throws Exception if error
+     * @throws Exception
      */
-    @Override
     public void initialize()
         throws Exception
     {
@@ -51,15 +45,14 @@ public class EPersonConsumer implements Consumer
      *
      * @param context
      * @param event
-     * @throws Exception if error
+     * @throws Exception
      */
-    @Override
     public void consume(Context context, Event event)
         throws Exception
     {
         int st = event.getSubjectType();
         int et = event.getEventType();
-        UUID id = event.getSubjectID();
+        int id = event.getSubjectID();
 
         switch (st)
         {
@@ -78,7 +71,7 @@ public class EPersonConsumer implements Consumer
                     {
                         try
                         {
-                            EPerson eperson = ePersonService.find(context, id);
+                            EPerson eperson = EPerson.find(context, id);
                             Email adminEmail = Email.getEmail(I18nUtil.getEmailFilename(context.getCurrentLocale(), "registration_notify"));
                             adminEmail.addRecipient(notifyRecipient);
 
@@ -116,9 +109,8 @@ public class EPersonConsumer implements Consumer
      * Handle the end of the event
      *
      * @param ctx
-     * @throws Exception if error
+     * @throws Exception
      */
-    @Override
     public void end(Context ctx)
         throws Exception
     {
@@ -130,7 +122,6 @@ public class EPersonConsumer implements Consumer
      *
      * @param ctx
      */
-    @Override
     public void finish(Context ctx)
     {
 

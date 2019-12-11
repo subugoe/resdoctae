@@ -1,4 +1,3 @@
-<%@ page import="java.util.UUID" %>
 <%--
 
     The contents of this file are subject to the license and copyright
@@ -23,7 +22,7 @@
 
 
 <%
-    UUID itemID = (UUID)request.getAttribute("itemID");
+    Integer itemID = (Integer)request.getAttribute("itemID");	
 	request.setAttribute("LanguageSwitch", "hide");
 %>
 

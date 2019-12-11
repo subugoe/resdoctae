@@ -9,23 +9,22 @@ package org.dspace.app.webui.servlet;
 
 import java.io.IOException;
 import java.sql.SQLException;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
+
 import org.dspace.app.webui.util.Authenticate;
 import org.dspace.app.webui.util.JSPManager;
-import org.dspace.authenticate.AuthenticationMethod;
-import org.dspace.authenticate.factory.AuthenticateServiceFactory;
-import org.dspace.authenticate.service.AuthenticationService;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
+import org.dspace.authenticate.AuthenticationManager;
+import org.dspace.authenticate.AuthenticationMethod;
 
 /**
- * Shibbolize DSpace. Follow instruction at
+ * Shibbolize dspace. Follow instruction at 
  * http://mams.melcoe.mq.edu.au/zope/mams/pubs/Installation/dspace15
  *
  * Pull information from the header as released by Shibboleth target.
@@ -44,12 +43,8 @@ import org.dspace.core.LogManager;
  */
 public class ShibbolethServlet extends DSpaceServlet {
     /** log4j logger */
-    private static final Logger log = Logger.getLogger(ShibbolethServlet.class);
+    private static Logger log = Logger.getLogger(ShibbolethServlet.class);
     
-    private final transient AuthenticationService authenticationService
-             = AuthenticateServiceFactory.getInstance().getAuthenticationService();
-    
-    @Override
     protected void doDSGet(Context context,
             HttpServletRequest request,
             HttpServletResponse response)
@@ -66,9 +61,21 @@ public class ShibbolethServlet extends DSpaceServlet {
         String jsp = null;
         
         // Locate the eperson
-        int status = authenticationService.authenticate(context, null, null, null, request);
+        int status = AuthenticationManager.authenticate(context, null, null, null, request);
         
         if (status == AuthenticationMethod.SUCCESS){
+            try {
+                // the AuthenticationManager updates the last_active field of the
+                // eperson that logged in. We need to commit the context, to store
+                // the updated field in the database.
+                context.commit();
+            } catch (SQLException ex) {
+                // We can log the SQLException, but we should not interrupt the 
+                // users interaction here.
+                log.error("Failed to write an updated last_active field of an "
+                        + "EPerson into the databse.", ex);
+            }
+
             // Logged in OK.
             Authenticate.loggedIn(context, request, context.getCurrentUser());
             

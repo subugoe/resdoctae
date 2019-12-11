@@ -9,18 +9,13 @@ package org.dspace.app.util;
 
 import org.apache.log4j.Logger;
 import org.dspace.content.Collection;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
 import org.springframework.util.StopWatch;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * @author peterdietz
@@ -33,8 +28,6 @@ public class OptimizeSelectCollection {
 
     private static ArrayList<EPerson> brokenPeople;
     private static Long timeSavedMS = 0L;
-    private static final CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    private static final EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
 
     public static void main(String[] argv) throws Exception
     {
@@ -49,13 +42,13 @@ public class OptimizeSelectCollection {
 
         if(argv != null && argv.length > 0) {
             for(String email : argv) {
-                EPerson person = ePersonService.findByEmail(context, email);
+                EPerson person = EPerson.findByEmail(context, email);
                 checkSelectCollectionForUser(person);
                 peopleChecked++;
             }
         } else {
             //default case, run as specific user, or run all...
-            List<EPerson> people = ePersonService.findAll(context, EPerson.EMAIL);
+            EPerson[] people = EPerson.findAll(context, EPerson.EMAIL);
             for(EPerson person : people) {
                 checkSelectCollectionForUser(person);
                 peopleChecked++;
@@ -80,7 +73,7 @@ public class OptimizeSelectCollection {
         System.out.println("User: " + person.getEmail());
 
         stopWatch.start("findAuthorized");
-        List<Collection> collections = collectionService.findAuthorized(context, null, Constants.ADD);
+        Collection[] collections = Collection.findAuthorized(context, null, Constants.ADD);
         stopWatch.stop();
         Long defaultMS = stopWatch.getLastTaskTimeMillis();
 
@@ -90,7 +83,7 @@ public class OptimizeSelectCollection {
         stopWatch.stop();
 
         stopWatch.start("findAuthorizedOptimized");
-        List<Collection> collectionsOptimized = collectionService.findAuthorizedOptimized(context, Constants.ADD);
+        Collection[] collectionsOptimized = Collection.findAuthorizedOptimized(context, Constants.ADD);
         stopWatch.stop();
         Long optimizedMS = stopWatch.getLastTaskTimeMillis();
         timeSavedMS += defaultMS - optimizedMS;
@@ -101,7 +94,7 @@ public class OptimizeSelectCollection {
         reportCollections(collectionsOptimized);
         stopWatch.stop();
 
-        if (collections.size() == collectionsOptimized.size()) {
+        if (collections.length == collectionsOptimized.length) {
             System.out.println("Number of collections matches - Good");
         } else {
             System.out.println("Number of collections doesn't match -- Bad");
@@ -111,13 +104,13 @@ public class OptimizeSelectCollection {
         System.out.println(stopWatch.prettyPrint());
     }
 
-    private static void reportCollections(List<Collection> collections) {
+    private static void reportCollections(Collection[] collections) {
         System.out.println("====================================");
         System.out.println("This user is permitted to submit to the following collections.");
 
         for(Collection collection : collections) {
             System.out.println(" - " + collection.getHandle() + " -- " + collection.getName());
         }
-        System.out.println("Total: " + collections.size());
+        System.out.println("Total: " + collections.length);
     }
 }

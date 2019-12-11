@@ -18,8 +18,7 @@ import java.io.Writer;
 
 import org.apache.log4j.Logger;
 import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
-import org.dspace.content.Item;
+import org.apache.pdfbox.util.PDFTextStripper;
 import org.dspace.core.ConfigurationManager;
 
 /*
@@ -33,7 +32,6 @@ public class PDFFilter extends MediaFilter
 
     private static Logger log = Logger.getLogger(PDFFilter.class);
 
-    @Override
     public String getFilteredName(String oldFilename)
     {
         return oldFilename + ".txt";
@@ -43,7 +41,6 @@ public class PDFFilter extends MediaFilter
      * @return String bundle name
      *
      */
-    @Override
     public String getBundleName()
     {
         return "TEXT";
@@ -52,7 +49,6 @@ public class PDFFilter extends MediaFilter
     /**
      * @return String bitstreamformat
      */
-    @Override
     public String getFormatString()
     {
         return "Text";
@@ -61,22 +57,18 @@ public class PDFFilter extends MediaFilter
     /**
      * @return String description
      */
-    @Override
     public String getDescription()
     {
         return "Extracted text";
     }
 
     /**
-     * @param currentItem item
-     * @param source source input stream
-     * @param verbose verbose mode
+     * @param source
+     *            source input stream
      *
      * @return InputStream the resulting input stream
-     * @throws Exception if error
      */
-    @Override
-    public InputStream getDestinationStream(Item currentItem, InputStream source, boolean verbose)
+    public InputStream getDestinationStream(InputStream source)
             throws Exception
     {
         try
@@ -86,7 +78,6 @@ public class PDFFilter extends MediaFilter
             // get input stream from bitstream
             // pass to filter, get string back
             PDFTextStripper pts = new PDFTextStripper();
-            pts.setSortByPosition(true);
             PDDocument pdfDoc = null;
             Writer writer = null;
             File tempTextFile = null;

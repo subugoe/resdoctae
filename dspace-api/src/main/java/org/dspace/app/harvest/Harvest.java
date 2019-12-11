@@ -7,31 +7,28 @@
  */
 package org.dspace.app.harvest;
 
-import org.apache.commons.cli.*;
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.List;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.browse.IndexBrowse;
 import org.dspace.content.Collection;
 import org.dspace.content.DSpaceObject;
+import org.dspace.harvest.HarvestedCollection;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.ItemService;
+import org.dspace.content.ItemIterator;
+import org.dspace.harvest.OAIHarvester;
+import org.dspace.harvest.OAIHarvester.HarvestingException;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.harvest.HarvestedCollection;
-import org.dspace.harvest.HarvestingException;
-import org.dspace.harvest.OAIHarvester;
-import org.dspace.harvest.factory.HarvestServiceFactory;
-import org.dspace.harvest.service.HarvestedCollectionService;
-
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.UUID;
+import org.dspace.handle.HandleManager;
 
 /**
  *  Test class for harvested collections.
@@ -41,11 +38,7 @@ import java.util.UUID;
 public class Harvest
 {
     private static Context context;
-
-    private static final HarvestedCollectionService harvestedCollectionService = HarvestServiceFactory.getInstance().getHarvestedCollectionService();
-    private static final EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-    private static final CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-
+	
     public static void main(String[] argv) throws Exception
     {
         // create an options object and populate it
@@ -87,7 +80,7 @@ public class Harvest
             HelpFormatter myhelp = new HelpFormatter();
             myhelp.printHelp("Harvest\n", options);
             System.out
-    				.println("\nPING OAI server: Harvest -g -a oai_source -i oai_set_id");
+    				.println("\nPING OAI server: Harvest -g -s oai_source -i oai_set_id");
             System.out
 					.println("RUNONCE harvest with arbitrary options: Harvest -o -e eperson -c collection -t harvest_type -a oai_source -i oai_set_id -m metadata_format");
             System.out
@@ -158,7 +151,7 @@ public class Harvest
 
         // Instantiate our class
         Harvest harvester = new Harvest();
-        harvester.context = new Context(Context.Mode.BATCH_EDIT);
+        harvester.context = new Context();
         
         
         // Check our options
@@ -202,11 +195,11 @@ public class Harvest
                 System.exit(1);
             }
         	
-        	List<HarvestedCollection> harvestedCollections = harvestedCollectionService.findAll(context);
-	    	for (HarvestedCollection harvestedCollection : harvestedCollections)
+        	List<Integer> cids = HarvestedCollection.findAll(context);
+        	System.out.println("Purging the following collections (deleting items and resetting harvest status): " + cids.toString());
+	    	for (Integer cid : cids) 
 	    	{
-                System.out.println("Purging the following collections (deleting items and resetting harvest status): " + harvestedCollection.getCollection().getID().toString());
-                harvester.purgeCollection(harvestedCollection.getCollection().getID().toString(), eperson);
+	    		harvester.purgeCollection(cid.toString(), eperson);
 	    	}
 	    	context.complete();
         }
@@ -279,7 +272,7 @@ public class Harvest
                 if (collectionID.indexOf('/') != -1)
                 {
                     // string has a / so it must be a handle - try and resolve it
-                    dso = HandleServiceFactory.getInstance().getHandleService().resolveToObject(context, collectionID);
+                    dso = HandleManager.resolveToObject(context, collectionID);
 
                     // resolved, now make sure it's a collection
                     if (dso == null || dso.getType() != Constants.COLLECTION)
@@ -296,7 +289,7 @@ public class Harvest
                 else
                 {
                     System.out.println("Looking up by id: " + collectionID + ", parsed as '" + Integer.parseInt(collectionID) + "', " + "in context: " + context);
-                    targetCollection = collectionService.find(context, UUID.fromString(collectionID));
+                    targetCollection = Collection.find(context, Integer.parseInt(collectionID));
                 }
             }
             // was the collection valid?
@@ -321,15 +314,15 @@ public class Harvest
     	System.out.println(collection.getID());
     	    	
     	try {
-    		HarvestedCollection hc = harvestedCollectionService.find(context, collection);
+    		HarvestedCollection hc = HarvestedCollection.find(context, collection.getID());
         	if (hc == null) {
-        		hc = harvestedCollectionService.create(context, collection);
+        		hc = HarvestedCollection.create(context, collection.getID());
         	}
     		
     		context.turnOffAuthorisationSystem();
     		hc.setHarvestParams(type, oaiSource, oaiSetId, mdConfigId);
     		hc.setHarvestStatus(HarvestedCollection.STATUS_READY);
-            harvestedCollectionService.update(context, hc);
+    		hc.update();
     		context.restoreAuthSystemState();
     		context.complete();
     	} 
@@ -359,38 +352,36 @@ public class Harvest
    	
     	try 
     	{
-    		EPerson eperson = ePersonService.findByEmail(context, email);
+    		EPerson eperson = EPerson.findByEmail(context, email);
         	context.setCurrentUser(eperson);
     		context.turnOffAuthorisationSystem();
-
-            ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-            Iterator<Item> it = itemService.findByCollection(context, collection);
+    		
+    		ItemIterator it = collection.getAllItems();
+    		IndexBrowse ib = new IndexBrowse(context);
     		int i=0;
     		while (it.hasNext()) {
     			i++;
     			Item item = it.next();
     			System.out.println("Deleting: " + item.getHandle());
-                collectionService.removeItem(context, collection, item);
-                context.uncacheEntity(item);
-                
-    			// Dispatch events every 50 items
+    			ib.itemRemoved(item);
+    			collection.removeItem(item);
+    			// commit every 50 items
     			if (i%50 == 0) {
-    				context.dispatchEvents();
+    				context.commit();
     				i=0;
     			}
     		}
     		
-    		HarvestedCollection hc = harvestedCollectionService.find(context, collection);
+    		HarvestedCollection hc = HarvestedCollection.find(context, collection.getID());
     		if (hc != null) {
-	    		hc.setLastHarvested(null);
-                hc.setHarvestMessage("");
+	    		hc.setHarvestResult(null,"");
 	    		hc.setHarvestStatus(HarvestedCollection.STATUS_READY);
 	    		hc.setHarvestStartTime(null);
-                harvestedCollectionService.update(context, hc);
+	    		hc.update();
     		}
-    		context.restoreAuthSystemState();
-            context.dispatchEvents();
-    	}
+    		context.restoreAuthSystemState();    		
+    		context.commit();
+    	} 
     	catch (Exception e) {
     		System.out.println("Changes could not be committed");
     		e.printStackTrace();
@@ -412,7 +403,7 @@ public class Harvest
     	OAIHarvester harvester = null;
     	try {
     		Collection collection = resolveCollection(collectionID);
-        	HarvestedCollection hc = harvestedCollectionService.find(context, collection);
+        	HarvestedCollection hc = HarvestedCollection.find(context, collection.getID());
     		harvester = new OAIHarvester(context, collection, hc);
     		System.out.println("success. ");
     	}
@@ -428,7 +419,7 @@ public class Harvest
     	    	
     	try {
     		// Harvest will not work for an anonymous user
-        	EPerson eperson = ePersonService.findByEmail(context, email);
+        	EPerson eperson = EPerson.findByEmail(context, email);
         	System.out.println("Harvest started... ");
         	context.setCurrentUser(eperson);
     		harvester.runHarvest();
@@ -455,14 +446,16 @@ public class Harvest
 
     	try
     	{
-            List<HarvestedCollection> harvestedCollections = harvestedCollectionService.findAll(context);
-            for (HarvestedCollection harvestedCollection : harvestedCollections)
+            List<Integer> cids = HarvestedCollection.findAll(context);
+            for (Integer cid : cids)
             {
+                HarvestedCollection hc = HarvestedCollection.find(context, cid);
                 //hc.setHarvestResult(null,"");
-                harvestedCollection.setHarvestStartTime(null);
-                harvestedCollection.setHarvestStatus(HarvestedCollection.STATUS_READY);
-                harvestedCollectionService.update(context, harvestedCollection);
+                hc.setHarvestStartTime(null);
+                hc.setHarvestStatus(HarvestedCollection.STATUS_READY);
+                hc.update();
             }
+            context.commit();
             System.out.println("success. ");
     	}
     	catch (Exception ex) {
@@ -474,12 +467,12 @@ public class Harvest
     /**
      * Starts up the harvest scheduler. Terminating this process will stop the scheduler.
      */
-    private static void startHarvester()
+    private static void startHarvester() 
     {
         try
         {
             System.out.print("Starting harvest loop... ");
-            HarvestServiceFactory.getInstance().getHarvestSchedulingService().startNewScheduler();
+            OAIHarvester.startNewScheduler();
             System.out.println("running. ");
     	}
     	catch (Exception ex) {

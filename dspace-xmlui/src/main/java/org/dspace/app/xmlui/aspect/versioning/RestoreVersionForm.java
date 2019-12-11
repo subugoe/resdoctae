@@ -13,11 +13,9 @@ import org.dspace.app.xmlui.wing.WingException;
 import org.dspace.app.xmlui.wing.element.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DCDate;
+import org.dspace.utils.DSpace;
 import org.dspace.versioning.Version;
-import org.dspace.versioning.factory.VersionServiceFactory;
-import org.dspace.versioning.service.VersioningService;
-
-import java.sql.SQLException;
+import org.dspace.versioning.VersioningService;
 
 /**
  *
@@ -44,7 +42,6 @@ public class RestoreVersionForm extends AbstractDSpaceTransformer
     private static final Message T_submit_restore = message("xmlui.aspect.versioning.RestoreVersionForm.restore");
 	private static final Message T_submit_cancel = message("xmlui.general.cancel");
 
-    protected VersioningService versioningService = VersionServiceFactory.getInstance().getVersionService();
 
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
@@ -55,7 +52,7 @@ public class RestoreVersionForm extends AbstractDSpaceTransformer
 		pageMeta.addTrail().addContent(T_trail);
 	}
 
-	public void addBody(Body body) throws WingException, AuthorizeException, SQLException
+	public void addBody(Body body) throws WingException, AuthorizeException
     {
     	Division main = createMainDivision(body);
 		createTable(main);
@@ -73,7 +70,7 @@ public class RestoreVersionForm extends AbstractDSpaceTransformer
     }
 
 
-    private void createTable(Division main) throws WingException, SQLException
+    private void createTable(Division main) throws WingException
     {
         // Get all our parameters
 		String id = parameters.getParameter("versionID", null);
@@ -86,11 +83,12 @@ public class RestoreVersionForm extends AbstractDSpaceTransformer
 		header.addCellContent(T_column3);
         header.addCellContent(T_column4);
 
+        VersioningService versioningService = new DSpace().getSingletonService(VersioningService.class);
         Version version = versioningService.getVersion(context, Integer.parseInt(id));
 
         Row row = table.addRow();
         row.addCell().addContent(version.getVersionNumber());
-        row.addCell().addContent(version.getEPerson().getEmail());
+        row.addCell().addContent(version.getEperson().getEmail());
         row.addCell().addContent(new DCDate(version.getVersionDate()).toString());
         row.addCell().addContent(version.getSummary());
 

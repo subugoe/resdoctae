@@ -8,7 +8,6 @@
 package org.dspace.app.webui.jsptag;
 
 import java.io.IOException;
-import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.jsp.JspException;
@@ -16,6 +15,7 @@ import javax.servlet.jsp.JspWriter;
 import javax.servlet.jsp.jstl.fmt.LocaleSupport;
 import javax.servlet.jsp.tagext.TagSupport;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.dspace.content.Collection;
 
 /**
@@ -27,16 +27,15 @@ import org.dspace.content.Collection;
 public class CollectionListTag extends TagSupport
 {
     /** Collections to display */
-    private List<Collection> collections;
+    private transient Collection[] collections;
 
     private static final long serialVersionUID = -9040013543196580904L;
-    
+
     public CollectionListTag()
     {
         super();
     }
 
-    @Override
     public int doStartTag() throws JspException
     {
         JspWriter out = pageContext.getOut();
@@ -54,10 +53,10 @@ public class CollectionListTag extends TagSupport
             // Row: toggles between Odd and Even
             String row = "even";
 
-            for (Collection col : collections)
+            for (int i = 0; i < collections.length; i++)
             {
                 // name
-                String name = col.getName();
+                String name = collections[i].getMetadata("name");
 
                 // first and only column is 'name'
                 out.print("<tr><td headers=\"t4\" class=\"" + row + "RowEvenCol\">");
@@ -66,7 +65,7 @@ public class CollectionListTag extends TagSupport
                 HttpServletRequest hrq = (HttpServletRequest) pageContext
                         .getRequest();
                 out.print(hrq.getContextPath() + "/handle/");
-                out.print(col.getHandle());
+                out.print(collections[i].getHandle());
                 out.print("\">");
                 out.print(name);
                 out.print("</a>");
@@ -91,9 +90,9 @@ public class CollectionListTag extends TagSupport
      * 
      * @return the collections
      */
-    public List<Collection> getCollections()
+    public Collection[] getCollections()
     {
-        return collections;
+        return (Collection[]) ArrayUtils.clone(collections);
     }
 
     /**
@@ -102,12 +101,11 @@ public class CollectionListTag extends TagSupport
      * @param collectionsIn
      *            the collections
      */
-    public void setCollections(List<Collection> collectionsIn)
+    public void setCollections(Collection[] collectionsIn)
     {
-        collections = collectionsIn;
+        collections = (Collection[]) ArrayUtils.clone(collectionsIn);
     }
 
-    @Override
     public void release()
     {
         collections = null;

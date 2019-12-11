@@ -31,8 +31,6 @@
 <%@ page import="org.dspace.app.util.DCInputsReader" %>
 <%@ page import="org.dspace.app.util.SubmissionInfo" %>
 <%@ page import="org.dspace.app.webui.util.UIUtil" %>
-<%@ page import="org.dspace.content.service.ItemService" %>
-<%@ page import="org.dspace.content.factory.ContentServiceFactory" %>
 
 
 <%
@@ -442,7 +440,7 @@
                 </div>
                 <script>
                     $(document).ready(function(){
-                        r = new Resumable({
+                        var r = new Resumable({
                             target:'submit',
                             chunkSize:1024*1024,
                             simultaneousUploads:1,
@@ -520,16 +518,14 @@
                                 $('.progress-bar').css({width:Math.floor(r.progress()*100) + '%'});
                             });
 
-                            
+                            function resume() {
+                                // Show pause, hide resume
+                                $('.resumable-progress .progress-resume-link').hide();
+                                $('.resumable-progress .progress-pause-link').show();
+                                r.upload();
+                            }
                         }
                     });
-			
-		    function resume() {
-                    	// Show pause, hide resume
-                        $('.resumable-progress .progress-resume-link').hide();
-                        $('.resumable-progress .progress-pause-link').show();
-                        r.upload();
-                    }
                 </script>
             <% } %>
             
@@ -577,16 +573,15 @@
         
 		<%-- Hidden fields needed for SubmissionController servlet to know which step is next--%>
         <%= SubmissionController.getSubmissionParameters(context, request) %>
-        <%
-            ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-            int col = 0; 
-            if(!SubmissionController.isFirstStep(request, subInfo))
+        <% 
+        	int col = 0; 
+			if(!SubmissionController.isFirstStep(request, subInfo))
+			{
+				col++;
+			}
+			if (!fileRequired || subInfo.getSubmissionItem().getItem().hasUploadedFiles())
             {
                     col++;
-            }
-            if (!fileRequired || itemService.hasUploadedFiles(subInfo.getSubmissionItem().getItem()))
-            {
-                col++;
             }
             %>
 
@@ -599,7 +594,7 @@
                         <input class="btn btn-default col-md-<%= 12 / (col + 2) %>" type="submit" name="<%=AbstractProcessingStep.CANCEL_BUTTON%>" value="<fmt:message key="jsp.submit.general.cancel-or-save.button"/>" />
                     <%
                         //if upload is set to optional, or user returned to this page after pressing "Add Another File" button
-                    	if (!fileRequired || itemService.hasUploadedFiles(subInfo.getSubmissionItem().getItem()))
+                    	if (!fileRequired || subInfo.getSubmissionItem().getItem().hasUploadedFiles())
                         {
                     %>
                                 <input class="btn btn-warning col-md-<%= 12 / (col + 2) %>" type="submit" name="<%=UploadStep.SUBMIT_SKIP_BUTTON%>" value="<fmt:message key="jsp.submit.choose-file.skip"/>" />

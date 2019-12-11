@@ -15,7 +15,6 @@ import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
 import org.apache.log4j.Logger;
-import org.dspace.storage.bitstore.factory.StorageServiceFactory;
 
 /**
  * Cleans up asset store.
@@ -76,7 +75,7 @@ public class Cleanup
                 deleteDbRecords = false;    
             }
            	log.debug("leave db records = " + deleteDbRecords);
-            StorageServiceFactory.getInstance().getBitstreamStorageService().cleanup(deleteDbRecords, line.hasOption('v'));
+            BitstreamStorageManager.cleanup(deleteDbRecords, line.hasOption('v'));
             
             System.exit(0);
         }

@@ -17,7 +17,7 @@ import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.services.analytics.Analytics;
 import com.google.api.services.analytics.AnalyticsScopes;
 import org.apache.log4j.Logger;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 import java.io.File;
 import java.util.HashSet;
@@ -51,10 +51,10 @@ public class GoogleAccount {
 
 
     private GoogleAccount() {
-        applicationName = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("google-analytics.application.name");
-        tableId = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("google-analytics.table.id");
-        emailAddress = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("google-analytics.account.email");
-        certificateLocation = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("google-analytics.certificate.location");
+        applicationName = new DSpace().getConfigurationService().getProperty("google-analytics.application.name");
+        tableId = new DSpace().getConfigurationService().getProperty("google-analytics.table.id");
+        emailAddress = new DSpace().getConfigurationService().getProperty("google-analytics.account.email");
+        certificateLocation = new DSpace().getConfigurationService().getProperty("google-analytics.certificate.location");
 
         jsonFactory = JacksonFactory.getDefaultInstance();
 

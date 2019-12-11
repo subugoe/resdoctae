@@ -13,7 +13,6 @@ import java.io.IOException;
 
 import org.apache.log4j.Logger;
 
-import org.dspace.content.Item;
 import org.textmining.extraction.TextExtractor;
 import org.textmining.extraction.word.WordTextExtractorFactory;
 
@@ -28,7 +27,6 @@ public class WordFilter extends MediaFilter
 
     private static Logger log = Logger.getLogger(WordFilter.class);
 
-    @Override
     public String getFilteredName(String oldFilename)
     {
         return oldFilename + ".txt";
@@ -38,7 +36,6 @@ public class WordFilter extends MediaFilter
      * @return String bundle name
      *  
      */
-    @Override
     public String getBundleName()
     {
         return "TEXT";
@@ -47,7 +44,6 @@ public class WordFilter extends MediaFilter
     /**
      * @return String bitstreamformat
      */
-    @Override
     public String getFormatString()
     {
         return "Text";
@@ -56,22 +52,18 @@ public class WordFilter extends MediaFilter
     /**
      * @return String description
      */
-    @Override
     public String getDescription()
     {
         return "Extracted text";
     }
 
     /**
-     * @param currentItem item
-     * @param source source input stream
-     * @param verbose verbose mode
+     * @param source
+     *            source input stream
      * 
      * @return InputStream the resulting input stream
-     * @throws Exception if error
      */
-    @Override
-    public InputStream getDestinationStream(Item currentItem, InputStream source, boolean verbose)
+    public InputStream getDestinationStream(InputStream source)
             throws Exception
     {
         // get input stream from bitstream
@@ -84,7 +76,7 @@ public class WordFilter extends MediaFilter
 
             // if verbose flag is set, print out extracted text
             // to STDOUT
-            if (verbose)
+            if (MediaFilterManager.isVerbose)
             {
                 System.out.println(extractedText);
             }

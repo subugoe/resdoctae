@@ -14,7 +14,10 @@ import java.text.ParseException;
 import java.util.List;
 
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
+import org.dspace.content.Bitstream;
+import org.dspace.content.Bundle;
+import org.dspace.content.DCDate;
+import org.dspace.content.Item;
 import org.dspace.core.Context;
 
 /**
@@ -30,18 +33,17 @@ public class DeleteBitstreamsAction extends UpdateBitstreamsAction
 	/**
 	 *   Delete bitstream from item
 	 * 
-	 * @param context DSpace Context
-	 * @param itarch item archive
-	 * @param isTest test flag
-	 * @param suppressUndo undo flag
-	 * @throws IOException if IO error
-         * @throws IllegalArgumentException if arg exception
-         * @throws SQLException if database error
-         * @throws AuthorizeException if authorization error
-         * @throws ParseException if parse error
+	 *  @param context
+	 *  @param itarch
+	 *  @param isTest
+	 *  @param suppressUndo
+	 *  @throws IllegalArgumentException
+	 *  @throws ParseException
+	 *  @throws IOException
+	 *  @throws AuthorizeException
+	 *  @throws SQLException
 	 */
-	@Override
-    public void execute(Context context, ItemArchive itarch, boolean isTest,
+	public void execute(Context context, ItemArchive itarch, boolean isTest,
             boolean suppressUndo) throws IllegalArgumentException, IOException,
             SQLException, AuthorizeException, ParseException 
 	{
@@ -52,34 +54,34 @@ public class DeleteBitstreamsAction extends UpdateBitstreamsAction
 		}
 		else
 		{
-			List<String> list = MetadataUtilities.readDeleteContentsFile(f);
+			List<Integer> list = MetadataUtilities.readDeleteContentsFile(f);
 			if (list.isEmpty())
 			{
 				ItemUpdate.pr("Warning: empty delete_contents file for item " + itarch.getDirectoryName() );
 			}
 			else
 			{
-				for (String id : list)
+				for (int id : list)
 				{
 					try
 					{
-			    		Bitstream bs = bitstreamService.findByIdOrLegacyId(context, id);
+			    		Bitstream bs = Bitstream.find(context, id);
 			    		if (bs == null)
 			    		{
 			    			ItemUpdate.pr("Bitstream not found by id: " + id);
 			    		}
 			    		else
 			    		{
-				    		List<Bundle> bundles = bs.getBundles();
+				    		Bundle[] bundles = bs.getBundles();
 				    		for (Bundle b : bundles)
 				    		{
-                                if (isTest)
+				    			if (isTest)
 				    			{
 					    			ItemUpdate.pr("Delete bitstream with id = " + id);
 				    			}
 				    			else
 				    			{
-				    				bundleService.removeBitstream(context, b, bs);
+				    				b.removeBitstream(bs); 
 					    			ItemUpdate.pr("Deleted bitstream with id = " + id);
 					    			
 				    			}
@@ -90,12 +92,12 @@ public class DeleteBitstreamsAction extends UpdateBitstreamsAction
 				            	DtoMetadata dtom = DtoMetadata.create("dc.description.provenance", "en", "");
 				            	
 				            	String append = "Bitstream " + bs.getName() + " deleted on " + DCDate.getCurrent() + "; ";
-				            	Item item = bundles.iterator().next().getItems().iterator().next();
+				            	Item item = bundles[0].getItems()[0];
 					    		ItemUpdate.pr("Append provenance with: " + append);
 					    		
 					    		if (!isTest)
 					    		{
-					    			MetadataUtilities.appendMetadata(context, item, dtom, false, append);
+					    			MetadataUtilities.appendMetadata(item, dtom, false, append);
 					    		}
 				            }
 			    		}	

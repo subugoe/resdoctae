@@ -34,17 +34,12 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Select;
 import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.content.Collection;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.content.Community;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.I18nUtil;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.Subscription;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.eperson.service.GroupService;
-import org.dspace.eperson.service.SubscribeService;
+import org.dspace.eperson.Subscribe;
 import org.xml.sax.SAXException;
 
 
@@ -179,12 +174,7 @@ public class EditProfile extends AbstractDSpaceTransformer
     
     /** A list of fields in error */
     private java.util.List<String> errors;
-
-    protected SubscribeService subscribeService = EPersonServiceFactory.getInstance().getSubscribeService();
-    protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-    protected EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-
+    
     public void setup(SourceResolver resolver, Map objectModel, String src,
             Parameters parameters) throws ProcessingException, SAXException,
             IOException
@@ -256,7 +246,7 @@ public class EditProfile extends AbstractDSpaceTransformer
        {
             defaultFirstName = eperson.getFirstName();
             defaultLastName = eperson.getLastName();
-            defaultPhone = ePersonService.getMetadata(eperson, "phone");
+            defaultPhone = eperson.getMetadata("phone");
             defaultLanguage = eperson.getLanguage();
        }
        
@@ -314,7 +304,7 @@ public class EditProfile extends AbstractDSpaceTransformer
        {
            firstName.addError(T_error_required);
        }
-       if (!registering && !DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("xmlui.user.editmetadata", true))
+       if (!registering && !ConfigurationManager.getBooleanProperty("xmlui.user.editmetadata", true))
        {
            firstName.setDisabled();
        }
@@ -328,7 +318,7 @@ public class EditProfile extends AbstractDSpaceTransformer
        {
            lastName.addError(T_error_required);
        }
-       if (!registering &&!DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("xmlui.user.editmetadata", true))
+       if (!registering &&!ConfigurationManager.getBooleanProperty("xmlui.user.editmetadata", true))
        {
            lastName.setDisabled();
        }
@@ -341,7 +331,7 @@ public class EditProfile extends AbstractDSpaceTransformer
        {
            phone.addError(T_error_required);
        }
-       if (!registering && !DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("xmlui.user.editmetadata", true))
+       if (!registering && !ConfigurationManager.getBooleanProperty("xmlui.user.editmetadata", true))
        {
            phone.setDisabled();
        }
@@ -362,7 +352,7 @@ public class EditProfile extends AbstractDSpaceTransformer
        }
        lang.setOptionSelected((defaultLanguage == null || defaultLanguage.equals("")) ?
                               I18nUtil.DEFAULTLOCALE.toString() : defaultLanguage);
-       if (!registering && !DSpaceServicesFactory.getInstance().getConfigurationService().getBooleanProperty("xmlui.user.editmetadata", true))
+       if (!registering && !ConfigurationManager.getBooleanProperty("xmlui.user.editmetadata", true))
        {
            lang.setDisabled();
        }
@@ -375,8 +365,8 @@ public class EditProfile extends AbstractDSpaceTransformer
            
            subscribe.addItem(T_subscriptions_help);
            
-           java.util.List<Subscription> currentList = subscribeService.getSubscriptions(context, context.getCurrentUser());
-           java.util.List<Collection> possibleList = collectionService.findAll(context);
+           Collection[] currentList = Subscribe.getSubscriptions(context, context.getCurrentUser());
+           Collection[] possibleList = Collection.findAll(context);
            
            Select subscriptions = subscribe.addItem().addSelect("subscriptions");
            subscriptions.setLabel(T_email_subscriptions);
@@ -385,14 +375,15 @@ public class EditProfile extends AbstractDSpaceTransformer
            subscriptions.enableDeleteOperation();
            
            subscriptions.addOption(-1,T_select_collection);
-	       CollectionDropDown.CollectionPathEntry[] possibleEntries = CollectionDropDown.annotateWithPaths(context, possibleList);
+	       CollectionDropDown.CollectionPathEntry[] possibleEntries = CollectionDropDown.annotateWithPaths(possibleList);
            for (CollectionDropDown.CollectionPathEntry possible : possibleEntries)
            {
-               subscriptions.addOption(possible.collection.getID().toString(), possible.path);
+               subscriptions.addOption(possible.collection.getID(), possible.path);
            }
 
-           for (Subscription subscription : currentList) {
-               subscriptions.addInstance().setOptionSelected(subscription.getCollection().getID().toString());
+           for (Collection collection: currentList)
+           {
+               subscriptions.addInstance().setOptionSelected(collection.getID());
            }
        }
        
@@ -452,11 +443,11 @@ public class EditProfile extends AbstractDSpaceTransformer
        if (!registering)
        {
                 // Add a list of groups that this user is apart of.
-                        java.util.Set<Group> memberships = groupService.allMemberGroupsSet(context, context.getCurrentUser());
+                        Group[] memberships = Group.allMemberGroups(context, context.getCurrentUser());
                 
                 
                         // Not a member of any groups then don't do anything.
-                        if (!(memberships.size() > 0))
+                        if (!(memberships.length > 0))
                         {
                             return;
                         }
@@ -489,8 +480,8 @@ public class EditProfile extends AbstractDSpaceTransformer
      */
     private static Locale[] getSupportedLocales()
     {
-        String[] ll = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("webui.supported.locales");
-        if(ll != null && ll.length>0)
+        String ll = ConfigurationManager.getProperty("webui.supported.locales");
+        if (ll != null)
         {
             return I18nUtil.parseLocales(ll);
         }

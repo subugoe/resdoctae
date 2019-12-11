@@ -9,7 +9,6 @@ package org.dspace.app.webui.servlet.admin;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -21,8 +20,6 @@ import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
 
 /**
  * Servlet browsing through e-people and selecting them
@@ -32,10 +29,6 @@ import org.dspace.eperson.service.EPersonService;
  */
 public class EPersonListServlet extends DSpaceServlet
 {
-	private final transient EPersonService personService
-             = EPersonServiceFactory.getInstance().getEPersonService();
-	
-    @Override
 	protected void doDSPost(Context context, HttpServletRequest request, 
 			HttpServletResponse response) throws ServletException, IOException, 
 			SQLException, AuthorizeException 
@@ -43,7 +36,6 @@ public class EPersonListServlet extends DSpaceServlet
 		doDSGet(context, request, response);
 	}
 
-    @Override
 	protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -86,23 +78,23 @@ public class EPersonListServlet extends DSpaceServlet
         }
         
 
-        List<EPerson> epeople;
+        EPerson[] epeople;
         String search = request.getParameter("search");
         if (search != null && !search.equals(""))
         {
-            epeople = personService.search(context, search);
-            request.setAttribute("offset", offset);
+            epeople = EPerson.search(context, search);
+            request.setAttribute("offset", Integer.valueOf(offset));
         }
         else
         {
             // Retrieve the e-people in the specified order
-            epeople = personService.findAll(context, sortBy);
-            request.setAttribute("offset", 0);
+            epeople = EPerson.findAll(context, sortBy);
+            request.setAttribute("offset", Integer.valueOf(0));
         }        
         
         // Set attributes for JSP
-        request.setAttribute("sortby", sortBy);
-        request.setAttribute("first", first);
+        request.setAttribute("sortby", Integer.valueOf(sortBy));
+        request.setAttribute("first", Integer.valueOf(first));
         request.setAttribute("epeople", epeople);
         request.setAttribute("search", search);
         

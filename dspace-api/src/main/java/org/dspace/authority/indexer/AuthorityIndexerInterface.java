@@ -9,13 +9,8 @@
 package org.dspace.authority.indexer;
 
 import org.dspace.authority.AuthorityValue;
-import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Item;
 import org.dspace.core.Context;
-
-import java.sql.SQLException;
-import java.util.List;
-import java.util.Map;
 
 /**
  *
@@ -26,11 +21,17 @@ import java.util.Map;
  */
 public interface AuthorityIndexerInterface {
 
-    public List<AuthorityValue> getAuthorityValues(Context context, Item item)
-            throws SQLException, AuthorizeException;
+    public void init(Context context, Item item);
 
-    public List<AuthorityValue> getAuthorityValues(Context context, Item item, Map<String, AuthorityValue> cache)
-            throws SQLException, AuthorizeException;
+    public void init(Context context, boolean useCache);
+
+    public void init(Context context);
+
+    public AuthorityValue nextValue();
+
+    public boolean hasMore();
+
+    public void close();
 
     public boolean isConfiguredProperly();
 }

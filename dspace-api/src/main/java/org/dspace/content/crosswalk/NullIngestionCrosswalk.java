@@ -45,8 +45,7 @@ public class NullIngestionCrosswalk
 
     private static XMLOutputter outputPretty = new XMLOutputter(Format.getPrettyFormat());
 
-    @Override
-    public void ingest(Context context, DSpaceObject dso, Element root, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, Element root)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         // drop xml on the floor but mention what we're missing for debugging:
@@ -54,8 +53,7 @@ public class NullIngestionCrosswalk
                 outputPretty.outputString(root));
     }
 
-    @Override
-    public void ingest(Context context, DSpaceObject dso, List<Element> ml, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, List<Element> ml)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         // drop xml on the floor but mention what we're missing for debugging:

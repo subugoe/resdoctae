@@ -47,13 +47,12 @@
 <%@ page import="org.dspace.core.Constants"           %>
 <%@ page import="org.dspace.eperson.EPerson"          %>
 <%@ page import="org.dspace.eperson.Group"            %>
-<%@ page import="java.util.List" %>
 
 
 <%
     ResourcePolicy policy = (ResourcePolicy) request.getAttribute("policy"    );
-    List<Group>   groups     = (List<Group>) request.getAttribute("groups"    );
-    List<EPerson> epeople    = (List<EPerson>) request.getAttribute("epeople"   );
+    Group   [] groups     = (Group  []     ) request.getAttribute("groups"    );
+    EPerson [] epeople    = (EPerson[]     ) request.getAttribute("epeople"   );
     String edit_title     = (String        ) request.getAttribute("edit_title");
     String id_name        = (String        ) request.getAttribute("id_name"   );
     String id             = (String        ) request.getAttribute("id"        );
@@ -61,36 +60,17 @@
     
     // calculate the resource type and its relevance ID
     // to check what actions to present
-    int resourceType      = policy.getdSpaceObject().getType();
+    int resourceType      = policy.getResourceType();
     int resourceRelevance = 1 << resourceType;
     
     request.setAttribute("LanguageSwitch", "hide");  
-    
-   // Is the logged in user an admin or community admin or collection admin
-    Boolean admin = (Boolean)request.getAttribute("is.admin");
-    boolean isAdmin = (admin == null ? false : admin.booleanValue());
-    
-    Boolean communityAdmin = (Boolean)request.getAttribute("is.communityAdmin");
-    boolean isCommunityAdmin = (communityAdmin == null ? false : communityAdmin.booleanValue());
-    
-    Boolean collectionAdmin = (Boolean)request.getAttribute("is.collectionAdmin");
-    boolean isCollectionAdmin = (collectionAdmin == null ? false : collectionAdmin.booleanValue());
-    
-    String naviAdmin = "admin";
-    String link = "/dspace-admin";
-    
-    if(!isAdmin && (isCommunityAdmin || isCollectionAdmin))
-    {
-        naviAdmin = "community-or-collection-admin";
-        link = "/tools";
-    }
 %>
 
 <dspace:layout style="submission" titlekey="jsp.dspace-admin.authorize-policy-edit.title"
-               navbar="<%= naviAdmin %>"
+               navbar="admin"
                locbar="link"
                parenttitlekey="jsp.administer"
-               parentlink="<%= link %>"
+               parentlink="/dspace-admin"
                nocache="true">
 
         <%-- <h1>Edit Policy for <%= edit_title %>:</h1> --%>
@@ -109,9 +89,9 @@
             	</span>
             	<span class="col-md-10">
                 <select class="form-control" size="15" name="group_id" id="tgroup_id">
-                    <%  for(int i = 0; i < groups.size(); i++ ) { %>
-                            <option value="<%= groups.get(i).getID() %>" <%= (groups.get(i).equals((policy.getGroup()))  ? "selected=\"selected\"" : "" ) %> >
-                            <%= groups.get(i).getName()%>
+                    <%  for(int i = 0; i < groups.length; i++ ) { %>
+                            <option value="<%= groups[i].getID() %>" <%= (groups[i].getID() == policy.getGroupID() ? "selected=\"selected\"" : "" ) %> >
+                            <%= groups[i].getName()%>
                             </option>
                         <%  } %>
                 </select>

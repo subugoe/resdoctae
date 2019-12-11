@@ -40,9 +40,6 @@ public class RegistryImporter
      *            the filename to load from
      * 
      * @return the DOM representation of the XML file
-     * @throws IOException if IO error
-     * @throws ParserConfigurationException if configuration parse error
-     * @throws SAXException if XML parse error
      */
     public static Document loadXML(String filename) 
     	throws IOException, ParserConfigurationException, SAXException
@@ -71,7 +68,7 @@ public class RegistryImporter
      *            the element, whose child element you want the CDATA from
      * @param childName
      *            the name of the element you want the CDATA from
-     * @throws TransformerException if error
+     * 
      * @return the CDATA as a <code>String</code>
      */
     public static String getElementData(Node parentElement, String childName)
@@ -119,7 +116,7 @@ public class RegistryImporter
      *            the element, whose child element you want the CDATA from
      * @param childName
      *            the name of the element you want the CDATA from
-     * @throws TransformerException if error
+     * 
      * @return the CDATA as a <code>String</code>
      */
     public static String[] getRepeatedElementData(Node parentElement,

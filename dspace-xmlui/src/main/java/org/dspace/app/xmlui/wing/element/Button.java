@@ -7,17 +7,18 @@
  */
 package org.dspace.app.xmlui.wing.element;
 
-import org.dspace.app.xmlui.wing.Message;
-import org.dspace.app.xmlui.wing.WingContext;
-import org.dspace.app.xmlui.wing.WingException;
-
 /**
  * A class representing the Button input control. The button input control
  * allows the user to activate a form submit, where the form information is sent
  * back to the server.
- *
+ * 
  * @author Scott Phillips
  */
+
+import org.dspace.app.xmlui.wing.Message;
+import org.dspace.app.xmlui.wing.WingContext;
+import org.dspace.app.xmlui.wing.WingException;
+
 public class Button extends Field
 {
     /**
@@ -35,7 +36,6 @@ public class Button extends Field
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws org.dspace.app.xmlui.wing.WingException on error.
      */
     protected Button(WingContext context, String name, String rend)
             throws WingException
@@ -49,7 +49,6 @@ public class Button extends Field
      * Set the button's label, removing any previous label's
      * 
      * @return A button label's value.
-     * @throws org.dspace.app.xmlui.wing.WingException on error.
      */
     public Value setValue() throws WingException
     {
@@ -64,7 +63,6 @@ public class Button extends Field
      * 
      * @param characters
      *            (May be null) The button's label as a string.
-     * @throws org.dspace.app.xmlui.wing.WingException on error.
      */
     public void setValue(String characters) throws WingException
     {
@@ -78,7 +76,6 @@ public class Button extends Field
      * @param translated
      *            (Required) A key into the i18n catalogue for translation into
      *            the user's preferred language.
-     * @throws org.dspace.app.xmlui.wing.WingException on error.
      */
     public void setValue(Message translated) throws WingException
     {

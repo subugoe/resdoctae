@@ -29,8 +29,6 @@
 <%@ page import="org.dspace.core.ConfigurationManager" %>
 <%@ page import="javax.servlet.jsp.jstl.fmt.LocaleSupport" %>
 <%@ page import="java.util.Enumeration" %>
-<%@ page import="org.dspace.content.service.CollectionService" %>
-<%@ page import="org.dspace.content.factory.ContentServiceFactory" %>
 
 <%@ taglib uri="http://www.dspace.org/dspace-tags.tld" prefix="dspace" %>
 <%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt" %>
@@ -63,24 +61,9 @@
     Boolean deleteButton = (Boolean)request.getAttribute("delete_button");
     boolean bDeleteButton = (deleteButton == null ? false : deleteButton.booleanValue());
     
-   // Is the logged in user an admin or community admin or collection admin
+    // Is the logged in user a sys admin
     Boolean admin = (Boolean)request.getAttribute("is.admin");
     boolean isAdmin = (admin == null ? false : admin.booleanValue());
-    
-    Boolean communityAdmin = (Boolean)request.getAttribute("is.communityAdmin");
-    boolean isCommunityAdmin = (communityAdmin == null ? false : communityAdmin.booleanValue());
-    
-    Boolean collectionAdmin = (Boolean)request.getAttribute("is.collectionAdmin");
-    boolean isCollectionAdmin = (collectionAdmin == null ? false : collectionAdmin.booleanValue());
-    
-    String naviAdmin = "admin";
-    String link = "/dspace-admin";
-    
-    if(!isAdmin && (isCommunityAdmin || isCollectionAdmin))
-    {
-        naviAdmin = "community-or-collection-admin";
-        link = "/tools";
-    }
     
     HarvestedCollection hc = (HarvestedCollection) request.getAttribute("harvestInstance");
     
@@ -110,25 +93,24 @@
     Item template = null;
 
     Bitstream logo = null;
-
-    CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
+    
     if (collection != null)
     {
-        name = collectionService.getMetadata(collection, "name");
-        shortDesc = collectionService.getMetadata(collection, "short_description");
-        intro = collectionService.getMetadata(collection, "introductory_text");
-        copy = collectionService.getMetadata(collection, "copyright_text");
-        side = collectionService.getMetadata(collection, "side_bar_text");
-        provenance = collectionService.getMetadata(collection, "provenance_description");
+        name = collection.getMetadata("name");
+        shortDesc = collection.getMetadata("short_description");
+        intro = collection.getMetadata("introductory_text");
+        copy = collection.getMetadata("copyright_text");
+        side = collection.getMetadata("side_bar_text");
+        provenance = collection.getMetadata("provenance_description");
 
-        if (collectionService.hasCustomLicense(collection))
+        if (collection.hasCustomLicense())
         {
-            license = collectionService.getLicense(collection);
+            license = collection.getLicense();
         }
         
-        wfGroups[0] = collection.getWorkflowStep1();
-        wfGroups[1] = collection.getWorkflowStep2();
-        wfGroups[2] = collection.getWorkflowStep3();
+        wfGroups[0] = collection.getWorkflowGroup(1);
+        wfGroups[1] = collection.getWorkflowGroup(2);
+        wfGroups[2] = collection.getWorkflowGroup(3);
 
         admins     = collection.getAdministrators();
         submitters = collection.getSubmitters();
@@ -151,9 +133,9 @@
 %>
 
 <dspace:layout style="submission" titlekey="jsp.tools.edit-collection.title"
-               navbar="<%= naviAdmin %>"
+               navbar="admin"
                locbar="link"
-               parentlink="<%= link %>"
+               parentlink="/dspace-admin"
                parenttitlekey="jsp.administer"
                nocache="true">
 <div class="row">
@@ -426,7 +408,7 @@
                 	<select class="form-control" name="metadata_format" >
 	                	<%
 		                // Add an entry for each instance of ingestion crosswalks configured for harvesting 
-			            String metaString = "harvester.metadataformats.";
+			            String metaString = "harvester.oai.metadataformats.";
 			            Enumeration pe = ConfigurationManager.propertyNames("oai");
 			            while (pe.hasMoreElements())
 			            {

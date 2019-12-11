@@ -22,8 +22,6 @@ import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
 import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
 
 /**
  * The manage epeople page is the starting point page for managing 
@@ -101,9 +99,6 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
      */
     private static final int PAGE_SIZE = 15;
 
-    protected EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-
-
 
     public void addPageMeta(PageMeta pageMeta) throws WingException
     {
@@ -117,11 +112,11 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
     {
         /* Get and setup our parameters */
         int page          = parameters.getParameterAsInteger("page",0);
-        String highlightID   = parameters.getParameter("highlightID",null);
+        int highlightID   = parameters.getParameterAsInteger("highlightID",-1);
         String query      = decodeFromURL(parameters.getParameter("query",null));
         String baseURL    = contextPath+"/admin/epeople?administrative-continue="+knot.getId();
-        int resultCount   = ePersonService.searchResultCount(context, query);
-        java.util.List<EPerson> epeople = ePersonService.search(context, query, page*PAGE_SIZE, PAGE_SIZE);
+        int resultCount   = EPerson.searchResultCount(context, query);	
+        EPerson[] epeople = EPerson.search(context, query, page*PAGE_SIZE, PAGE_SIZE);
 
 
         // DIVISION: eperson-main
@@ -161,7 +156,7 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
         {
             // If there are enough results then paginate the results
             int firstIndex = page*PAGE_SIZE+1; 
-            int lastIndex = page*PAGE_SIZE + epeople.size();
+            int lastIndex = page*PAGE_SIZE + epeople.length;
 
             String nextURL = null, prevURL = null;
             if (page < (resultCount / PAGE_SIZE))
@@ -176,7 +171,7 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
             search.setSimplePagination(resultCount,firstIndex,lastIndex,prevURL, nextURL);
         }
 
-        Table table = search.addTable("eperson-search-table", epeople.size() + 1, 1);
+        Table table = search.addTable("eperson-search-table", epeople.length + 1, 1);
         Row header = table.addRow(Row.ROLE_HEADER);
         header.addCell().addContent(T_search_column1);
         header.addCell().addContent(T_search_column2);
@@ -190,10 +185,10 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
             String fullName = person.getFullName();
             String email = person.getEmail();
             String url = baseURL+"&submit_edit&epersonID="+epersonID;
-            java.util.List<String> deleteConstraints = ePersonService.getDeleteConstraints(context, person);
+            java.util.List<String> deleteConstraints = person.getDeleteConstraints();
 
             Row row;
-            if (person.getID().toString().equals(highlightID))
+            if (person.getID() == highlightID)
             {
                 // This is a highlighted eperson
                 row = table.addRow(null, null, "highlight");
@@ -216,7 +211,7 @@ public class ManageEPeopleMain extends AbstractDSpaceTransformer
             row.addCell().addXref(url, email);
         }
 
-        if (epeople.size() <= 0)
+        if (epeople.length <= 0) 
         {
             Cell cell = table.addRow().addCell(1, 4);
             cell.addHighlight("italic").addContent(T_no_results);

@@ -29,18 +29,22 @@
 <%@ page import="org.dspace.app.webui.servlet.admin.EditCommunitiesServlet" %>
 <%@ page import="org.dspace.app.webui.util.CurateTaskResult" %>
 <%@ page import="org.dspace.content.Item" %>
+<%@ page import="org.dspace.content.Metadatum" %>
 <%@ page import="org.dspace.core.ConfigurationManager" %>
-<%@ page import="java.util.UUID" %>
 <%!
     private static final String TASK_QUEUE_NAME = ConfigurationManager.getProperty("curate", "ui.queuename");
 %>
 <%
     Item item = (Item) request.getAttribute("item");
-    UUID itemID = (item != null ? item.getID() : null);
+    int itemID = (item != null ? item.getID() : -1);
     String title = "Unknown Item";
     if (item != null)
     {
-        item.getName();
+        Metadatum[] dcvs = item.getMetadataByMetadataString("dc.title");
+        if (dcvs != null && dcvs.length > 0)
+        {
+            title = dcvs[0].value;
+        }
     }
     String groupOptions = (String)request.getAttribute("curate_group_options");
     String taskOptions = (String)request.getAttribute("curate_task_options");

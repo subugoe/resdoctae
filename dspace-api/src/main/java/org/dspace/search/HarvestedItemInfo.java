@@ -9,7 +9,6 @@ package org.dspace.search;
 
 import java.util.Date;
 import java.util.List;
-import java.util.UUID;
 
 import org.dspace.content.Item;
 import org.dspace.core.Context;
@@ -26,7 +25,7 @@ public class HarvestedItemInfo
     public Context context;
     
     /** Internal item ID (as opposed to item's OAI ID, which is the Handle) */
-    public UUID itemID;
+    public int itemID;
 
     /** The Handle, with no prefix */
     public String handle;

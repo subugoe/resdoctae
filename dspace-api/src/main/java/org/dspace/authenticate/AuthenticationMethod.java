@@ -10,11 +10,9 @@ package org.dspace.authenticate;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.sql.SQLException;
-import java.util.List;
 
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.Group;
 
 
 /**
@@ -33,7 +31,7 @@ import org.dspace.eperson.Group;
  * and validate the credentials and fail gracefully if they are not
  * appropriate for it.  The next method in the stack is then called.
  *
- * @see org.dspace.authenticate.service.AuthenticationService
+ * @see AuthenticationManager
  *
  * @author Larry Stone
  * @version $Revision$
@@ -74,7 +72,6 @@ public interface AuthenticationMethod {
      * @param username
      *            Username, if available.  May be null.
      * @return true if new ePerson should be created.
-     * @throws SQLException if database error
      */
     public boolean canSelfRegister(Context context,
                                    HttpServletRequest request,
@@ -93,7 +90,6 @@ public interface AuthenticationMethod {
      * @param eperson
      *            newly created EPerson record - email + information from the
      *            registration form will have been filled out.
-     * @throws SQLException if database error
      */
     public void initEPerson(Context context,
                             HttpServletRequest request,
@@ -113,7 +109,6 @@ public interface AuthenticationMethod {
      * @param username
      *            Username, if available.  May be null.
      * @return true if this method allows user to change ePerson password.
-     * @throws SQLException if database error
      */
     public boolean allowSetPassword(Context context,
                                     HttpServletRequest request,
@@ -152,9 +147,8 @@ public interface AuthenticationMethod {
      * 
      * @return array of EPerson-group IDs, possibly 0-length, but never
      *         <code>null</code>.
-     * @throws SQLException if database error
      */
-    public List<Group> getSpecialGroups(Context context, HttpServletRequest request)
+    public int[] getSpecialGroups(Context context, HttpServletRequest request)
         throws SQLException;
 
     /**
@@ -189,7 +183,6 @@ public interface AuthenticationMethod {
      * <br>CERT_REQUIRED   - not allowed to login this way without X.509 cert.
      * <br>NO_SUCH_USER    - user not found using this method.
      * <br>BAD_ARGS        - user/pw not appropriate for this method
-     * @throws SQLException if database error
      */
 
     public int authenticate(Context context,

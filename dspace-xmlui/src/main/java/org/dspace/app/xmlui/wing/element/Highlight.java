@@ -34,7 +34,7 @@ public class Highlight extends RichTextContainer implements StructuralElement
     public static final String E_HIGHLIGHT = "hi";
 
     /** Special rendering instructions for this highlight */
-    private final String rend;
+    private String rend;
 
     /**
      * Construct a new highlight element.
@@ -44,7 +44,6 @@ public class Highlight extends RichTextContainer implements StructuralElement
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Highlight(WingContext context, String rend) throws WingException
     {
@@ -58,17 +57,15 @@ public class Highlight extends RichTextContainer implements StructuralElement
      * events should be routed to the contentHandler found in the WingContext.
      * 
      * @param contentHandler
-     *            (Required) The registered contentHandler to which SAX events
-     *            should be routed.
+     *            (Required) The registered contentHandler where SAX events
+     *            should be routed too.
      * @param lexicalHandler
-     *            (Required) The registered lexicalHandler to which lexical
-     *            events (such as CDATA, DTD, etc) should be routed.
+     *            (Required) The registered lexicalHandler where lexical 
+     *            events (such as CDATA, DTD, etc) should be routed too.
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler,
             NamespaceSupport namespaces) throws SAXException
     {

@@ -7,20 +7,28 @@
  */
 package org.dspace.app.xmlui.aspect.administrative.registries;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+
 import org.apache.cocoon.environment.ObjectModelHelper;
 import org.apache.cocoon.environment.Request;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
-import org.dspace.app.xmlui.wing.element.*;
+import org.dspace.app.xmlui.wing.element.Body;
+import org.dspace.app.xmlui.wing.element.CheckBox;
+import org.dspace.app.xmlui.wing.element.Division;
+import org.dspace.app.xmlui.wing.element.Highlight;
+import org.dspace.app.xmlui.wing.element.Item;
+import org.dspace.app.xmlui.wing.element.List;
+import org.dspace.app.xmlui.wing.element.PageMeta;
+import org.dspace.app.xmlui.wing.element.Para;
+import org.dspace.app.xmlui.wing.element.Row;
+import org.dspace.app.xmlui.wing.element.Table;
+import org.dspace.app.xmlui.wing.element.Text;
+import org.dspace.app.xmlui.wing.element.TextArea;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataSchema;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataFieldService;
-import org.dspace.content.service.MetadataSchemaService;
-
-import java.sql.SQLException;
-import java.util.ArrayList;
 
 /**
  * Edit a metadata schema by: listing all the existing fields in
@@ -94,12 +102,8 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 		message("xmlui.administrative.registries.EditMetadataSchema.error_qualifier_tolong");	
 	private static final Message T_error_qualifier_badchar =
 		message("xmlui.administrative.registries.EditMetadataSchema.error_qualifier_badchar");	
-
-	protected MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-	protected MetadataSchemaService metadataSchemaService = ContentServiceFactory.getInstance().getMetadataSchemaService();
-
 	
-    @Override
+	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
         pageMeta.addMetadata("title").addContent(T_title);
@@ -109,15 +113,14 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
     }
 	
 	
-    @Override
 	public void addBody(Body body) throws WingException, SQLException 
 	{
 		// Get our parameters & state
 		int schemaID = parameters.getParameterAsInteger("schemaID",-1);
 		int updateID = parameters.getParameterAsInteger("updateID",-1);
 		int highlightID = parameters.getParameterAsInteger("highlightID",-1);
-		MetadataSchema schema = metadataSchemaService.find(context,schemaID);
-		java.util.List<MetadataField> fields = metadataFieldService.findAllInSchema(context, schema);
+		MetadataSchema schema = MetadataSchema.find(context,schemaID);
+		MetadataField[] fields = MetadataField.findAllInSchema(context, schemaID);
 		String schemaName = schema.getName();
 		String schemaNamespace = schema.getNamespace();
 		
@@ -156,7 +159,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 		Division existingFields = main.addDivision("metadata-schema-edit-existing-fields");
 		existingFields.setHead(T_head2);
 		
-		Table table = existingFields.addTable("metadata-schema-edit-existing-fields", fields.size()+1, 5);
+		Table table = existingFields.addTable("metadata-schema-edit-existing-fields", fields.length+1, 5);
 		
 		Row header = table.addRow(Row.ROLE_HEADER);
 		header.addCellContent(T_column1);
@@ -166,7 +169,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 		
 		for (MetadataField field : fields)
 		{
-			String id = String.valueOf(field.getID());
+			String id = String.valueOf(field.getFieldID());
 			String fieldElement = field.getElement();
 			String fieldQualifier = field.getQualifier();
 			
@@ -177,7 +180,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
             }
 				
 			boolean highlight = false;
-			if (field.getID() == highlightID)
+			if (field.getFieldID() == highlightID)
             {
                 highlight = true;
             }
@@ -205,7 +208,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 			row.addCell().addContent(fieldScopeNote);
 		}
 		
-		if (fields.size() == 0)
+		if (fields.length == 0)
 		{
 			// No fields, let the user know.
 			table.addRow().addCell(1,4).addHighlight("italic").addContent(T_empty);
@@ -216,7 +219,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 			// Only show the actions if there are fields available to perform them on.
 			Para actions = main.addPara();
 			actions.addButton("submit_delete").setValue(T_submit_delete);
-			if (metadataSchemaService.findAll(context).size() > 1)
+			if (MetadataSchema.findAll(context).length > 1)
             {
                 actions.addButton("submit_move").setValue(T_submit_move);
             }
@@ -234,7 +237,6 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 	 * @param div The division to add the form too.
 	 * @param schemaName The schemaName currently being operated on.
 	 * @param errors A list of errors from previous attempts at adding new fields.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
 	 */
 	public void addNewFieldForm(Division div, String schemaName, java.util.List<String> errors) throws WingException
 	{
@@ -275,19 +277,17 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 	
 
 	/**
-	 * Update an existing field by prompting the user for its values.
+	 * Update an existing field by promting the user for it's values.
 	 *  
 	 * @param div The division to add the form too.
 	 * @param schemaName The schemaName currently being operated on.
 	 * @param fieldID The id of the field being updated.
-	 * @param errors A list of errors from previous attempts at updating the field.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
-     * @throws java.sql.SQLException passed through.
+	 * @param errors A list of errors from previous attempts at updaating the field.
 	 */
 	public void addUpdateFieldForm(Division div, String schemaName, int fieldID, java.util.List<String> errors) throws WingException, SQLException
 	{
 		
-		MetadataField field = metadataFieldService.find(context, fieldID);
+		MetadataField field = MetadataField.find(context, fieldID);
 		
 		Request request = ObjectModelHelper.getRequest(objectModel);
 		String elementValue = request.getParameter("updateElement");
@@ -309,7 +309,7 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 		
 		
 		Division newField = div.addDivision("edit-schema-update-field");
-		newField.setHead(T_head4.parameterize(field.getID()));
+		newField.setHead(T_head4.parameterize(field.getFieldID()));
 		
 		List form = newField.addList("edit-schema-update-field-form",List.TYPE_FORM);
 		
@@ -344,15 +344,15 @@ public class EditMetadataSchema extends AbstractDSpaceTransformer
 	}
 	
 	/**
-	 * Determine if there were any special errors and display appropriate
-	 * text. Because of the in-line nature of the element and qualifier
+	 * Determine if there were any special errors and display approparte 
+	 * text. Because of the inline nature of the element and qualifier 
 	 * fields these errors can not be placed on the field. Instead they 
 	 * have to be added as separate items above the field.
 	 * 
 	 * @param form The form to add errors to.
 	 * @param errors A list of errors.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
 	 */
+	
 	public void addFieldErrors(List form, java.util.List<String> errors) throws WingException 
 	{
 		if (errors.contains("duplicate_field"))

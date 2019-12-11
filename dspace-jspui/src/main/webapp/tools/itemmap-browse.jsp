@@ -31,11 +31,8 @@
 <%@ page import="java.util.Map"                  %>
 <%@ page import="javax.servlet.jsp.jstl.fmt.LocaleSupport" %>
 <%@ page import="org.dspace.content.Collection"  %>
+<%@ page import="org.dspace.content.Metadatum"    %>
 <%@ page import="org.dspace.content.Item"        %>
-<%@ page import="org.dspace.content.MetadataValue" %>
-<%@ page import="org.dspace.content.service.ItemService" %>
-<%@ page import="org.dspace.content.factory.ContentServiceFactory" %>
-<%@ page import="java.util.List" %>
 
 <%
     Collection collection  = (Collection)request.getAttribute("collection");
@@ -120,26 +117,25 @@
     String row = "even";
     Iterator i = items.keySet().iterator();
 
-    ItemService itemService = ContentServiceFactory.getInstance().getItemService();
     while( i.hasNext() )
     {
         Item item = (Item)items.get(i.next());
         // get the metadata or placeholders to display for date, contributor and title
         String date = LocaleSupport.getLocalizedMessage(pageContext, "jsp.general.without-date");
-        List<MetadataValue> dates = itemService.getMetadata(item, "dc", "date", "issued", Item.ANY);
-        if (dates.size() >= 1)
+        Metadatum[] dates = item.getMetadata("dc", "date", "issued", Item.ANY);
+        if (dates.length >= 1)
         {
-            date = dates.get(0).getValue();
+            date = dates[0].value;
         }
         else
         {
          // do nothing the date is already set to "without date"
         }
         String contributor = LocaleSupport.getLocalizedMessage(pageContext, "jsp.general.without-contributor");
-        List<MetadataValue> contributors = itemService.getMetadata(item, "dc", "contributor", Item.ANY, Item.ANY);
-        if (contributors.size() >= 1)
+        Metadatum[] contributors = item.getMetadata("dc", "contributor", Item.ANY, Item.ANY);
+        if (contributors.length >= 1)
         {
-            contributor = contributors.get(0).getValue();
+            contributor = contributors[0].value;
             
         }
         else
@@ -147,10 +143,10 @@
          // do nothing the contributor is already set to anonymous
         }
         String title = LocaleSupport.getLocalizedMessage(pageContext, "jsp.general.untitled");
-        List<MetadataValue> titles = itemService.getMetadata(item, "dc", "title", null, Item.ANY);
-        if (titles.size() >= 1)
+        Metadatum[] titles = item.getMetadata("dc", "title", null, Item.ANY);
+        if (titles.length >= 1)
         {
-            title = titles.get(0).getValue();
+            title = titles[0].value;
             
         }
         else

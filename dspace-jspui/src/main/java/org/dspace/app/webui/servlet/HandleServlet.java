@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.net.URLEncoder;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.servlet.RequestDispatcher;
@@ -19,7 +18,6 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -28,37 +26,27 @@ import org.dspace.app.webui.util.Authenticate;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.crosswalk.DisseminationCrosswalk;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.core.service.PluginService;
+import org.dspace.core.PluginManager;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.SubscribeService;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.identifier.DOI;
-import org.dspace.identifier.factory.IdentifierServiceFactory;
-import org.dspace.identifier.service.DOIService;
-import org.dspace.identifier.service.IdentifierService;
+import org.dspace.eperson.Subscribe;
+import org.dspace.handle.HandleManager;
 import org.dspace.plugin.CollectionHomeProcessor;
 import org.dspace.plugin.CommunityHomeProcessor;
 import org.dspace.plugin.ItemHomeProcessor;
-import org.dspace.services.factory.DSpaceServicesFactory;
 import org.dspace.usage.UsageEvent;
+import org.dspace.utils.DSpace;
 import org.jdom.Element;
 import org.jdom.Text;
 import org.jdom.output.XMLOutputter;
@@ -81,39 +69,18 @@ import org.jdom.output.XMLOutputter;
 public class HandleServlet extends DSpaceServlet
 {
     /** log4j category */
-    private static final Logger log = Logger.getLogger(HandleServlet.class);
+    private static Logger log = Logger.getLogger(HandleServlet.class);
 
-    // services API
-    private final transient HandleService handleService
-             = HandleServiceFactory.getInstance().getHandleService();
-
-    private final transient SubscribeService subscribeService
-             = EPersonServiceFactory.getInstance().getSubscribeService();
-    
-    private final transient ItemService itemService
-             = ContentServiceFactory.getInstance().getItemService();
-
-    private final transient CommunityService communityService
-             = ContentServiceFactory.getInstance().getCommunityService();
-    
-    private final transient CollectionService collectionService
-             = ContentServiceFactory.getInstance().getCollectionService();
-    
-    private final transient PluginService pluginService
-             = CoreServiceFactory.getInstance().getPluginService();
-    
     /** For obtaining &lt;meta&gt; elements to put in the &lt;head&gt; */
-    private final transient DisseminationCrosswalk xHTMLHeadCrosswalk
-             = (DisseminationCrosswalk) pluginService
-                .getNamedPlugin(DisseminationCrosswalk.class, "XHTML_HEAD_ITEM");
+    private DisseminationCrosswalk xHTMLHeadCrosswalk;
 
-    private final transient IdentifierService identifierService
-            = IdentifierServiceFactory.getInstance().getIdentifierService();
-    
-    private final transient DOIService doiService
-            = IdentifierServiceFactory.getInstance().getDOIService();
-    
-    @Override
+    public HandleServlet()
+    {
+        super();
+        xHTMLHeadCrosswalk = (DisseminationCrosswalk) PluginManager
+                .getNamedPlugin(DisseminationCrosswalk.class, "XHTML_HEAD_ITEM");
+    }   
+
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -155,12 +122,10 @@ public class HandleServlet extends DSpaceServlet
             }
         }
 
-        
-        
         // Find out what the handle relates to
         if (handle != null)
         {
-            dso = handleService.resolveToObject(context, handle);
+            dso = HandleManager.resolveToObject(context, handle);
         }
 
         if (dso == null)
@@ -289,20 +254,20 @@ public class HandleServlet extends DSpaceServlet
              * the collection is in. This should probably be more context
              * sensitive when we have multiple inclusion.
              */
-            List<Community> parents = c.getCommunities();
-            request.setAttribute("dspace.community", parents.get(0));
+            Community[] parents = c.getCommunities();
+            request.setAttribute("dspace.community", parents[0]);
 
             /*
              * Find all the "parent" communities for the collection for
              * "breadcrumbs"
              */
-            request.setAttribute("dspace.communities", getParents(context, parents.get(0),
+            request.setAttribute("dspace.communities", getParents(parents[0],
                     true));
 
             // home page, or forward to another page?
             if ((extraPathInfo == null) || (extraPathInfo.equals("/")))
             {
-                collectionHome(context, request, response, parents.get(0), c);
+                collectionHome(context, request, response, parents[0], c);
             }
             else
             {
@@ -321,7 +286,7 @@ public class HandleServlet extends DSpaceServlet
             /*
              * Find all the "parent" communities for the community
              */
-            request.setAttribute("dspace.communities", getParents(context, c, false));
+            request.setAttribute("dspace.communities", getParents(c, false));
 
             // home page, or forward to another page?
             if ((extraPathInfo == null) || (extraPathInfo.equals("/")))
@@ -378,40 +343,34 @@ public class HandleServlet extends DSpaceServlet
         }
 
         // Ensure the user has authorisation
-        authorizeService.authorizeAction(context, item, Constants.READ);
+        AuthorizeManager.authorizeAction(context, item, Constants.READ);
 
         log
                 .info(LogManager.getHeader(context, "view_item", "handle="
                         + handle));
-        
+
         // show edit link
-        if (itemService.canEdit(context, item))
+        if (item.canEdit())
         {
             // set a variable to create an edit button
             request.setAttribute("admin_button", Boolean.TRUE);
-        } 
-        // show submitters a button to create a new item version
-        else if (itemService.canCreateNewVersion(context, item))
-        {
-            // set a variable to create a button to create a new item version
-            request.setAttribute("submitter_button", Boolean.TRUE);
         }
-  		  
+
         // Get the collections
-        List<Collection> collections = item.getCollections();
+        Collection[] collections = item.getCollections();
 
         // For the breadcrumbs, get the first collection and the first community
         // that is in. FIXME: Not multiple-inclusion friendly--should be
         // smarter, context-sensitive
         request.setAttribute("dspace.collection", item.getOwningCollection());
 
-        List<Community> comms = item.getOwningCollection().getCommunities();
-        request.setAttribute("dspace.community", comms.get(0));
+        Community[] comms = item.getOwningCollection().getCommunities();
+        request.setAttribute("dspace.community", comms[0]);
 
         /*
          * Find all the "parent" communities for the collection
          */
-        request.setAttribute("dspace.communities", getParents(context, comms.get(0), true));
+        request.setAttribute("dspace.communities", getParents(comms[0], true));
 
         // Full or simple display?
         boolean displayAll = false;
@@ -427,7 +386,7 @@ public class HandleServlet extends DSpaceServlet
         // Produce <meta> elements for header from crosswalk
         try
         {
-            List<Element> l = xHTMLHeadCrosswalk.disseminateList(context, item);
+            List<Element> l = xHTMLHeadCrosswalk.disseminateList(item);
             StringWriter sw = new StringWriter();
 
             XMLOutputter xmlo = new XMLOutputter();
@@ -460,38 +419,6 @@ public class HandleServlet extends DSpaceServlet
         {
             throw new ServletException(ce);
         }
-        
-        // lookup if we have a DOI
-        String doi = null;
-        if (identifierService != null)
-        {
-            doi = identifierService.lookup(UIUtil.obtainContext(request), item, DOI.class);
-        }
-        if (doi != null)
-        {
-            try
-            {
-                doi = doiService.DOIToExternalForm(doi);
-            }
-            catch (Exception ex)
-            {
-                doi = null;
-                log.error("Unable to convert DOI '" + doi + "' into external form.", ex);
-            }
-        }
-        
-        // use handle as preferred Identifier if not configured otherwise.    
-        String preferredIdentifier = null;
-        if (item.getHandle() != null) {
-            preferredIdentifier = handleService.getCanonicalForm(item.getHandle());
-        }
-        if ("doi".equalsIgnoreCase(ConfigurationManager.getProperty("webui.preferred.identifier")))
-        {
-            if (doi != null)
-            {
-                preferredIdentifier = doi;
-            }
-        }
 
         // Enable suggest link or not
         boolean suggestEnable = false;
@@ -512,12 +439,12 @@ public class HandleServlet extends DSpaceServlet
             else
             {
                 // check whether there is a logged in user
-                suggestEnable = (context.getCurrentUser() != null);
+                suggestEnable = (context.getCurrentUser() == null ? false : true);
             }
         }
 
         // Fire usage event.
-        DSpaceServicesFactory.getInstance().getEventService().fireEvent(
+        new DSpace().getEventService().fireEvent(
             		new UsageEvent(
             				UsageEvent.Action.VIEW,
             				request,
@@ -525,13 +452,11 @@ public class HandleServlet extends DSpaceServlet
             				item));
 
         // Set attributes and display
-        request.setAttribute("suggest.enable", suggestEnable);
-        request.setAttribute("display.all", displayAll);
+        request.setAttribute("suggest.enable", Boolean.valueOf(suggestEnable));
+        request.setAttribute("display.all", Boolean.valueOf(displayAll));
         request.setAttribute("item", item);
         request.setAttribute("collections", collections);
         request.setAttribute("dspace.layout.head", headMetadata);
-        request.setAttribute("doi", doi);
-        request.setAttribute("preferred_identifier", preferredIdentifier);
         JSPManager.showJSP(request, response, "/display-item.jsp");
     }
     
@@ -541,7 +466,7 @@ public class HandleServlet extends DSpaceServlet
     {
         try
         {
-            ItemHomeProcessor[] chp = (ItemHomeProcessor[]) pluginService.getPluginSequence(ItemHomeProcessor.class);
+            ItemHomeProcessor[] chp = (ItemHomeProcessor[]) PluginManager.getPluginSequence(ItemHomeProcessor.class);
             for (int i = 0; i < chp.length; i++)
             {
                 chp[i].process(context, request, response, item);
@@ -572,7 +497,7 @@ public class HandleServlet extends DSpaceServlet
             throws ServletException, IOException, SQLException, AuthorizeException
     {
         // Ensure the user has authorisation
-        authorizeService.authorizeAction(context, community, Constants.READ);
+    	AuthorizeManager.authorizeAction(context, community, Constants.READ);
 
         // Handle click on a browse or search button
         if (!handleButton(request, response, community.getHandle()))
@@ -582,23 +507,23 @@ public class HandleServlet extends DSpaceServlet
                     "community_id=" + community.getID()));
 
             // Get the collections within the community
-            List<Collection> collections = community.getCollections();
+            Collection[] collections = community.getCollections();
 
             // get any subcommunities of the community
-            List<Community> subcommunities = community.getSubcommunities();
+            Community[] subcommunities = community.getSubcommunities();
 
             // perform any necessary pre-processing
             preProcessCommunityHome(context, request, response, community);
 
             // is the user a COMMUNITY_EDITOR?
-            if (communityService.canEditBoolean(context, community))
+            if (community.canEditBoolean())
             {
                 // set a variable to create an edit button
                 request.setAttribute("editor_button", Boolean.TRUE);
             }
 
             // can they add to this community?
-            if (authorizeService.authorizeActionBoolean(context, community,
+            if (AuthorizeManager.authorizeActionBoolean(context, community,
                     Constants.ADD))
             {
                 // set a variable to create an edit button
@@ -606,7 +531,7 @@ public class HandleServlet extends DSpaceServlet
             }
 
             // can they remove from this community?
-            if (authorizeService.authorizeActionBoolean(context, community,
+            if (AuthorizeManager.authorizeActionBoolean(context, community,
                     Constants.REMOVE))
             {
                 // set a variable to create an edit button
@@ -614,7 +539,7 @@ public class HandleServlet extends DSpaceServlet
             }
 
             // Fire usage event.
-            DSpaceServicesFactory.getInstance().getEventService().fireEvent(
+            new DSpace().getEventService().fireEvent(
             		new UsageEvent(
             				UsageEvent.Action.VIEW,
             				request,
@@ -635,7 +560,7 @@ public class HandleServlet extends DSpaceServlet
     {
     	try
     	{
-    		CommunityHomeProcessor[] chp = (CommunityHomeProcessor[]) pluginService.getPluginSequence(CommunityHomeProcessor.class);
+    		CommunityHomeProcessor[] chp = (CommunityHomeProcessor[]) PluginManager.getPluginSequence(CommunityHomeProcessor.class);
     		for (int i = 0; i < chp.length; i++)
     		{
     			chp[i].process(context, request, response, community);
@@ -669,7 +594,7 @@ public class HandleServlet extends DSpaceServlet
             SQLException, AuthorizeException
     {
     	// Ensure the user has authorisation
-        authorizeService.authorizeAction(context, collection, Constants.READ);
+    	AuthorizeManager.authorizeAction(context, collection, Constants.READ);
         
         // Handle click on a browse or search button
         if (!handleButton(request, response, collection.getHandle()))
@@ -691,14 +616,14 @@ public class HandleServlet extends DSpaceServlet
                 }
                 else
                 {
-                    subscribeService.subscribe(context, context.getCurrentUser(),
+                    Subscribe.subscribe(context, context.getCurrentUser(),
                             collection);
                     updated = true;
                 }
             }
             else if (request.getParameter("submit_unsubscribe") != null)
             {
-            	subscribeService.unsubscribe(context, context.getCurrentUser(),
+                Subscribe.unsubscribe(context, context.getCurrentUser(),
                         collection);
                 updated = true;
             }
@@ -716,17 +641,17 @@ public class HandleServlet extends DSpaceServlet
 
             if (e != null)
             {
-            	subscribeService.isSubscribed(context, e, collection);
+                subscribed = Subscribe.isSubscribed(context, e, collection);
 
                 // is the user a COLLECTION_EDITOR?
-                if (collectionService.canEditBoolean(context, collection, true))
+                if (collection.canEditBoolean(true))
                 {
                     // set a variable to create an edit button
                     request.setAttribute("editor_button", Boolean.TRUE);
                 }
 
                 // can they admin this collection?
-                if (authorizeService.authorizeActionBoolean(context,
+                if (AuthorizeManager.authorizeActionBoolean(context,
                         collection, Constants.COLLECTION_ADMIN))
                 {
                     request.setAttribute("admin_button", Boolean.TRUE);
@@ -742,7 +667,7 @@ public class HandleServlet extends DSpaceServlet
                 }
 
                 // can they submit to this collection?
-                if (authorizeService.authorizeActionBoolean(context,
+                if (AuthorizeManager.authorizeActionBoolean(context,
                         collection, Constants.ADD))
                 {
                     request
@@ -758,7 +683,7 @@ public class HandleServlet extends DSpaceServlet
             }
 
             // Fire usage event.
-            DSpaceServicesFactory.getInstance().getEventService().fireEvent(
+            new DSpace().getEventService().fireEvent(
             		new UsageEvent(
             				UsageEvent.Action.VIEW,
             				request,
@@ -768,8 +693,8 @@ public class HandleServlet extends DSpaceServlet
             // Forward to collection home page
             request.setAttribute("collection", collection);
             request.setAttribute("community", community);
-            request.setAttribute("logged.in", e != null);
-            request.setAttribute("subscribed", subscribed);
+            request.setAttribute("logged.in", Boolean.valueOf(e != null));
+            request.setAttribute("subscribed", Boolean.valueOf(subscribed));
             JSPManager.showJSP(request, response, "/collection-home.jsp");
 
             if (updated)
@@ -785,7 +710,7 @@ public class HandleServlet extends DSpaceServlet
     {
     	try
     	{
-    		CollectionHomeProcessor[] chp = (CollectionHomeProcessor[]) pluginService.getPluginSequence(CollectionHomeProcessor.class);
+    		CollectionHomeProcessor[] chp = (CollectionHomeProcessor[]) PluginManager.getPluginSequence(CollectionHomeProcessor.class);
     		for (int i = 0; i < chp.length; i++)
     		{
     			chp[i].process(context, request, response, collection);
@@ -868,16 +793,27 @@ public class HandleServlet extends DSpaceServlet
      * passed community, if include is true. The array is ordered highest level
      * to lowest
      */
-    private List<Community> getParents(Context context, Community c, boolean include)
+    private Community[] getParents(Community c, boolean include)
             throws SQLException
     {
         // Find all the "parent" communities for the community
-        List<Community> parents = communityService.getAllParents(context, c);
-        parents = Lists.reverse(parents);
+        Community[] parents = c.getAllParents();
+
+        // put into an array in reverse order
+        int revLength = include ? (parents.length + 1) : parents.length;
+        Community[] reversedParents = new Community[revLength];
+        int index = parents.length - 1;
+
+        for (int i = 0; i < parents.length; i++)
+        {
+            reversedParents[i] = parents[index - i];
+        }
+
         if (include)
         {
-            parents.add(c);
+            reversedParents[revLength - 1] = c;
         }
-        return parents;
+
+        return reversedParents;
     }
 }

@@ -17,13 +17,10 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
 import org.dspace.content.Bitstream;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.Utils;
-import org.dspace.license.factory.LicenseServiceFactory;
-import org.dspace.license.service.CreativeCommonsService;
+import org.dspace.license.CreativeCommons;
 
 /**
  * Export the object's Creative Commons license, text form.
@@ -31,25 +28,21 @@ import org.dspace.license.service.CreativeCommonsService;
  * @author  Larry Stone
  * @version $Revision: 1.0 $
  * 
- * @deprecated to make uniform JSPUI and XMLUI approach the bitstream with the license in the textual format it is no longer stored (see https://jira.duraspace.org/browse/DS-2604) 
+ * @deprecated to make uniforme JSPUI and XMLUI approach the bitstream with the license in the textual format it is no longer stored see https://jira.duraspace.org/browse/DS-2604 
  */
+@Deprecated
 public class CreativeCommonsTextStreamDisseminationCrosswalk
     implements StreamDisseminationCrosswalk
 {
-
-    protected final BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected final CreativeCommonsService creativeCommonsService = LicenseServiceFactory.getInstance().getCreativeCommonsService();
-
     /** log4j logger */
     private static Logger log = Logger.getLogger(CreativeCommonsTextStreamDisseminationCrosswalk.class);
 
-    @Override
     public boolean canDisseminate(Context context, DSpaceObject dso)
     {
         try
         {
             return dso.getType() == Constants.ITEM &&
-                    creativeCommonsService.getLicenseTextBitstream((Item) dso) != null;
+                   CreativeCommons.getLicenseTextBitstream((Item)dso) != null;
         }
         catch (Exception e)
         {
@@ -58,22 +51,20 @@ public class CreativeCommonsTextStreamDisseminationCrosswalk
         }
     }
 
-    @Override
     public void disseminate(Context context, DSpaceObject dso, OutputStream out)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
         if (dso.getType() == Constants.ITEM)
         {
-            Bitstream cc = creativeCommonsService.getLicenseTextBitstream((Item) dso);
+            Bitstream cc = CreativeCommons.getLicenseTextBitstream((Item)dso);
             if (cc != null)
             {
-                Utils.copy(bitstreamService.retrieve(context, cc), out);
+                Utils.copy(cc.retrieve(), out);
                 out.close();
             }
         }
     }
 
-    @Override
     public String getMIMEType()
     {
         return "text/plain";

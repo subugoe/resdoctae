@@ -83,7 +83,7 @@ public class MockServiceManagerSystem implements ServiceManagerSystem {
     /* (non-Javadoc)
      * @see org.dspace.kernel.ServiceManager#pushConfig(java.util.Map)
      */
-    public void pushConfig(Map<String, Object> settings) {
+    public void pushConfig(Map<String, String> settings) {
         this.sms.pushConfig(settings);
     }
 
@@ -92,11 +92,6 @@ public class MockServiceManagerSystem implements ServiceManagerSystem {
      */
     public void registerService(String name, Object service) {
         this.sms.registerService(name, service);
-    }
-
-    @Override
-    public void registerServiceNoAutowire(String name, Object service) {
-        this.sms.registerServiceNoAutowire(name, service);
     }
 
     /* (non-Javadoc)

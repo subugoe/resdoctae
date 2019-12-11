@@ -57,6 +57,8 @@ public class BatchImportConfirm extends AbstractDSpaceTransformer {
     {
         // Get list of changes
 
+        Request request = ObjectModelHelper.getRequest(objectModel);
+
         // DIVISION: metadata-import
         Division div = body.addInteractiveDivision("batch-import",contextPath + "/admin/batchimport", Division.METHOD_MULTIPART,"primary administrative");
         div.setHead(T_head1);

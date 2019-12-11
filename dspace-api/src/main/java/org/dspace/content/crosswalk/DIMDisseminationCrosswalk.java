@@ -14,11 +14,10 @@ import java.util.List;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.*;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
+import org.dspace.content.Metadatum;
+import org.dspace.content.DSpaceObject;
+import org.dspace.content.Item;
 import org.dspace.core.Constants;
-import org.dspace.core.Context;
 import org.jdom.Element;
 import org.jdom.Namespace;
 
@@ -40,26 +39,21 @@ public class DIMDisseminationCrosswalk
     public static final Namespace DIM_NS =
         Namespace.getNamespace("dim", "http://www.dspace.org/xmlns/dspace/dim");
 
-    protected final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-
     private static final Namespace namespaces[] = { DIM_NS };
 
-    @Override
     public Namespace[] getNamespaces()
     {
         return (Namespace[]) ArrayUtils.clone(namespaces);
     }
 
     /* No schema for DIM */ 
-    @Override
     public String getSchemaLocation()
     {
         return DIM_NS.getURI() + " " + DIM_XSD;
     }
 
     
-    @Override
-    public Element disseminateElement(Context context, DSpaceObject dso)	throws CrosswalkException, IOException, SQLException, AuthorizeException
+    public Element disseminateElement(DSpaceObject dso)	throws CrosswalkException, IOException, SQLException, AuthorizeException 
 	{
     	if (dso.getType() != Constants.ITEM)
         {
@@ -67,45 +61,43 @@ public class DIMDisseminationCrosswalk
         }
         Item item = (Item)dso;
         
-    	List<MetadataValue> dc = itemService.getMetadata(item, Item.ANY, Item.ANY, Item.ANY, Item.ANY);
+    	Metadatum[] dc = item.getMetadata(Item.ANY, Item.ANY, Item.ANY, Item.ANY);
         Element dim = new Element("dim", DIM_NS);
-        for (MetadataValue aDc : dc)
+        for (int i = 0; i < dc.length; i++)
         {
-            MetadataField metadataField = aDc.getMetadataField();
-            MetadataSchema metadataSchema = metadataField.getMetadataSchema();
             Element field = new Element("field", DIM_NS);
-            field.setAttribute("mdschema", metadataSchema.getName());
-            field.setAttribute("element", metadataField.getElement());
-            if (metadataField.getQualifier() != null) {
-                field.setAttribute("qualifier", metadataField.getQualifier());
+            field.setAttribute("mdschema", dc[i].schema);
+            field.setAttribute("element", dc[i].element);
+            if (dc[i].qualifier != null)
+            {
+                field.setAttribute("qualifier", dc[i].qualifier);
             }
-            if (aDc.getLanguage() != null) {
-                field.setAttribute("lang", aDc.getLanguage());
+            if (dc[i].language != null)
+            {
+                field.setAttribute("lang", dc[i].language);
             }
-            if (aDc.getValue() != null) {
-                field.setText(aDc.getValue());
+            if (dc[i].value != null)
+            {
+                field.setText(dc[i].value);
             }
             dim.addContent(field);
         }
         return dim;
 	}
    
-    @Override
-    public List<Element> disseminateList(Context context, DSpaceObject dso) throws CrosswalkException, IOException, SQLException, AuthorizeException
+    public List<Element> disseminateList(DSpaceObject dso) throws CrosswalkException, IOException, SQLException, AuthorizeException
 	{
 	    List<Element> result = new ArrayList<Element>(1);
-	    result.add(disseminateElement(context, dso));
+	    result.add(disseminateElement(dso));
 	    return result;
 	}
 
     /* Only interested in disseminating items at this time */
-    @Override
     public boolean canDisseminate(DSpaceObject dso)
     {
     	return (dso.getType() == Constants.ITEM);
     }
 
-    @Override
     public boolean preferList()
     {
         return false;

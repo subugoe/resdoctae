@@ -7,80 +7,87 @@
  */
 package org.dspace.checker;
 
-import org.dspace.core.Context;
-import org.dspace.content.Bitstream;
-import org.dspace.core.ReloadableEntity;
-
-import javax.persistence.*;
 import java.util.Date;
 
 /**
  * <p>
  * Represents a history record for the bitstream.
  * </p>
- *
+ * 
  * @author Jim Downing
  * @author Grace Carpenter
  * @author Nathan Sarr
- *
+ * 
  */
-@Entity
-@Table(name="checksum_history")
-public class ChecksumHistory implements ReloadableEntity<Long>
+public class ChecksumHistory
 {
 
+    /** Unique bitstream id. */
+    private int bitstreamId;
 
-    @Id
-    @Column(name="check_id")
-    @GeneratedValue(strategy = GenerationType.SEQUENCE ,generator="checksum_history_check_id_seq")
-    @SequenceGenerator(name="checksum_history_check_id_seq", sequenceName="checksum_history_check_id_seq", allocationSize = 1)
-    private Long id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bitstream_id")
-    private Bitstream bitstream;
-
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "process_start_date", nullable = false)
+    /** Date the process started. */
     private Date processStartDate;
 
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "process_end_date", nullable = false)
+    /** Date the process ended. */
     private Date processEndDate;
 
-    @Column(name= "checksum_expected", nullable = false)
+    /** The expected checksum. */
     private String checksumExpected;
 
-    @Column(name= "checksum_calculated", nullable = false)
+    /** The checksum calculated. */
     private String checksumCalculated;
 
-    @ManyToOne
-    @JoinColumn(name = "result", referencedColumnName = "result_code")
-    private ChecksumResult checksumResult;
+    /** The string result. */
+    private String result;
 
-
-    /**
-     * Protected constructor, create object using:
-     * {@link org.dspace.checker.service.ChecksumHistoryService#addHistory(Context, MostRecentChecksum)}
-     */
-    protected ChecksumHistory()
+    public ChecksumHistory()
     {
     }
 
-    public Long getID() {
-        return id;
+    /**
+     * Minimal Constructor.
+     * 
+     * @param bitstreamId
+     *            bitstream id in the database
+     */
+    public ChecksumHistory(int bitstreamId)
+    {
+        this.bitstreamId = bitstreamId;
+    }
+
+    /**
+     * * Full history info Constructor.
+     * 
+     * @param bitstrmId
+     *            bitstream Id.
+     * @param startDate
+     *            process start date
+     * @param endDate
+     *            process end date
+     * @param checksumExpted
+     *            expected checksum
+     * @param checksumCalc
+     *            calculated checksum
+     * @param inResult
+     *            result information
+     */
+    public ChecksumHistory(int bitstrmId, Date startDate, Date endDate,
+            String checksumExpted, String checksumCalc, String inResult)
+    {
+        this.bitstreamId = bitstrmId;
+        this.processStartDate = (startDate == null ? null : new Date(startDate.getTime()));
+        this.processEndDate = (endDate == null ? null : new Date(endDate.getTime()));
+        this.checksumExpected = checksumExpted;
+        this.checksumCalculated = checksumCalc;
+        this.result = inResult;
     }
 
     /**
      * @return Returns the bitstreamId.
      */
-    public Bitstream getBitstream()
+    public int getBitstreamId()
     {
-        return bitstream;
-    }
-
-    public void setBitstream(Bitstream bitstream) {
-        this.bitstream = bitstream;
+        return bitstreamId;
     }
 
     /**
@@ -93,7 +100,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Set the checksum calculated.
-     *
+     * 
      * @param checksumCalculated
      *            The checksumCalculated to set.
      */
@@ -104,7 +111,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Get the extpected checksum.
-     *
+     * 
      * @return Returns the checksumExpected.
      */
     public String getChecksumExpected()
@@ -114,7 +121,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Set the expected checksum.
-     *
+     * 
      * @param checksumExpected
      *            The checksumExpected to set.
      */
@@ -125,7 +132,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Get the process end date. This is the date and time the processing ended.
-     *
+     * 
      * @return Returns the processEndDate.
      */
     public Date getProcessEndDate()
@@ -135,7 +142,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Set the process end date. This is the date and time the processing ended.
-     *
+     * 
      * @param processEndDate
      *            The processEndDate to set.
      */
@@ -147,7 +154,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
     /**
      * Get the process start date. This is the date and time the processing
      * started.
-     *
+     * 
      * @return Returns the processStartDate.
      */
     public Date getProcessStartDate()
@@ -158,7 +165,7 @@ public class ChecksumHistory implements ReloadableEntity<Long>
     /**
      * Set the process start date. This is the date and time the processing
      * started.
-     *
+     * 
      * @param processStartDate
      *            The processStartDate to set.
      */
@@ -169,21 +176,20 @@ public class ChecksumHistory implements ReloadableEntity<Long>
 
     /**
      * Return the processing result.
-     * @return result
      */
-    public ChecksumResult getResult()
+    public String getResult()
     {
-        return checksumResult;
+        return result;
     }
 
     /**
      * Set the checksum processing result.
-     *
+     * 
      * @param result
      *            The result to set.
      */
-    public void setResult(ChecksumResult result)
+    public void setResult(String result)
     {
-        this.checksumResult = result;
+        this.result = result;
     }
 }

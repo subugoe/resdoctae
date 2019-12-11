@@ -28,11 +28,11 @@ import org.dspace.submit.util.ItemSubmissionLookupDTO;
  */
 public class SubmissionLookupOutputGenerator implements OutputGenerator
 {
-    protected List<ItemSubmissionLookupDTO> dtoList;
+    private List<ItemSubmissionLookupDTO> dtoList;
 
-    protected final String DOI_FIELD = "doi";
+    private static final String DOI_FIELD = "doi";
 
-    protected final String NOT_FOUND_DOI = "NOT-FOUND-DOI";
+    private static final String NOT_FOUND_DOI = "NOT-FOUND-DOI";
 
     public SubmissionLookupOutputGenerator()
     {

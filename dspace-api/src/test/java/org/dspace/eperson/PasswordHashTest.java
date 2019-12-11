@@ -10,7 +10,7 @@ package org.dspace.eperson;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import org.apache.commons.codec.DecoderException;
-import org.dspace.AbstractDSpaceTest;
+import org.dspace.servicemanager.DSpaceKernelInit;
 import org.junit.*;
 import static org.junit.Assert.*;
 
@@ -18,12 +18,26 @@ import static org.junit.Assert.*;
  *
  * @author mwood
  */
-public class PasswordHashTest extends AbstractDSpaceTest
+public class PasswordHashTest
 {
     public PasswordHashTest()
     {
     }
 
+    @BeforeClass
+    public static void setUpClass()
+            throws Exception
+    {
+        // Make certain that a default DSpaceKernel is started.
+        DSpaceKernelInit.getKernel(null).start();
+    }
+
+    @AfterClass
+    public static void tearDownClass()
+            throws Exception
+    {
+    }
+    
     @Before
     public void setUp()
     {

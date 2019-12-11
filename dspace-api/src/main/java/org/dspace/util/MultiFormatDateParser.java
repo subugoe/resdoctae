@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Attempt to parse date strings in a variety of formats.  This uses an external
  * list of regular expressions and associated SimpleDateFormat strings.  Inject
- * the list as pairs of strings using {@link #setPatterns}.  {@link #parse} walks
+ * the list as pairs of strings using {@link setPatterns}.  {@link parse} walks
  * the provided list in the order provided and tries each entry against a String.
  *
  * Dates are parsed as being in the UTC zone.
@@ -47,17 +47,11 @@ public class MultiFormatDateParser
     private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
 
     /** Format for displaying a result of testing. */
-    private static final ThreadLocal<DateFormat> formatter;
+    private static final DateFormat formatter;
     static
     {
-        formatter = new ThreadLocal<DateFormat>(){
-        @Override
-        protected DateFormat initialValue() {
-            DateFormat dateTimeInstance = SimpleDateFormat.getDateTimeInstance();
-            dateTimeInstance.setTimeZone(UTC_ZONE);
-            return dateTimeInstance;
-        }
-      };
+        formatter = SimpleDateFormat.getDateTimeInstance();
+        formatter.setTimeZone(UTC_ZONE);
     }
 
     @Inject
@@ -122,7 +116,7 @@ public class MultiFormatDateParser
     public static void main(String[] args)
             throws IOException
     {
-        DSpaceKernelInit.getKernel(null); // Mainly to initialize Spring
+        DSpaceKernel kernel = DSpaceKernelInit.getKernel(null); // Mainly to initialize Spring
         // TODO direct log to stdout/stderr somehow
 
         if (args.length > 0) // Test data supplied on the command line
@@ -162,7 +156,7 @@ public class MultiFormatDateParser
             System.out.println("Did not match any pattern.");
         else
         {
-            System.out.println(formatter.get().format(result));
+            System.out.println(formatter.format(result));
         }
     }
 

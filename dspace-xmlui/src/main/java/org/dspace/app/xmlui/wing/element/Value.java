@@ -56,7 +56,7 @@ public class Value extends RichTextContainer
     /** The type of this value element */
     private String type;
 
-    /** The submitted value for this option */
+    /** The submited value for this option */
     private String option;
     
     /** The checked attribute */
@@ -73,7 +73,6 @@ public class Value extends RichTextContainer
      * @param type
      *            (may be null) Determine the value's type, raw, default or
      *            interpreted. If the value is null, then raw is used.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Value(WingContext context, String type) throws WingException
     {
@@ -102,7 +101,6 @@ public class Value extends RichTextContainer
      * @param optionOrConfidence
      *            (May be null) when type is TYPE_AUTHORITY, this is the
      *            symbolic confidence value, otherwise it is the option value.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Value(WingContext context, String type, String optionOrConfidence) throws WingException
     {
@@ -138,7 +136,6 @@ public class Value extends RichTextContainer
      * @param checked
      *            (Required) Determine if the value is checked, only valid for
      *            checkboxes and radio buttons
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected Value(WingContext context, String type, boolean checked) throws WingException
     {
@@ -177,9 +174,8 @@ public class Value extends RichTextContainer
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
+
     public void toSAX(ContentHandler contentHandler,
             LexicalHandler lexicalHandler, NamespaceSupport namespaces)
             throws SAXException

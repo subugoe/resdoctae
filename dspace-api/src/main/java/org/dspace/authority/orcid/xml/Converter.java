@@ -22,7 +22,6 @@ import java.net.URISyntaxException;
  * @author Kevin Van de Velde (kevin at atmire dot com)
  * @author Ben Bosman (ben at atmire dot com)
  * @author Mark Diggory (markd at atmire dot com)
- * @param <T> type
  */
 public abstract class Converter<T> {
 

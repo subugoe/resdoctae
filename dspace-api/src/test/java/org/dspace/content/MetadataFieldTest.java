@@ -7,22 +7,15 @@
  */
 package org.dspace.content;
 
+import org.dspace.authorize.AuthorizeManager;
 import mockit.NonStrictExpectations;
-import org.apache.log4j.Logger;
-import org.dspace.AbstractUnitTest;
-import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataFieldService;
-import org.dspace.content.service.MetadataSchemaService;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import java.sql.SQLException;
-import java.util.List;
-
+import org.dspace.AbstractUnitTest;
+import org.apache.log4j.Logger;
+import org.dspace.authorize.AuthorizeException;
+import org.junit.*;
+import static org.junit.Assert.* ;
 import static org.hamcrest.CoreMatchers.*;
-import static org.junit.Assert.*;
 
 /**
  * Unit Tests for class MetadataFieldTest
@@ -38,8 +31,6 @@ public class MetadataFieldTest extends AbstractUnitTest
      * MetadataField instance for the tests
      */
     private MetadataField mf;
-    
-    private MetadataSchema dcSchema;
 
     /**
      * Element of the metadata element
@@ -56,9 +47,6 @@ public class MetadataFieldTest extends AbstractUnitTest
      */
     private String scopeNote = "scope note";
 
-    protected MetadataSchemaService metadataSchemaService = ContentServiceFactory.getInstance().getMetadataSchemaService();
-    protected MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-
     /**
      * This method will be run before every test as per @Before. It will
      * initialize resources required for the tests.
@@ -73,28 +61,14 @@ public class MetadataFieldTest extends AbstractUnitTest
         super.init();
         try
         {
-            this.dcSchema = metadataSchemaService.find(context, MetadataSchema.DC_SCHEMA);
-            this.mf = metadataFieldService.findByElement(context,
-                    MetadataSchema.DC_SCHEMA, element, qualifier);
-            if(mf == null)
-            {
-                context.turnOffAuthorisationSystem();
-                this.mf = metadataFieldService.create(context, metadataSchemaService.find(context, MetadataSchema.DC_SCHEMA), element, qualifier, scopeNote);
-                context.restoreAuthSystemState();
-            }
-
+            this.mf = MetadataField.findByElement(context,
+                    MetadataSchema.DC_SCHEMA_ID, element, qualifier);
             this.mf.setScopeNote(scopeNote);
         }
         catch (SQLException ex)
         {
             log.error("SQL Error in init", ex);
             fail("SQL Error in init: " + ex.getMessage());
-        } catch (NonUniqueMetadataException ex) {
-            log.error("NonUniqueMetadataException Error in init", ex);
-            fail("NonUniqueMetadataException Error in init: " + ex.getMessage());
-        } catch (AuthorizeException ex) {
-            log.error("AuthorizeException Error in init", ex);
-            fail("AuthorizeException Error in init: " + ex.getMessage());
         }
     }
 
@@ -139,7 +113,7 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testGetFieldID()
     {
-        assertTrue("testGetFieldID 0",mf.getID() >= 0);
+        assertTrue("testGetFieldID 0",mf.getFieldID() >= 0);
     }
 
     /**
@@ -166,25 +140,20 @@ public class MetadataFieldTest extends AbstractUnitTest
      * Test of getSchemaID method, of class MetadataField.
      */
     @Test
-    public void testGetSchema()
+    public void testGetSchemaID() 
     {
-        assertThat("testGetSchemaID 0",mf.getMetadataSchema().getName(), equalTo(MetadataSchema.DC_SCHEMA));
+        assertThat("testGetSchemaID 0",mf.getSchemaID(), equalTo(MetadataSchema.DC_SCHEMA_ID));
     }
 
     /**
      * Test of setSchemaID method, of class MetadataField.
      */
     @Test
-    public void testSetSchema() throws NonUniqueMetadataException, SQLException, AuthorizeException
+    public void testSetSchemaID()
     {
-        new NonStrictExpectations(authorizeService.getClass())
-        {{
-            // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
-        }};
-        MetadataSchema newSchema = metadataSchemaService.create(context, "testSetSchema", "testSetSchemaNS");
-        mf.setMetadataSchema(newSchema);
-        assertThat("testSetSchemaID 0",mf.getMetadataSchema(), equalTo(newSchema));
+        int schemaID = 3;
+        mf.setSchemaID(schemaID);
+        assertThat("testSetSchemaID 0",mf.getSchemaID(), equalTo(schemaID));
     }
 
     /**
@@ -213,18 +182,22 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testCreateAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
+            AuthorizeManager.isAdmin(context); result = true;
         }};
 
         String elem = "elem1";
         String qual = "qual1";
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
 
-        MetadataField found = metadataFieldService.findByElement(context, dcSchema, elem, qual);
-        assertThat("testCreateAuth 0",found.getID(), equalTo(m.getID()));
+        MetadataField found = MetadataField.findByElement(context, MetadataSchema.DC_SCHEMA_ID, elem, qual);
+        assertThat("testCreateAuth 0",found.getFieldID(), equalTo(m.getFieldID()));
     }
 
     /**
@@ -233,15 +206,19 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test(expected=AuthorizeException.class)
     public void testCreateNoAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Disallow full admin permissions
-            authorizeService.isAdmin(context); result = false;
+            AuthorizeManager.isAdmin(context); result = false;
         }};
 
         String elem = "elem1";
         String qual = "qual1";
-        metadataFieldService.create(context, dcSchema, elem, qual, null);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
         fail("Exception expected");
     }
 
@@ -251,15 +228,19 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test(expected=NonUniqueMetadataException.class)
     public void testCreateRepeated() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
+            AuthorizeManager.isAdmin(context); result = true;
         }};
 
         String elem = element;
         String qual = qualifier;
-        metadataFieldService.create(context, dcSchema, elem, qual, null);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
         fail("Exception expected");
     }
 
@@ -269,9 +250,9 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testFindByElement() throws Exception
     {
-        MetadataField found = metadataFieldService.findByElement(context, MetadataSchema.DC_SCHEMA, element, qualifier);
+        MetadataField found = MetadataField.findByElement(context, MetadataSchema.DC_SCHEMA_ID, element, qualifier);
         assertThat("testFindByElement 0",found, notNullValue());
-        assertThat("testFindByElement 1",found.getID(), equalTo(mf.getID()));
+        assertThat("testFindByElement 1",found.getFieldID(), equalTo(mf.getFieldID()));
         assertThat("testFindByElement 2",found.getElement(), equalTo(mf.getElement()));
         assertThat("testFindByElement 3",found.getQualifier(), equalTo(mf.getQualifier()));        
     }
@@ -282,9 +263,9 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testFindAll() throws Exception
     {
-        List<MetadataField> found = metadataFieldService.findAll(context);
+        MetadataField[] found = MetadataField.findAll(context);
         assertThat("testFindAll 0",found, notNullValue());
-        assertTrue("testFindAll 1",found.size() >= 1);
+        assertTrue("testFindAll 1",found.length >= 1);
 
         boolean added = false;
         for(MetadataField mdf: found)
@@ -303,10 +284,10 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testFindAllInSchema() throws Exception 
     {
-        List<MetadataField> found = metadataFieldService.findAllInSchema(context, metadataSchemaService.find(context, MetadataSchema.DC_SCHEMA));
+        MetadataField[] found = MetadataField.findAllInSchema(context, MetadataSchema.DC_SCHEMA_ID);
         assertThat("testFindAllInSchema 0",found, notNullValue());
-        assertTrue("testFindAllInSchema 1",found.size() >= 1);
-        assertTrue("testFindAllInSchema 2",found.size() <= metadataFieldService.findAll(context).size());
+        assertTrue("testFindAllInSchema 1",found.length >= 1);
+        assertTrue("testFindAllInSchema 2",found.length <= MetadataField.findAll(context).length);
 
         boolean added = false;
         for(MetadataField mdf: found)
@@ -325,19 +306,23 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testUpdateAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
+            AuthorizeManager.isAdmin(context); result = true;
         }};
 
         String elem = "elem2";
         String qual = "qual2";
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
-        metadataFieldService.update(context, m);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
+        m.update(context);
 
-        MetadataField found = metadataFieldService.findByElement(context, MetadataSchema.DC_SCHEMA, elem, qual);
-        assertThat("testUpdateAuth 0",found.getID(), equalTo(m.getID()));
+        MetadataField found = MetadataField.findByElement(context, MetadataSchema.DC_SCHEMA_ID, elem, qual);
+        assertThat("testUpdateAuth 0",found.getFieldID(), equalTo(m.getFieldID()));
     }
 
     /**
@@ -346,16 +331,19 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test(expected=AuthorizeException.class)
     public void testUpdateNoAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Disallow full admin permissions
-            authorizeService.isAdmin(context); result = false;
+            AuthorizeManager.isAdmin(context); result = false;
         }};
 
         String elem = "elem2";
         String qual = "qual2";
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
-        metadataFieldService.update(context, m);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.update(context);
         fail("Exception expected");
     }
 
@@ -365,19 +353,21 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test(expected=NonUniqueMetadataException.class)
     public void testUpdateRepeated() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
+            AuthorizeManager.isAdmin(context); result = true;
         }};
 
         String elem = element;
         String qual = qualifier;
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
-
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.create(context);        
+        
         m.setElement(elem);
         m.setQualifier(qual);
-        metadataFieldService.update(context, m);
+        m.update(context);
         fail("Exception expected");
     }
 
@@ -387,19 +377,24 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testDeleteAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Allow full admin permissions
-            authorizeService.isAdmin(context); result = true;
+            AuthorizeManager.isAdmin(context); result = true;
         }};
 
         String elem = "elem3";
         String qual = "qual3";
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
+        context.commit();
 
-        metadataFieldService.delete(context, m);
+        m.delete(context);
 
-        MetadataField found = metadataFieldService.findByElement(context, MetadataSchema.DC_SCHEMA, elem, qual);
+        MetadataField found = MetadataField.findByElement(context, MetadataSchema.DC_SCHEMA_ID, elem, qual);
         assertThat("testDeleteAuth 0",found, nullValue());
     }
 
@@ -409,18 +404,33 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test(expected=AuthorizeException.class)
     public void testDeleteNoAuth() throws Exception
     {
-        new NonStrictExpectations(authorizeService.getClass())
+        new NonStrictExpectations(AuthorizeManager.class)
         {{
             // Disallow full admin permissions
-            authorizeService.isAdmin(context); result = false;
+            AuthorizeManager.isAdmin(context); result = false;
         }};
 
         String elem = "elem3";
         String qual = "qual3";
-        MetadataField m = metadataFieldService.create(context, dcSchema, elem, qual, null);
+        MetadataField m = new MetadataField();
+        m.setSchemaID(MetadataSchema.DC_SCHEMA_ID);
+        m.setElement(elem);
+        m.setQualifier(qual);
+        m.create(context);
+        context.commit();
 
-        metadataFieldService.delete(context, m);
+        m.delete(context);
         fail("Exception expected");
+    }
+
+    /**
+     * Test of formKey method, of class MetadataField.
+     */
+    @Test
+    public void testFormKey()
+    {
+        assertThat("testFormKey 0",MetadataField.formKey("dc", "elem", null), equalTo("dc_elem"));
+        assertThat("testFormKey 1",MetadataField.formKey("dc", "elem", "qual"), equalTo("dc_elem_qual"));
     }
 
     /**
@@ -429,11 +439,11 @@ public class MetadataFieldTest extends AbstractUnitTest
     @Test
     public void testFind() throws Exception
     {
-        int id = mf.getID();
+        int id = mf.getFieldID();
         
-        MetadataField found = metadataFieldService.find(context, id);
+        MetadataField found = MetadataField.find(context, id);
         assertThat("testFind 0",found, notNullValue());
-        assertThat("testFind 1",found.getID(), equalTo(mf.getID()));
+        assertThat("testFind 1",found.getFieldID(), equalTo(mf.getFieldID()));
     }
 
 }

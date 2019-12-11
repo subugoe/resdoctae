@@ -8,26 +8,23 @@
 package org.dspace.app.webui.servlet;
 
 import java.io.IOException;
-import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.List;
-
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.sql.SQLException;
 
 import org.apache.log4j.Logger;
+
+import org.dspace.authorize.AuthorizeException;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
-import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.Collection;
-import org.dspace.content.Item;
-import org.dspace.content.WorkspaceItem;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.WorkspaceItemService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
+import org.dspace.content.Collection;
+import org.dspace.content.Item;
+import org.dspace.content.WorkspaceItem;
 
 /**
  * Class to deal with viewing workspace items during the authoring process.
@@ -36,34 +33,29 @@ import org.dspace.core.LogManager;
  * @author Richard Jones
  * @version  $Revision$
  */
-public class ViewWorkspaceItemServlet
-    extends DSpaceServlet
+public class ViewWorkspaceItemServlet 
+    extends DSpaceServlet 
 {
 
     /** log4j logger */
-    private static final Logger log = Logger.getLogger(ViewWorkspaceItemServlet.class);
+    private static Logger log = Logger.getLogger(ViewWorkspaceItemServlet.class);
 
-    private final transient WorkspaceItemService workspaceItemService
-             = ContentServiceFactory.getInstance().getWorkspaceItemService();
-
-    @Override
-    protected void doDSGet(Context c,
+    protected void doDSGet(Context c, 
         HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException, SQLException, AuthorizeException
     {
         // pass all requests to the same place for simplicty
         doDSPost(c, request, response);
     }
-
-    @Override
-    protected void doDSPost(Context c,
+    
+    protected void doDSPost(Context c, 
         HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException, SQLException, AuthorizeException
     {
         String button = UIUtil.getSubmitButton(request, "submit_error");
-
-        if (button.equals("submit_view")
-            || button.equals("submit_full")
+        
+        if (button.equals("submit_view") 
+            || button.equals("submit_full") 
             || button.equals("submit_simple"))
         {
             showMainPage(c, request, response);
@@ -80,21 +72,21 @@ public class ViewWorkspaceItemServlet
      * @param request the servlet request
      * @param response the servlet response
      */
-    private void showMainPage(Context c,
+    private void showMainPage(Context c, 
         HttpServletRequest request, HttpServletResponse response)
         throws ServletException, IOException, SQLException, AuthorizeException
     {
         // get the value from the request
         int wsItemID = UIUtil.getIntParameter(request,"workspace_id");
-
+        
         // get the workspace item, item and collections from the request value
-        WorkspaceItem wsItem = workspaceItemService.find(c, wsItemID);
+        WorkspaceItem wsItem = WorkspaceItem.find(c, wsItemID);
         Item item = wsItem.getItem();
         //Collection[] collections = item.getCollections();
-        List<Collection> collections = Arrays.asList(wsItem.getCollection());
+        Collection[] collections = {wsItem.getCollection()};
         
         // Ensure the user has authorisation
-        authorizeService.authorizeAction(c, item, Constants.READ);
+        AuthorizeManager.authorizeAction(c, item, Constants.READ);
         
         log.info(LogManager.getHeader(c, 
             "View Workspace Item Metadata", 
@@ -112,10 +104,10 @@ public class ViewWorkspaceItemServlet
         // display item JSP for both handled and un-handled items
         // Set attributes and display
         // request.setAttribute("wsItem", wsItem);
-        request.setAttribute("display.all", displayAll);
+        request.setAttribute("display.all", Boolean.valueOf(displayAll));
         request.setAttribute("item", item);
         request.setAttribute("collections", collections);
-        request.setAttribute("workspace_id", wsItem.getID());
+        request.setAttribute("workspace_id", Integer.valueOf(wsItem.getID()));
         
         JSPManager.showJSP(request, response, "/display-item.jsp");
     }

@@ -7,22 +7,30 @@
  */
 package org.dspace.app.xmlui.aspect.administrative.item;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+
 import org.apache.commons.lang.StringUtils;
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
 import org.dspace.app.xmlui.wing.WingException;
-import org.dspace.app.xmlui.wing.element.*;
+import org.dspace.app.xmlui.wing.element.Body;
+import org.dspace.app.xmlui.wing.element.Button;
+import org.dspace.app.xmlui.wing.element.Cell;
+import org.dspace.app.xmlui.wing.element.CheckBox;
+import org.dspace.app.xmlui.wing.element.Division;
+import org.dspace.app.xmlui.wing.element.Highlight;
 import org.dspace.app.xmlui.wing.element.List;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
-import org.dspace.content.*;
+import org.dspace.app.xmlui.wing.element.PageMeta;
+import org.dspace.app.xmlui.wing.element.Para;
+import org.dspace.app.xmlui.wing.element.Row;
+import org.dspace.app.xmlui.wing.element.Table;
+import org.dspace.authorize.AuthorizeManager;
+import org.dspace.content.Bitstream;
+import org.dspace.content.BitstreamFormat;
+import org.dspace.content.Bundle;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Constants;
-
-import java.sql.SQLException;
-import java.util.*;
 
 /**
  * Show a list of the item's bitstreams allowing the user to delete them, 
@@ -67,9 +75,6 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
     private static final Message T_order_up = message("xmlui.administrative.item.EditItemBitstreamsForm.order_up");
     private static final Message T_order_down = message("xmlui.administrative.item.EditItemBitstreamsForm.order_down");
 
-    protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-
     public void addPageMeta(PageMeta pageMeta) throws WingException
 	{
 		pageMeta.addMetadata("title").addContent(T_title);
@@ -83,8 +88,8 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
 	public void addBody(Body body) throws SQLException, WingException
 	{
 		// Get our parameters and state
-		UUID itemID = UUID.fromString(parameters.getParameter("itemID", null));
-		Item item = itemService.find(context, itemID);
+		int itemID = parameters.getParameterAsInteger("itemID",-1);
+		Item item = Item.find(context, itemID);
 		String baseURL = contextPath+"/admin/item?administrative-continue="+knot.getId();
 
 
@@ -118,7 +123,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
 		header.addCellContent(T_column6);
 		header.addCellContent(T_column7);
 
-		java.util.List<Bundle> bundles = item.getBundles();
+		Bundle[] bundles = item.getBundles();
 
         boolean showBitstreamUpdateOrderButton = false;
 		for (Bundle bundle : bundles)
@@ -127,15 +132,15 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
 			Cell bundleCell = files.addRow("bundle_head_" + bundle.getID(), Row.ROLE_DATA, "").addCell(1, 5);
 			bundleCell.addContent(T_bundle_label.parameterize(bundle.getName()));
 
-			java.util.List<Bitstream> bitstreams = bundle.getBitstreams();
-            ArrayList<UUID> bitstreamIdOrder = new ArrayList<>();
-            for (Bitstream bitstream  : bitstreams) {
+			Bitstream[] bitstreams = bundle.getBitstreams();
+            ArrayList<Integer> bitstreamIdOrder = new ArrayList<Integer>();
+            for (Bitstream bitstream : bitstreams) {
                 bitstreamIdOrder.add(bitstream.getID());
             }
 
-            for (int bitstreamIndex = 0; bitstreamIndex < bitstreams.size(); bitstreamIndex++) {
-                Bitstream bitstream = bitstreams.get(bitstreamIndex);
-                boolean primary = (bitstream.equals(bundle.getPrimaryBitstream()));
+            for (int bitstreamIndex = 0; bitstreamIndex < bitstreams.length; bitstreamIndex++) {
+                Bitstream bitstream = bitstreams[bitstreamIndex];
+                boolean primary = (bundle.getPrimaryBitstreamID() == bitstream.getID());
                 String name = bitstream.getName();
 
                 if (name != null && name.length() > 50) {
@@ -148,7 +153,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
 
                 String description = bitstream.getDescription();
                 String format = null;
-                BitstreamFormat bitstreamFormat = bitstream.getFormat(context);
+                BitstreamFormat bitstreamFormat = bitstream.getFormat();
                 if (bitstreamFormat != null) {
                     format = bitstreamFormat.getShortDescription();
                 }
@@ -160,11 +165,11 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
                 CheckBox remove = row.addCell().addCheckBox("remove");
                 remove.setLabel("remove");
                 remove.addOption(bundle.getID() + "/" + bitstream.getID());
-                if (!authorizeService.authorizeActionBoolean(context, item, Constants.REMOVE)) {
+                if (!AuthorizeManager.authorizeActionBoolean(context, item, Constants.REMOVE)) {
                     remove.setDisabled();
                 }
 
-                if (authorizeService.authorizeActionBoolean(context, bitstream, Constants.WRITE)) {
+                if (AuthorizeManager.authorizeActionBoolean(context, bitstream, Constants.WRITE)) {
                     // The user can edit the bitstream give them a link.
                     Cell cell = row.addCell();
                     cell.addXref(editURL, name);
@@ -172,7 +177,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
                         cell.addXref(editURL, T_primary_label);
                     }
 
-                    row.addCell(null,null,"break-all").addXref(editURL, description);
+                    row.addCell().addXref(editURL, description);
                     row.addCell().addXref(editURL, format);
                 } else {
                     // The user can't edit the bitstream just show them it.
@@ -182,7 +187,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
                         cell.addContent(T_primary_label);
                     }
 
-                    row.addCell(null,null,"break-all").addContent(description);
+                    row.addCell().addContent(description);
                     row.addCell().addContent(format);
                 }
 
@@ -191,7 +196,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
                 highlight.addXref(viewURL, T_view_link);
                 highlight.addContent("]");
 
-                if (authorizeService.authorizeActionBoolean(context, bundle, Constants.WRITE)) {
+                if (AuthorizeManager.authorizeActionBoolean(context, bundle, Constants.WRITE)) {
                     Cell cell = row.addCell("bitstream_order_" + bitstream.getID(), Cell.ROLE_DATA, "");
                     //Add the +1 to make it more human readable
                     cell.addHidden("order_" + bitstream.getID()).setValue(String.valueOf(bitstreamIndex + 1));
@@ -202,24 +207,23 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
                     }
                     upButton.setValue(T_order_up);
                     upButton.setHelp(T_order_up);
-                    Button downButton = cell.addButton("submit_order_" + bundle.getID() + "_" + bitstream.getID() + "_down", (bitstreamIndex == (bitstreams.size() - 1) ? "disabled" : "") + " icon-button arrowDown ");
-                    if(bitstreamIndex == (bitstreams.size() - 1)){
+                    Button downButton = cell.addButton("submit_order_" + bundle.getID() + "_" + bitstream.getID() + "_down", (bitstreamIndex == (bitstreams.length - 1) ? "disabled" : "") + " icon-button arrowDown ");
+                    if(bitstreamIndex == (bitstreams.length - 1)){
                         downButton.setDisabled();
                     }
                     downButton.setValue(T_order_down);
                     downButton.setHelp(T_order_down);
 
                     //These values will only be used IF javascript is disabled or isn't working
-                    cell.addHidden(bundle.getID() + "_" + bitstream.getID() + "_up_value").setValue(retrieveOrderUpButtonValue((java.util.List<UUID>) bitstreamIdOrder.clone(), bitstreamIndex));
-                    String characters = retrieveOrderDownButtonValue((java.util.List<UUID>) bitstreamIdOrder.clone(), bitstreamIndex);
-                    cell.addHidden(bundle.getID() + "_" + bitstream.getID() + "_down_value").setValue(characters);
+                    cell.addHidden(bundle.getID() + "_" + bitstream.getID() + "_up_value").setValue(retrieveOrderUpButtonValue((java.util.List<Integer>) bitstreamIdOrder.clone(), bitstreamIndex));
+                    cell.addHidden(bundle.getID() + "_" + bitstream.getID() + "_down_value").setValue(retrieveOrderDownButtonValue((java.util.List<Integer>) bitstreamIdOrder.clone(), bitstreamIndex));
                 }else{
                     row.addCell().addContent(String.valueOf(bitstreamIndex));
                 }
             }
 		}
 
-		if (authorizeService.authorizeActionBoolean(context, item, Constants.ADD))
+		if (AuthorizeManager.authorizeActionBoolean(context, item, Constants.ADD))
 		{
 			Cell cell = files.addRow().addCell(1, 5);
 			cell.addXref(contextPath+"/admin/item?administrative-continue="+knot.getId()+"&submit_add",T_submit_add);
@@ -241,7 +245,7 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
         }
 
         // Only System Administrators can delete bitstreams
-		if (authorizeService.authorizeActionBoolean(context, item, Constants.REMOVE))
+		if (AuthorizeManager.authorizeActionBoolean(context, item, Constants.REMOVE))
         {
             actions.addButton("submit_delete").setValue(T_submit_delete);
         }
@@ -260,24 +264,23 @@ public class EditItemBitstreamsForm extends AbstractDSpaceTransformer {
 
 	}
 
-    private String retrieveOrderUpButtonValue(java.util.List<UUID> bitstreamIdOrder, int bitstreamIndex) {
+    private String retrieveOrderUpButtonValue(java.util.List<Integer> bitstreamIdOrder, int bitstreamIndex) {
         if(0 != bitstreamIndex){
             //We don't have the first button, so create a value where the current bitstreamId moves one up
-            UUID temp = bitstreamIdOrder.get(bitstreamIndex);
+            Integer temp = bitstreamIdOrder.get(bitstreamIndex);
             bitstreamIdOrder.set(bitstreamIndex, bitstreamIdOrder.get(bitstreamIndex - 1));
             bitstreamIdOrder.set(bitstreamIndex - 1, temp);
         }
-        UUID[] uuids = new UUID[bitstreamIdOrder.size()];
-        return StringUtils.join(bitstreamIdOrder.toArray(uuids), ",");
+        return StringUtils.join(bitstreamIdOrder.toArray(new Integer[bitstreamIdOrder.size()]), ",");
     }
 
-    private String retrieveOrderDownButtonValue(java.util.List<UUID> bitstreamIdOrder, int bitstreamIndex) {
+    private String retrieveOrderDownButtonValue(java.util.List<Integer> bitstreamIdOrder, int bitstreamIndex) {
         if(bitstreamIndex < (bitstreamIdOrder.size()) -1){
             //We don't have the first button, so create a value where the current bitstreamId moves one up
-            UUID temp = bitstreamIdOrder.get(bitstreamIndex);
+            Integer temp = bitstreamIdOrder.get(bitstreamIndex);
             bitstreamIdOrder.set(bitstreamIndex, bitstreamIdOrder.get(bitstreamIndex + 1));
             bitstreamIdOrder.set(bitstreamIndex + 1, temp);
         }
-        return StringUtils.join(bitstreamIdOrder.toArray(new UUID[bitstreamIdOrder.size()]), ",");
+        return StringUtils.join(bitstreamIdOrder.toArray(new Integer[bitstreamIdOrder.size()]), ",");
     }
 }

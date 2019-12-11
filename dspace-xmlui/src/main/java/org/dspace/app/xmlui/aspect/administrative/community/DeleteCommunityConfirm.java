@@ -8,7 +8,6 @@
 package org.dspace.app.xmlui.aspect.administrative.community;
 
 import java.sql.SQLException;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
@@ -20,8 +19,6 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Para;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Community;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CommunityService;
 
 /**
  * Confirmation step for the deletion of an entire community
@@ -45,9 +42,8 @@ public class DeleteCommunityConfirm extends AbstractDSpaceTransformer
 
 	private static final Message T_submit_confirm = message("xmlui.general.delete");
 	private static final Message T_submit_cancel = message("xmlui.general.cancel");
-
-	protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-
+	
+	
 	public void addPageMeta(PageMeta pageMeta) throws WingException
     {
         pageMeta.addMetadata("title").addContent(T_title);
@@ -57,14 +53,14 @@ public class DeleteCommunityConfirm extends AbstractDSpaceTransformer
 	
 	public void addBody(Body body) throws WingException, SQLException, AuthorizeException
 	{
-		UUID communityID = UUID.fromString(parameters.getParameter("communityID", null));
-		Community thisCommunity = communityService.find(context, communityID);
+		int communityID = parameters.getParameterAsInteger("communityID", -1);
+		Community thisCommunity = Community.find(context, communityID);
 		
 		
 		// DIVISION: main
 	    Division main = body.addInteractiveDivision("community-confirm-delete",contextPath+"/admin/community",Division.METHOD_POST,"primary administrative community");
 	    main.setHead(T_main_head.parameterize(communityID));
-	    main.addPara(T_main_para.parameterize(communityService.getMetadata(thisCommunity, "name")));
+	    main.addPara(T_main_para.parameterize(thisCommunity.getMetadata("name")));	    
 	    List deleteConfirmHelp = main.addList("consequences",List.TYPE_BULLETED);
 	    deleteConfirmHelp.addItem(T_confirm_item1);
 	    deleteConfirmHelp.addItem(T_confirm_item2);

@@ -14,9 +14,7 @@ import java.net.URLEncoder;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,8 +30,8 @@ import org.apache.log4j.Logger;
 import org.dspace.app.itemmarking.ItemMarkingExtractor;
 import org.dspace.app.itemmarking.ItemMarkingInfo;
 import org.dspace.app.util.Util;
-import org.dspace.authenticate.factory.AuthenticateServiceFactory;
-import org.dspace.authenticate.service.AuthenticationService;
+import org.dspace.authenticate.AuthenticationManager;
+import org.dspace.browse.BrowseItem;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DCDate;
@@ -45,16 +43,7 @@ import org.dspace.core.Context;
 import org.dspace.core.Email;
 import org.dspace.core.I18nUtil;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.services.factory.DSpaceServicesFactory;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.identifier.DOI;
-import org.dspace.identifier.factory.IdentifierServiceFactory;
-import org.dspace.identifier.service.DOIService;
-import org.dspace.identifier.service.IdentifierService;
+import org.dspace.utils.DSpace;
 
 /**
  * Miscellaneous UI utility methods
@@ -74,25 +63,6 @@ public class UIUtil extends Util
 	 * Pattern used to get file.ext from filename (which can be a path)
 	 */
 	private static Pattern p = Pattern.compile("[^/]*$");
-	
-        private static boolean initialized = false;
-	    
-	private static AuthenticationService authenticationService;
-	private static EPersonService personService;
-        private static IdentifierService identifierService;
-        private static DOIService doiService;
-        private static HandleService handleService;
-	
-	private static synchronized void initialize() {
-		if (initialized) {
-			return;
-		}
-		authenticationService = AuthenticateServiceFactory.getInstance().getAuthenticationService();
-                doiService = IdentifierServiceFactory.getInstance().getDOIService();
-                handleService = HandleServiceFactory.getInstance().getHandleService();
-                identifierService = IdentifierServiceFactory.getInstance().getIdentifierService();
-		personService = EPersonServiceFactory.getInstance().getEPersonService();
-	}
 
     /**
      * Obtain a new context object. If a context object has already been created
@@ -108,7 +78,6 @@ public class UIUtil extends Util
     public static Context obtainContext(HttpServletRequest request)
             throws SQLException
     {
-    	initialize();
 
         //Set encoding to UTF-8, if not set yet
         //This avoids problems of using the HttpServletRequest
@@ -137,7 +106,7 @@ public class UIUtil extends Util
             HttpSession session = request.getSession();
 
             // See if a user has authentication
-            UUID userID = (UUID) session.getAttribute(
+            Integer userID = (Integer) session.getAttribute(
                     "dspace.current.user.id");
 
             if (userID != null)
@@ -145,7 +114,7 @@ public class UIUtil extends Util
                 String remAddr = (String)session.getAttribute("dspace.current.remote.addr");
                 if (remAddr != null && remAddr.equals(request.getRemoteAddr()))
                 {
-                	EPerson e = personService.find(c, userID);
+                	EPerson e = EPerson.find(c, userID.intValue());
 
                 	Authenticate.loggedIn(c, request, e);
                 }
@@ -158,12 +127,12 @@ public class UIUtil extends Util
             }
 
             // Set any special groups - invoke the authentication mgr.
-            List<Group> groups = authenticationService.getSpecialGroups(c, request);
+            int[] groupIDs = AuthenticationManager.getSpecialGroups(c, request);
 
-            for (Group g : groups)
+            for (int i = 0; i < groupIDs.length; i++)
             {
-                c.setSpecialGroup(g.getID());
-                log.debug("Adding Special Group id="+g.getID().toString());
+                c.setSpecialGroup(groupIDs[i]);
+                log.debug("Adding Special Group id="+String.valueOf(groupIDs[i]));
             }
 
             // Set the session ID and IP address
@@ -195,71 +164,6 @@ public class UIUtil extends Util
 
         return c;
     }
-    
-     /**
-     * Returns a string array containing the URL to address this Item in DSpace,
-     * the official URL of its preferred identifier (example given
-     * http://dx.doi.org/10.5072/123) and the preferred identifier in canonical
-     * form (example given doi:10.5072/123). The configuration property 
-     * webui.preferred.identifier can be used to configure which identifier 
-     * should be preferred.
-     * If no identifier is found this method returns null. If no handle but a
-     * DOI is found the first value of the array is null.
-     * 
-     * @param ctx DSpace Context
-     * @param item the item
-     * @return string array containing URL or null if no ID found; string
-               array contains null if no handle, but a DOI is found
-     * @throws SQLException
-     */
-    public static String[] getItemIdentifier(Context ctx, Item item)
-            throws SQLException
-    {
-        initialize();
-        // look up the the version handle
-        String versionHandle = item.getHandle();
-
-        // lookup the version doi
-        String versionDOI = identifierService.lookup(ctx, item, DOI.class);
-        
-        // resolve identifiers
-        String[] handles = null;
-        if (versionHandle != null)
-        {
-            handles = new String[] {
-                handleService.resolveToURL(ctx, versionHandle),
-                handleService.getCanonicalForm(versionHandle),
-                versionHandle,
-                "hdl:" + versionHandle
-            };
-        }
-        String[] dois = null;
-        if (versionDOI != null)
-        {
-            try {
-                dois = new String[] {
-                    handleService.resolveToURL(ctx, versionHandle),
-                    doiService.DOIToExternalForm(versionDOI),
-                    doiService.formatIdentifier(versionDOI).substring(DOI.SCHEME.length()),
-                    doiService.formatIdentifier(versionDOI)
-                };
-            } catch (Exception ex) {
-                dois = null;
-                log.error("Unable to format DOI " + versionDOI 
-                        + ". " + ex.getClass().getName() + ": " + ex.getMessage());
-            }
-        }
-        
-        // do we prefer DOIs or handles?
-        if (dois != null
-                && ("doi".equalsIgnoreCase(ConfigurationManager.getProperty("webui.preferred.identifier")) 
-                    || handles == null))
-        {
-            return dois;
-        }
-        
-        return handles;
-    }
 
     /**
      * Get the current community location, that is, where the user "is". This
@@ -273,8 +177,6 @@ public class UIUtil extends Util
      */
     public static Community getCommunityLocation(HttpServletRequest request)
     {
-    	initialize();
-    	
         return ((Community) request.getAttribute("dspace.community"));
     }
 
@@ -290,8 +192,6 @@ public class UIUtil extends Util
      */
     public static Collection getCollectionLocation(HttpServletRequest request)
     {
-    	initialize();
-    	
         return ((Collection) request.getAttribute("dspace.collection"));
     }
 
@@ -306,8 +206,6 @@ public class UIUtil extends Util
      */
     public static void storeOriginalURL(HttpServletRequest request)
     {
-    	initialize();
-    	
         String orig = (String) request.getAttribute("dspace.original.url");
 
         if (orig == null)
@@ -333,8 +231,6 @@ public class UIUtil extends Util
      */
     public static String getOriginalURL(HttpServletRequest request)
     {
-    	initialize();
-    	
         // Make sure there's a URL in the attribute
         storeOriginalURL(request);
 
@@ -357,8 +253,6 @@ public class UIUtil extends Util
      */
     public static String displayDate(DCDate d, boolean time, boolean localTime, HttpServletRequest request)
     {
-    	initialize();
-    	
         return d.displayDate(time, localTime, getSessionLocale(request));
             }
 
@@ -372,8 +266,6 @@ public class UIUtil extends Util
      */
     public static String getRequestLogInfo(HttpServletRequest request)
     {
-    	initialize();
-    	
         StringBuilder report = new StringBuilder();
 
         report.append("-- URL Was: ").append(getOriginalURL(request)).append("\n").toString();
@@ -420,8 +312,6 @@ public class UIUtil extends Util
     public static Locale getSessionLocale(HttpServletRequest request)
 
     {
-    	initialize();
-    	
         String paramLocale = request.getParameter("locale");
         Locale sessionLocale = null;
         Locale supportedLocale = null;
@@ -479,8 +369,6 @@ public class UIUtil extends Util
      */
     public static void sendAlert(HttpServletRequest request, Exception exception)
     {
-    	initialize();
-    	
         String logInfo = UIUtil.getRequestLogInfo(request);
         Context c = (Context) request.getAttribute("dspace.context");
         Locale locale = getSessionLocale(request);
@@ -556,8 +444,7 @@ public class UIUtil extends Util
 	public static void setBitstreamDisposition(String filename, HttpServletRequest request,
 			HttpServletResponse response)
 	{
-		initialize();
-		
+
 		String name = filename;
 
 		Matcher m = p.matcher(name);
@@ -587,13 +474,13 @@ public class UIUtil extends Util
 		}
 		finally
 		{
-			response.setHeader("Content-Disposition", "attachment;filename=" + name);
+			response.setHeader("Content-Disposition", "attachment;filename=" + '"' + name + '"');
 		}
 	}
 	
 	/**
 	 * Generate the (X)HTML required to show the item marking. Based on the markType it tries to find
-	 * the corresponding item marking Strategy on the item_marking.xml Spring configuration file in order
+	 * the corresponding item marking Strategy on the iem_marking.xml Spring configuration file in order
 	 * to apply it to the item.
 	 * This method is used in BrowseListTag and ItemListTag to du the actual item marking in browse
 	 * and search results
@@ -601,25 +488,30 @@ public class UIUtil extends Util
 	 * @param hrq The servlet request
 	 * @param dso The DSpaceObject to mark (it can be a BrowseItem or an Item)
 	 * @param markType the type of the mark.
-	 * @return (X)HTML markup
+	 * @return
 	 * @throws JspException
 	 */
     public static String getMarkingMarkup(HttpServletRequest hrq, DSpaceObject dso, String markType)
             throws JspException
     {
-    	initialize();
-    	
     	try
     	{
-            String contextPath = hrq.getContextPath();
-
+    		String contextPath = hrq.getContextPath();
+    		
             Context c = UIUtil.obtainContext(hrq);
             
-            Item item = (Item) dso;
-
+            Item item = null;
+    		if (dso instanceof BrowseItem){
+    			item = Item.find(c, dso.getID());
+    		}
+    		else if (dso instanceof Item){
+    			item = (Item)dso;
+    		}
+    		
             String mark = markType.replace("mark_", "");
             
-            ItemMarkingExtractor markingExtractor = DSpaceServicesFactory.getInstance().getServiceManager()
+            ItemMarkingExtractor markingExtractor = new DSpace()
+				.getServiceManager()
 				.getServiceByName(
 						ItemMarkingExtractor.class.getName()+"."+mark,
 						ItemMarkingExtractor.class);

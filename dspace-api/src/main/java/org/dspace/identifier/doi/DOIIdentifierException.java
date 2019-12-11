@@ -162,8 +162,7 @@ public class DOIIdentifierException extends IdentifierException {
     {
         return this.code;
     }
-
-    @Override
+    
     public String getMessage()
     {
         String message = super.getMessage();

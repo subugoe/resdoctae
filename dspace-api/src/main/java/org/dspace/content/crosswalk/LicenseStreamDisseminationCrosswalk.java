@@ -17,9 +17,7 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
 import org.dspace.content.packager.PackageUtils;
-import org.dspace.content.service.BitstreamService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.Utils;
@@ -35,9 +33,7 @@ public class LicenseStreamDisseminationCrosswalk
 {
     /** log4j logger */
     private static Logger log = Logger.getLogger(LicenseStreamDisseminationCrosswalk.class);
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
 
-    @Override
     public boolean canDisseminate(Context context, DSpaceObject dso)
     {
         try
@@ -52,7 +48,6 @@ public class LicenseStreamDisseminationCrosswalk
         }
     }
 
-    @Override
     public void disseminate(Context context, DSpaceObject dso, OutputStream out)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
@@ -62,13 +57,12 @@ public class LicenseStreamDisseminationCrosswalk
              
             if (licenseBs != null)
             {
-                Utils.copy(bitstreamService.retrieve(context, licenseBs), out);
+                Utils.copy(licenseBs.retrieve(), out);
                 out.close();
             }
         }
     }
 
-    @Override
     public String getMIMEType()
     {
         return "text/plain";

@@ -7,39 +7,31 @@
  */
 package org.dspace.content.packager;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.sql.SQLException;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.apache.commons.codec.DecoderException;
+
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.crosswalk.CrosswalkException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
-import org.dspace.content.service.DSpaceObjectService;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
 import org.dspace.eperson.PasswordHash;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.eperson.service.GroupService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 /**
  * Create EPersons and Groups from a file of external representations.
@@ -51,12 +43,6 @@ public class RoleIngester implements PackageIngester
     private static final Logger log = LoggerFactory
             .getLogger(RoleIngester.class);
 
-    protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-    protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
-    protected EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-
     /**
      * Common code to ingest roles from a Document.
      * 
@@ -66,11 +52,11 @@ public class RoleIngester implements PackageIngester
      *          the Parent DSpaceObject
      * @param document
      *          the XML Document
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
-     * @throws PackageException if packaging error
+     * @throws SQLException
+     * @throws AuthorizeException
+     * @throws PackageException
      */
-    void ingestDocument(Context context, DSpaceObject parent,
+    static void ingestDocument(Context context, DSpaceObject parent,
             PackageParameters params, Document document)
             throws SQLException, AuthorizeException, PackageException
     {
@@ -100,7 +86,7 @@ public class RoleIngester implements PackageIngester
                     continue; // Cannot operate on my own EPerson!
                 }
                 identity = email;
-                collider = ePersonService.findByEmail(context, identity);
+                collider = EPerson.findByEmail(context, identity);
                 // collider = EPerson.find(context, userID);
             }
             else if (netids.getLength() > 0)
@@ -111,7 +97,7 @@ public class RoleIngester implements PackageIngester
                     continue; // Cannot operate on my own EPerson!
                 }
                 identity = netid;
-                collider = ePersonService.findByNetid(context, identity);
+                collider = EPerson.findByNetid(context, identity);
             }
             else
             {
@@ -134,7 +120,7 @@ public class RoleIngester implements PackageIngester
                 }
             else
             {
-                eperson = ePersonService.create(context);
+                eperson = EPerson.create(context);
                 log.info("Created EPerson {}.", identity);
             }
 
@@ -146,31 +132,31 @@ public class RoleIngester implements PackageIngester
             data = user.getElementsByTagName(RoleDisseminator.FIRST_NAME);
             if (data.getLength() > 0)
             {
-                eperson.setFirstName(context, data.item(0).getTextContent());
+                eperson.setFirstName(data.item(0).getTextContent());
             }
             else
             {
-                eperson.setFirstName(context, null);
+                eperson.setFirstName(null);
             }
 
             data = user.getElementsByTagName(RoleDisseminator.LAST_NAME);
             if (data.getLength() > 0)
             {
-                eperson.setLastName(context, data.item(0).getTextContent());
+                eperson.setLastName(data.item(0).getTextContent());
             }
             else
             {
-                eperson.setLastName(context, null);
+                eperson.setLastName(null);
             }
 
             data = user.getElementsByTagName(RoleDisseminator.LANGUAGE);
             if (data.getLength() > 0)
             {
-                eperson.setLanguage(context, data.item(0).getTextContent());
+                eperson.setLanguage(data.item(0).getTextContent());
             }
             else
             {
-                eperson.setLanguage(context, null);
+                eperson.setLanguage(null);
             }
 
             data = user.getElementsByTagName(RoleDisseminator.CAN_LOGIN);
@@ -208,17 +194,17 @@ public class RoleIngester implements PackageIngester
                 } catch (DecoderException ex) {
                     throw new PackageValidationException("Unable to decode hexadecimal password hash or salt", ex);
                 }
-                ePersonService.setPasswordHash(eperson, password);
+                eperson.setPasswordHash(password);
             }
             else
             {
-                ePersonService.setPasswordHash(eperson, null);
+                eperson.setPasswordHash(null);
             }
 
             // Actually write Eperson info to DB
             // NOTE: this update() doesn't call a commit(). So, Eperson info
             // may still be rolled back if a subsequent error occurs
-            ePersonService.update(context, eperson);
+            eperson.update();
         }
 
         // Now ingest the Groups
@@ -252,35 +238,24 @@ public class RoleIngester implements PackageIngester
             log.debug("Translated group name:  {}", name);
 
             Group groupObj = null; // The group to restore
-            Group collider = groupService.findByName(context, name); // Existing group?
+            Group collider = Group.findByName(context, name); // Existing group?
             if (null != collider)
             { // Group already exists, so empty it
                 if (params.replaceModeEnabled()) // -r -f
                 {
-                    // Get a *copy* of our group list to avoid ConcurrentModificationException
-                    // when we remove these groups from the parent Group obj
-                    List<Group> groupRemovalList = new ArrayList<>(collider.getMemberGroups());
-                    Iterator<Group> groupIterator = groupRemovalList.iterator();
-                    while(groupIterator.hasNext())
+                    for (Group member : collider.getMemberGroups())
                     {
-                        Group member = groupIterator.next();
-                        groupService.removeMember(context, collider, member);
+                        collider.removeMember(member);
                     }
-
-                    // Get a *copy* of our eperson list to avoid ConcurrentModificationException
-                    // when we remove these epersons from the parent Group obj
-                    List<EPerson> epersonRemovalList = new ArrayList<>(collider.getMembers());
-                    Iterator<EPerson> epersonIterator = epersonRemovalList.iterator();
-                    while(epersonIterator.hasNext())
+                    for (EPerson member : collider.getMembers())
                     {
-                        EPerson member = epersonIterator.next();
                         // Remove all group members *EXCEPT* we don't ever want
                         // to remove the current user from the list of Administrators
                         // (otherwise remainder of ingest will fail)
-                        if(!(collider.equals(groupService.findByName(context, Group.ADMIN)) &&
+                        if(!(collider.equals(Group.find(context, 1)) &&
                              member.equals(context.getCurrentUser())))
                         {
-                            groupService.removeMember(context, collider, member);
+                            collider.removeMember(member);
                         }
                     }
                     log.info("Existing Group {} was cleared. Its members will be replaced.", name);
@@ -300,8 +275,7 @@ public class RoleIngester implements PackageIngester
             else
             { // No such group exists  -- so, we'll need to create it!
 
-                DSpaceObjectService<DSpaceObject> dsoService = ContentServiceFactory.getInstance().getDSpaceObjectService(parent);
-                log.debug("Creating group for a {}", dsoService.getTypeText(parent));
+                log.debug("Creating group for a {}", parent.getTypeText());
                 // First Check if this is a "typed" group (i.e. Community or Collection associated Group)
                 // If so, we'll create it via the Community or Collection
                 String type = group.getAttribute(RoleDisseminator.TYPE);
@@ -316,23 +290,23 @@ public class RoleIngester implements PackageIngester
                         // Create this Collection-associated group, based on its group type
                         if(type.equals(RoleDisseminator.GROUP_TYPE_ADMIN))
                         {
-                            groupObj = collectionService.createAdministrators(context, collection);
+                            groupObj = collection.createAdministrators();
                         }
                         else if(type.equals(RoleDisseminator.GROUP_TYPE_SUBMIT))
                         {
-                            groupObj = collectionService.createSubmitters(context, collection);
+                            groupObj = collection.createSubmitters();
                         }
                         else if(type.equals(RoleDisseminator.GROUP_TYPE_WORKFLOW_STEP_1))
                         {
-                            groupObj = collectionService.createWorkflowGroup(context, collection, 1);
+                            groupObj = collection.createWorkflowGroup(1);
                         }
                         else if(type.equals(RoleDisseminator.GROUP_TYPE_WORKFLOW_STEP_2))
                         {
-                            groupObj = collectionService.createWorkflowGroup(context, collection, 2);
+                            groupObj = collection.createWorkflowGroup(2);
                         }
                         else if(type.equals(RoleDisseminator.GROUP_TYPE_WORKFLOW_STEP_3))
                         {
-                            groupObj = collectionService.createWorkflowGroup(context, collection, 3);
+                            groupObj = collection.createWorkflowGroup(3);
                         }
                     }
                     else if(parent.getType()==Constants.COMMUNITY)
@@ -342,7 +316,7 @@ public class RoleIngester implements PackageIngester
                         // Create this Community-associated group, based on its group type
                         if(type.equals(RoleDisseminator.GROUP_TYPE_ADMIN))
                         {
-                            groupObj = communityService.createAdministrators(context, community);
+                            groupObj = community.createAdministrators();
                         }
                     }
                     //Ignore all other dspace object types
@@ -351,11 +325,11 @@ public class RoleIngester implements PackageIngester
                 //If group not yet created, create it with the given name
                 if(groupObj==null)
                 {
-                    groupObj = groupService.create(context);
+                    groupObj = Group.create(context);
                 }
 
                 // Always set the name:  parent.createBlop() is guessing
-                groupService.setName(groupObj, name);
+                groupObj.setName(name);
 
                 log.info("Created Group {}.", groupObj.getName());
             }
@@ -366,9 +340,9 @@ public class RoleIngester implements PackageIngester
             {
                 Element member = (Element) members.item(memberx);
                 String memberName = member.getAttribute(RoleDisseminator.NAME);
-                EPerson memberEPerson = ePersonService.findByEmail(context, memberName);
+                EPerson memberEPerson = EPerson.findByEmail(context, memberName);
                 if (null != memberEPerson)
-                    groupService.addMember(context, groupObj, memberEPerson);
+                    groupObj.addMember(memberEPerson);
                 else
                     throw new PackageValidationException("EPerson " + memberName
                             + " not found, not added to " + name);
@@ -377,7 +351,7 @@ public class RoleIngester implements PackageIngester
             // Actually write Group info to DB
             // NOTE: this update() doesn't call a commit(). So, Group info
             // may still be rolled back if a subsequent error occurs
-            groupService.update(context, groupObj);
+            groupObj.update();
 
         }
 
@@ -404,7 +378,7 @@ public class RoleIngester implements PackageIngester
             }
 
             // Find previously created group
-            Group groupObj = groupService.findByName(context, name);
+            Group groupObj = Group.findByName(context, name);
             log.debug("Looked up the group and found {}", groupObj);
             NodeList members = group
                     .getElementsByTagName(RoleDisseminator.MEMBER_GROUP);
@@ -415,26 +389,29 @@ public class RoleIngester implements PackageIngester
                 //Translate Group name back to internal ID format (e.g. COLLECTION_<ID>_ADMIN)
                 memberName = PackageUtils.translateGroupNameForImport(context, memberName);
                 // Find previously created group
-                Group memberGroup = groupService.findByName(context, memberName);
-                groupService.addMember(context, groupObj, memberGroup);
+                Group memberGroup = Group.findByName(context, memberName);
+                groupObj.addMember(memberGroup);
             }
             // Actually update Group info in DB
             // NOTE: Group info may still be rolled back if a subsequent error occurs
-            groupService.update(context, groupObj);
+            groupObj.update();
         }
     }
 
     /**
      * Ingest roles from an InputStream.
      *
-     * @param context DSpace Context
-     * @param parent the Parent DSpaceObject
-     * @param params package params
-     * @throws PackageException if packaging error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
+     * @param context
+     *          DSpace Context
+     * @param parent
+     *          the Parent DSpaceObject
+     * @param stream
+     *          the XML Document InputStream
+     * @throws PackageException
+     * @throws SQLException
+     * @throws AuthorizeException
      */
-    public void ingestStream(Context context, DSpaceObject parent,
+    public static void ingestStream(Context context, DSpaceObject parent,
             PackageParameters params, InputStream stream)
             throws PackageException, SQLException, AuthorizeException
     {

@@ -15,8 +15,9 @@ import java.util.Iterator;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
-import org.dspace.rdf.RDFUtil;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.content.Site;
+import org.dspace.rdf.RDFConfiguration;
+import org.dspace.utils.DSpace;
 
 /**
  *
@@ -31,7 +32,7 @@ public class Negotiator {
     public static final int RDFXML = 2;
     public static final int TURTLE = 3;
     public static final int N3 = 4;
-
+    
     public static final String DEFAULT_LANG="html";
     
     private static final Logger log = Logger.getLogger(Negotiator.class);
@@ -170,6 +171,7 @@ public class Negotiator {
      * equals! Caution should be exercised when using it to order a sorted set
      * or a sorted map. Take a look at the java.util.Comparator for further 
      * information.</p>
+     * @param mediaRangeRegex
      * @return A comparator that imposes orderings that are inconsistent with equals!
      */
     public static Comparator<MediaRange> getMediaRangeComparator() {
@@ -243,8 +245,7 @@ public class Negotiator {
         if (StringUtils.isEmpty(handle))
         {
             log.warn("Handle is empty, set it to Site Handle.");
-            handle = DSpaceServicesFactory.getInstance().getConfigurationService()
-                    .getProperty("handle.prefix") + "/0";
+            handle = Site.getSiteHandle();
         }
         
         // don't redirect if HTML is requested and content negotiation is done
@@ -262,10 +263,9 @@ public class Negotiator {
         // if html is requested we have to forward to the repositories webui.
         if ("html".equals(lang))
         {
-            urlBuilder.append(DSpaceServicesFactory.getInstance()
-                    .getConfigurationService().getProperty("dspace.url"));
-            if (!handle.equals(DSpaceServicesFactory.getInstance()
-                    .getConfigurationService().getProperty("handle.prefix") + "/0"))
+            urlBuilder.append((new DSpace()).getConfigurationService()
+                    .getProperty("dspace.url"));
+            if (!handle.equals(Site.getSiteHandle()))
             {
                 urlBuilder.append("/handle/");
                 urlBuilder.append(handle).append("/").append(extraPathInfo);
@@ -289,9 +289,7 @@ public class Negotiator {
         }
         
         // load the URI of the dspace-rdf module.
-        urlBuilder.append(DSpaceServicesFactory.getInstance()
-                .getConfigurationService()
-                .getProperty(RDFUtil.CONTEXT_PATH_KEY));
+        urlBuilder.append(RDFConfiguration.getDSpaceRDFModuleURI());
         if (urlBuilder.length() == 0)
         {
             log.error("Cannot load URL of dspace-rdf module. "

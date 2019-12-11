@@ -9,14 +9,11 @@ package org.dspace.app.itemmarking;
 
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import org.dspace.content.Item;
-import org.dspace.content.MetadataValue;
-import org.dspace.content.service.ItemService;
+import org.dspace.content.Metadatum;
 import org.dspace.core.Context;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * This is an item marking Strategy class that tries to mark an item
@@ -27,9 +24,6 @@ import org.springframework.beans.factory.annotation.Autowired;
  * 
  */
 public class ItemMarkingMetadataStrategy implements ItemMarkingExtractor {
-
-    @Autowired(required = true)
-    protected ItemService itemService;
 
 	private String metadataField;
 	Map<String, ItemMarkingInfo> mapping = new HashMap<String, ItemMarkingInfo>();
@@ -43,11 +37,11 @@ public class ItemMarkingMetadataStrategy implements ItemMarkingExtractor {
 		
 		if (metadataField != null && mapping!=null)
 		{
-			List<MetadataValue> vals = itemService.getMetadataByMetadataString(item, metadataField);
-			if (vals.size() > 0)
+			Metadatum[] vals = item.getMetadataByMetadataString(metadataField);
+			if (vals.length > 0)
 			{
-				for (MetadataValue value : vals){
-					String type = value.getValue();
+				for (Metadatum value : vals){
+					String type = value.value;
 					if (mapping.containsKey(type)){
 						return mapping.get(type);
 					}

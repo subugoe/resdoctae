@@ -67,7 +67,6 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
     // Only access this through getObjectManager, so that we don't have to create one if we don't want to.
     private ObjectManager objectManager;
 
-    @Override
     public void setup(SourceResolver resolver, Map objectModel, String src,
             Parameters parameters) throws ProcessingException, SAXException,
             IOException
@@ -105,7 +104,6 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
         }
     }
 
-    @Override
     protected void handleException(Exception e) throws SAXException
     {
         throw new SAXException(
@@ -113,21 +111,21 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
                         + this.getClass().getName(), e);
     }
 
-    @Override
+    /** What to add at the end of the body */
     public void addBody(Body body) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException, ProcessingException
     {
         // Do nothing
     }
 
-    @Override
+    /** What to add to the options list */
     public void addOptions(Options options) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException
     {
         // Do nothing
     }
 
-    @Override
+    /** What user metadata to add to the document */
     public void addUserMeta(UserMeta userMeta) throws SAXException,
             WingException, UIException, SQLException, IOException,
             AuthorizeException
@@ -135,7 +133,7 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
         // Do nothing
     }
 
-    @Override
+    /** What page metadata to add to the document */
     public void addPageMeta(PageMeta pageMeta) throws SAXException,
             WingException, UIException, SQLException, IOException,
             AuthorizeException
@@ -143,7 +141,6 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
         // Do nothing
     }
     
-    @Override
     public ObjectManager getObjectManager() 
     {
         if (this.objectManager == null)
@@ -153,7 +150,7 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
         return this.objectManager;
     }
     
-    @Override
+    /** What is a unique name for this component? */
     public String getComponentName()
     {
         String name = this.getClass().getName();
@@ -170,7 +167,6 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
      * @param unencodedString
      *            The unencoded string.
      * @return The encoded string
-     * @throws org.dspace.app.xmlui.utils.UIException if the encoding is unsupported.
      */
     public static String encodeForURL(String unencodedString) throws UIException
     {
@@ -196,7 +192,6 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
      * @param encodedString
      *            The encoded string.
      * @return The unencoded string
-     * @throws org.dspace.app.xmlui.utils.UIException if the encoding is unsupported.
      */
     public static String decodeFromURL(String encodedString) throws UIException
     {
@@ -224,22 +219,18 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
 
     /**
      * Generate a URL for the given base URL with the given parameters. This is
-     * a convenience method to make it easier to generate URL references with
+     * a convenance method to make it easier to generate URL references with
      * parameters.
      * 
-     * <p>Example:
-     *
-     * <pre>{@code
+     * Example
      * Map<String,String> parameters = new Map<String,String>();
      * parameters.put("arg1","value1");
      * parameters.put("arg2","value2");
      * parameters.put("arg3","value3");
      * String url = genrateURL("/my/url",parameters);
-     * }</pre>
-     *
+     * 
      * would result in the string:
-     *
-     * <pre>{@code url == "/my/url?arg1=value1&arg2=value2&arg3=value3"}</pre>
+     * url == "/my/url?arg1=value1&arg2=value2&arg3=value3"
      * 
      * @param baseURL The baseURL without any parameters.
      * @param parameters The parameters to be encoded on in the URL.
@@ -267,7 +258,9 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
     }
     
     
-    @Override
+    /**
+     * Recyle
+     */
     public void recycle() {
     	this.objectModel = null;
         this.context = null;
@@ -282,7 +275,9 @@ public abstract class AbstractDSpaceTransformer extends AbstractWingTransformer
     	super.recycle();
     }
 
-    @Override
+    /**
+     * Dispose
+     */
     public void dispose() {
     	this.objectModel = null;
         this.context = null;

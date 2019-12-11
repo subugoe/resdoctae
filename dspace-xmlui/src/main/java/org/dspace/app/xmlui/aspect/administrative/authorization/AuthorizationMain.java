@@ -21,9 +21,6 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Text;
 import org.dspace.content.Collection;
 import org.dspace.content.Community;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.CommunityService;
 
 /**
  * @author Alexey Maslov
@@ -65,9 +62,6 @@ public class AuthorizationMain extends AbstractDSpaceTransformer
 
     private static final Message T_untitled =
                 message("xmlui.general.untitled");
-
-    protected CommunityService communityService = ContentServiceFactory.getInstance().getCommunityService();
-    protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
 
 
 
@@ -143,7 +137,7 @@ public class AuthorizationMain extends AbstractDSpaceTransformer
     {
         if (currentCommunity == null)
         {
-            for (Community topLevel : communityService.findAllTop(context))
+            for (Community topLevel : Community.findAllTop(context))
             {
                 containerListBuilder(baseURL, parentList, topLevel);
             }
@@ -152,7 +146,7 @@ public class AuthorizationMain extends AbstractDSpaceTransformer
         {
             parentList.addItem().addHighlight("bold").addXref(baseURL
                     + "&submit_edit&community_id=" + currentCommunity.getID(),
-                    communityService.getMetadata(currentCommunity, "name"));
+                    currentCommunity.getMetadata("name"));
             List containerSubList = null;
             for (Collection subCols : currentCommunity.getCollections())
             {
@@ -161,7 +155,7 @@ public class AuthorizationMain extends AbstractDSpaceTransformer
                     containerSubList = parentList.addList("subList"
                             + currentCommunity.getID());
                 }
-                String name = collectionService.getMetadata(subCols, "name");
+                String name = subCols.getMetadata("name");
                 if (name == null || name.length() == 0)
                 {
                     containerSubList.addItemXref(baseURL

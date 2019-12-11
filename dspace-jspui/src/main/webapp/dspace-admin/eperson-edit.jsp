@@ -47,26 +47,22 @@
 <%@ page import="org.dspace.eperson.EPerson, org.dspace.core.ConfigurationManager" %>
 <%@ page import="org.dspace.eperson.Group"   %>
 <%@ page import="org.dspace.core.Utils" %>
-<%@ page import="java.util.List" %>
-<%@ page import="org.dspace.eperson.service.EPersonService" %>
-<%@ page import="org.dspace.eperson.factory.EPersonServiceFactory" %>
 
 <%
     EPerson eperson = (EPerson) request.getAttribute("eperson");
 
-	List<Group> groupMemberships = null;
+	Group [] groupMemberships = null;
 	if(request.getAttribute("group.memberships") != null)
 	{
-		groupMemberships = (List<Group>) request.getAttribute("group.memberships");
+		groupMemberships = (Group []) request.getAttribute("group.memberships");
 	}
 
-    EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
     String email     = eperson.getEmail();
     String firstName = eperson.getFirstName();
     String lastName  = eperson.getLastName();
-    String phone     = ePersonService.getMetadata(eperson, "phone");
+    String phone     = eperson.getMetadata("phone");
     String netid = eperson.getNetid();
-    String language     = ePersonService.getMetadata(eperson, "language");
+    String language     = eperson.getMetadata("language");
     boolean emailExists = (request.getAttribute("email_exists") != null);
 
     boolean ldap_enabled = ConfigurationManager.getBooleanProperty("authentication-ldap", "enable");
@@ -194,7 +190,7 @@
     </form>
 
 <%
-  if((groupMemberships != null) && (groupMemberships.size()>0))
+  if((groupMemberships != null) && (groupMemberships.length>0))
   {
 %>
 	<br/>
@@ -204,10 +200,10 @@
 	
 	<div class="row">    
     <ul>
-	<%  for(int i=0; i<groupMemberships.size(); i++)
+	<%  for(int i=0; i<groupMemberships.length; i++)
      	{
-        String myLink = groupMemberships.get(i).getName();
-        String args   = "submit_edit&amp;group_id="+ groupMemberships.get(i).getID();
+        String myLink = groupMemberships[i].getName();
+        String args   = "submit_edit&amp;group_id="+groupMemberships[i].getID();
         
         myLink = "<a href=\""
         +request.getContextPath()

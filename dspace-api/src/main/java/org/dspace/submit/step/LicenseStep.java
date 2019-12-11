@@ -24,6 +24,7 @@ import org.dspace.content.LicenseUtils;
 import org.dspace.core.Context;
 import org.dspace.core.LogManager;
 import org.dspace.eperson.EPerson;
+import org.dspace.license.CreativeCommons;
 import org.dspace.submit.AbstractProcessingStep;
 
 /**
@@ -81,7 +82,6 @@ public class LicenseStep extends AbstractProcessingStep
      *         doPostProcessing() below! (if STATUS_COMPLETE or 0 is returned,
      *         no errors occurred!)
      */
-    @Override
     public int doProcessing(Context context, HttpServletRequest request,
             HttpServletResponse response, SubmissionInfo subInfo)
             throws ServletException, IOException, SQLException,
@@ -128,7 +128,7 @@ public class LicenseStep extends AbstractProcessingStep
 
             // remove any existing DSpace license (just in case the user
             // accepted it previously)
-            itemService.removeDSpaceLicense(context, item);
+            item.removeDSpaceLicense();
 
             String license = LicenseUtils.getLicenseText(context
                     .getCurrentLocale(), subInfo.getSubmissionItem()
@@ -137,7 +137,7 @@ public class LicenseStep extends AbstractProcessingStep
             LicenseUtils.grantLicense(context, item, license);
 
             // commit changes
-            context.dispatchEvents();
+            context.commit();
         }
 
         // completed without errors
@@ -167,7 +167,6 @@ public class LicenseStep extends AbstractProcessingStep
      * 
      * @return the number of pages in this step
      */
-    @Override
     public int getNumberOfPages(HttpServletRequest request,
             SubmissionInfo subInfo) throws ServletException
     {

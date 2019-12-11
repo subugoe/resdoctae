@@ -9,11 +9,9 @@
 package org.dspace.springmvc;
 
 
-import org.dspace.content.MetadataValue;
+import org.dspace.content.Metadatum;
 import org.dspace.content.DSpaceObject;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,8 +39,7 @@ public class RisView implements View {
     private static final String EOL = "\r\n";
 
     private String resourceIdentifier=null;
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    
+
     public RisView(String resourceIdentifier)
     {
         this.resourceIdentifier = resourceIdentifier;
@@ -158,9 +155,9 @@ public class RisView implements View {
     {
         ArrayList<String> authors = new ArrayList<String>();
 
-        authors.addAll(getAuthors(itemService.getMetadataByMetadataString(aItem, "dc.contributor.author")));
-        authors.addAll(getAuthors(itemService.getMetadataByMetadataString(aItem, "dc.creator")));
-        authors.addAll(getAuthors(itemService.getMetadataByMetadataString(aItem, "dc.contributor")));
+        authors.addAll(getAuthors(aItem.getMetadataByMetadataString("dc.contributor.author")));
+        authors.addAll(getAuthors(aItem.getMetadataByMetadataString("dc.creator")));
+        authors.addAll(getAuthors(aItem.getMetadataByMetadataString("dc.contributor")));
 
         return authors.toArray(new String[authors.size()]);
     }
@@ -169,19 +166,19 @@ public class RisView implements View {
     {
         ArrayList<String> keywordList = new ArrayList<String>();
 
-        for (MetadataValue keyword : itemService.getMetadataByMetadataString(aItem, "dc.subject"))
+        for (Metadatum keyword : aItem.getMetadataByMetadataString("dc.subject"))
         {
-            if (keyword.getValue().length() < 255)
+            if (keyword.value.length() < 255)
             {
-                keywordList.add(keyword.getValue());
+                keywordList.add(keyword.value);
             }
         }
 
-        for (MetadataValue keyword : itemService.getMetadataByMetadataString(aItem, "dwc.ScientificName"))
+        for (Metadatum keyword : aItem.getMetadataByMetadataString("dwc.ScientificName"))
         {
-            if (keyword.getValue().length() < 255)
+            if (keyword.value.length() < 255)
             {
-                keywordList.add(keyword.getValue());
+                keywordList.add(keyword.value);
             }
         }
 
@@ -192,9 +189,9 @@ public class RisView implements View {
     {
         StringTokenizer tokenizer;
 
-        for (MetadataValue date : itemService.getMetadataByMetadataString(item, "dc.date.issued"))
+        for (Metadatum date : item.getMetadataByMetadataString("dc.date.issued"))
         {
-            tokenizer = new StringTokenizer(date.getValue(), "-/ T");
+            tokenizer = new StringTokenizer(date.value, "-/ T");
             String[] dateParts = new String[tokenizer.countTokens()];
 
             for (int index = 0; index < dateParts.length; index++)
@@ -210,25 +207,25 @@ public class RisView implements View {
 
     private String getMetadataValue(Item item, String metadatafield)
     {
-        for (MetadataValue value : itemService.getMetadataByMetadataString(item, metadatafield))
+        for (Metadatum value : item.getMetadataByMetadataString(metadatafield))
         {
-            return value.getValue();
+            return value.value;
         }
         return null;
     }
 
-    private List<String> getAuthors(List<MetadataValue> aMetadata)
+    private List<String> getAuthors(Metadatum[] aMetadata)
     {
         ArrayList<String> authors = new ArrayList<String>();
         StringTokenizer tokenizer;
 
-        for (MetadataValue metadata : aMetadata)
+        for (Metadatum metadata : aMetadata)
         {
             StringBuilder builder = new StringBuilder();
 
-            if (metadata.getValue().indexOf(",") != -1)
+            if (metadata.value.indexOf(",") != -1)
             {
-                String[] parts = metadata.getValue().split(",");
+                String[] parts = metadata.value.split(",");
 
                 if (parts.length > 1)
                 {
@@ -242,7 +239,7 @@ public class RisView implements View {
                 }
                 else
                 {
-                    builder.append(metadata.getValue());
+                    builder.append(metadata.value);
                 }
 
                 authors.add(builder.toString());
@@ -250,7 +247,7 @@ public class RisView implements View {
             // Now the minority case (as we've cleaned up data and input method)
             else
             {
-                String[] parts = metadata.getValue().split("\\s+|\\.");
+                String[] parts = metadata.value.split("\\s+|\\.");
                 String name = parts[parts.length - 1].replace("\\s+|\\.", "");
 
                 builder.append(name).append(" ");

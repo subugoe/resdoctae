@@ -16,12 +16,13 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.log4j.Logger;
 import org.dspace.app.webui.discovery.DiscoverySearchRequestProcessor;
+import org.dspace.app.webui.search.LuceneSearchRequestProcessor;
 import org.dspace.app.webui.search.SearchProcessorException;
 import org.dspace.app.webui.search.SearchRequestProcessor;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
 import org.dspace.core.PluginConfigurationError;
-import org.dspace.core.factory.CoreServiceFactory;
+import org.dspace.core.PluginManager;
 
 /**
  * Servlet for handling a simple search.
@@ -29,16 +30,16 @@ import org.dspace.core.factory.CoreServiceFactory;
  */
 public class SimpleSearchServlet extends DSpaceServlet
 {
-    private transient SearchRequestProcessor internalLogic;
+    private SearchRequestProcessor internalLogic;
 
     /** log4j category */
-    private static final Logger log = Logger.getLogger(SimpleSearchServlet.class);
+    private static Logger log = Logger.getLogger(SimpleSearchServlet.class);
 
-    public SimpleSearchServlet()
+    public void init()
     {
         try
         {
-            internalLogic = (SearchRequestProcessor) CoreServiceFactory.getInstance().getPluginService()
+            internalLogic = (SearchRequestProcessor) PluginManager
                     .getSinglePlugin(SearchRequestProcessor.class);
         }
         catch (PluginConfigurationError e)
@@ -53,7 +54,6 @@ public class SimpleSearchServlet extends DSpaceServlet
         }
     }
 
-    @Override
     protected void doDSGet(Context context, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException

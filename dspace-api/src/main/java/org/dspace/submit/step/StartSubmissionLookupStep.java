@@ -18,7 +18,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.UUID;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -34,7 +33,6 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.Collection;
 import org.dspace.content.WorkspaceItem;
 import org.dspace.core.Context;
-import org.dspace.services.factory.DSpaceServicesFactory;
 import org.dspace.submit.AbstractProcessingStep;
 import org.dspace.submit.lookup.DSpaceWorkspaceItemOutputGenerator;
 import org.dspace.submit.lookup.SubmissionItemDataLoader;
@@ -42,6 +40,7 @@ import org.dspace.submit.lookup.SubmissionLookupService;
 import org.dspace.submit.util.ItemSubmissionLookupDTO;
 import org.dspace.submit.util.SubmissionLookupDTO;
 import org.dspace.submit.util.SubmissionLookupPublication;
+import org.dspace.utils.DSpace;
 
 /**
  * StartSubmissionLookupStep is used when you want enabled the user to auto fill
@@ -81,8 +80,8 @@ public class StartSubmissionLookupStep extends AbstractProcessingStep
 
     public static final int STATUS_SUBMISSION_EXPIRED = 4;
 
-    private SubmissionLookupService slService = DSpaceServicesFactory.getInstance().getServiceManager()
-            .getServiceByName(
+    private SubmissionLookupService slService = new DSpace()
+            .getServiceManager().getServiceByName(
                     SubmissionLookupService.class.getCanonicalName(),
                     SubmissionLookupService.class);
 
@@ -113,14 +112,13 @@ public class StartSubmissionLookupStep extends AbstractProcessingStep
      *         doPostProcessing() below! (if STATUS_COMPLETE or 0 is returned,
      *         no errors occurred!)
      */
-    @Override
     public int doProcessing(Context context, HttpServletRequest request,
             HttpServletResponse response, SubmissionInfo subInfo)
             throws ServletException, IOException, SQLException,
             AuthorizeException
     {
         // First we find the collection which was selected
-        UUID id = Util.getUUIDParameter(request, "collectionid");
+        int id = Util.getIntParameter(request, "collectionid");
         String titolo = request.getParameter("search_title");
         String date = request.getParameter("search_year");
         String autori = request.getParameter("search_authors");
@@ -155,13 +153,13 @@ public class StartSubmissionLookupStep extends AbstractProcessingStep
         }
         // if the user didn't select a collection,
         // send him/her back to "select a collection" page
-        if (id == null)
+        if (id < 0)
         {
             return STATUS_NO_COLLECTION;
         }
 
         // try to load the collection
-        Collection col = collectionService.find(context, id);
+        Collection col = Collection.find(context, id);
 
         // Show an error if the collection is invalid
         if (col == null)
@@ -270,7 +268,7 @@ public class StartSubmissionLookupStep extends AbstractProcessingStep
             }
 
             // commit changes to database
-            context.dispatchEvents();
+            context.commit();
 
             // need to reload current submission process config,
             // since it is based on the Collection selected
@@ -304,7 +302,6 @@ public class StartSubmissionLookupStep extends AbstractProcessingStep
      * 
      * @return the number of pages in this step
      */
-    @Override
     public int getNumberOfPages(HttpServletRequest request,
             SubmissionInfo subInfo) throws ServletException
     {

@@ -15,13 +15,19 @@
          id="WebApp_ID" version="2.5">
 
     <display-name>RDF Data Provider</display-name>
-
     <context-param>
         <description>
-            The location of the DSpace home directory
+            The location of the main DSpace configuration file
+        </description>
+        <param-name>dspace-config</param-name>
+        <param-value>/opt/dspace/adw/config/dspace.cfg</param-value>
+    </context-param>
+    <context-param>
+        <description>
+            The location of the main DSpace configuration file
         </description>
         <param-name>dspace.dir</param-name>
-        <param-value>${dspace.dir}</param-value>
+        <param-value>/opt/dspace/adw</param-value>
     </context-param>
 
     <filter>
@@ -34,12 +40,17 @@
         <url-pattern>/*</url-pattern>
     </filter-mapping>
 
+    <!--
+       DSpace Kernel startup listener. This listener is in charge of initializing/starting the
+       DSpace Kernel. It MUST be listed BEFORE any other DSpace listeners, as DSpace services
+       will not function until the Kernel is initialized.
+    -->
     <listener>
-        <listener-class>org.dspace.app.util.DSpaceContextListener</listener-class>
+        <listener-class>org.dspace.servicemanager.servlet.DSpaceKernelServletContextListener</listener-class>
     </listener>
 
     <listener>
-        <listener-class>org.dspace.servicemanager.servlet.DSpaceKernelServletContextListener</listener-class>
+        <listener-class>org.dspace.app.util.DSpaceContextListener</listener-class>
     </listener>
 
     <servlet>

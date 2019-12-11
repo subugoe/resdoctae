@@ -22,9 +22,6 @@ import org.dspace.core.Context;
 import org.dspace.core.I18nUtil;
 import org.dspace.eperson.EPerson;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.eperson.service.GroupService;
 
 /**
  * A command-line tool for creating an initial administrator for setting up a
@@ -49,17 +46,13 @@ public final class CreateAdministrator
 {
 	/** DSpace Context object */
 	private final Context context;
-
-    protected EPersonService ePersonService;
-    protected GroupService groupService;
-
+	
     /**
      * For invoking via the command line.  If called with no command line arguments,
      * it will negotiate with the user for the administrator details
      * 
      * @param argv
      *            command-line arguments
-     * @throws Exception if error
      */
     public static void main(String[] argv)
     	throws Exception
@@ -93,23 +86,21 @@ public final class CreateAdministrator
     /** 
      * constructor, which just creates and object with a ready context
      * 
-     * @throws Exception if error
+     * @throws Exception
      */
-    protected CreateAdministrator()
+    private CreateAdministrator()
     	throws Exception
     {
     	context = new Context();
-        groupService = EPersonServiceFactory.getInstance().getGroupService();
-        ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
     }
     
     /**
      * Method which will negotiate with the user via the command line to 
      * obtain the administrator's details
      * 
-     * @throws Exception if error
+     * @throws Exception
      */
-    protected void negotiateAdministratorDetails()
+    private void negotiateAdministratorDetails()
     	throws Exception
     {
         Console console = System.console();
@@ -229,9 +220,9 @@ public final class CreateAdministrator
      * @param language preferred language
      * @param pw	desired password
      * 
-     * @throws Exception if error
+     * @throws Exception
      */
-    protected void createAdministrator(String email, String first, String last,
+    private void createAdministrator(String email, String first, String last,
     		String language, String pw)
     	throws Exception
     {
@@ -240,7 +231,7 @@ public final class CreateAdministrator
     	context.turnOffAuthorisationSystem();
     	
     	// Find administrator group
-    	Group admins = groupService.findByName(context, Group.ADMIN);
+    	Group admins = Group.find(context, 1);
     	
     	if (admins == null)
     	{
@@ -248,27 +239,27 @@ public final class CreateAdministrator
     	}
     	
     	// Create the administrator e-person
-        EPerson eperson = ePersonService.findByEmail(context,email);
+        EPerson eperson = EPerson.findByEmail(context,email);
         
         // check if the email belongs to a registered user,
         // if not create a new user with this email
         if (eperson == null)
         {
-            eperson = ePersonService.create(context);
+            eperson = EPerson.create(context);
             eperson.setEmail(email);
             eperson.setCanLogIn(true);
             eperson.setRequireCertificate(false);
             eperson.setSelfRegistered(false);
         }
     	
-    	eperson.setLastName(context, last);
-    	eperson.setFirstName(context, first);
-    	eperson.setLanguage(context, language);
-        ePersonService.setPassword(eperson, pw);
-        ePersonService.update(context, eperson);
+    	eperson.setLastName(last);
+    	eperson.setFirstName(first);
+    	eperson.setLanguage(language);
+    	eperson.setPassword(pw);
+    	eperson.update();
     	
-    	groupService.addMember(context, admins, eperson);
-        groupService.update(context, admins);
+    	admins.addMember(eperson);
+    	admins.update();
     	
     	context.complete();
     	

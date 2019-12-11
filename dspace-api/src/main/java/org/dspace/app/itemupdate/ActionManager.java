@@ -21,16 +21,9 @@ import java.util.Map;
  */
 public class ActionManager implements Iterable<UpdateAction> {
 	
-	protected Map<Class<? extends UpdateAction>, UpdateAction> registry
+	private Map<Class<? extends UpdateAction>, UpdateAction> registry 
                      = new LinkedHashMap<Class<? extends UpdateAction>, UpdateAction>();
 	
-        /**
-         * Get update action
-         * @param actionClass UpdateAction class
-         * @return instantiation of UpdateAction class
-         * @throws InstantiationException if instantiation error
-         * @throws IllegalAccessException if illegal access error
-         */
 	public UpdateAction getUpdateAction(Class<? extends UpdateAction> actionClass) 
 	throws InstantiationException, IllegalAccessException
 	{
@@ -60,28 +53,24 @@ public class ActionManager implements Iterable<UpdateAction> {
 	 * 
 	 * @return iterator for UpdateActions
 	 */
-	@Override
-    public Iterator<UpdateAction> iterator()
+	public Iterator<UpdateAction> iterator()
 	{
 		return new Iterator<UpdateAction>() 
 		{ 			
 			private Iterator<Class<? extends UpdateAction>> itr = registry.keySet().iterator();
 			
-			@Override
-            public boolean hasNext()
+			public boolean hasNext()
 			{
 				return itr.hasNext();
 			}
 			
-			@Override
-            public UpdateAction next()
+			public UpdateAction next()
 			{
 				return registry.get(itr.next());
 			}
 			
 			//not supported
-			@Override
-            public void remove()
+			public void remove()
 			{
 				throw new UnsupportedOperationException();
 			}

@@ -41,7 +41,6 @@ public class LicenseStreamIngestionCrosswalk
     /** log4j logger */
     private static Logger log = Logger.getLogger(LicenseStreamIngestionCrosswalk.class);
 
-    @Override
     public void ingest(Context context, DSpaceObject dso, InputStream in, String MIMEType)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {

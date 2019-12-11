@@ -160,8 +160,8 @@ public class BrowseOutput
 	 * Pass in some SQL.  If print is set to true this will output to the
 	 * screen.  If file is set to true, this will write to the file specified.
 	 * 
-	 * @param sql SQL string
-	 * @throws BrowseException if browse error
+	 * @param sql
+	 * @throws BrowseException
 	 */
 	public void sql(String sql) throws BrowseException
 	{

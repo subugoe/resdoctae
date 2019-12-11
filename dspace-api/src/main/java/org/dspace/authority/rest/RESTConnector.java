@@ -38,6 +38,7 @@ public class RESTConnector {
     }
 
     public InputStream get(String path, String accessToken) {
+
         InputStream result = null;
         path = trimSlashes(path);
 

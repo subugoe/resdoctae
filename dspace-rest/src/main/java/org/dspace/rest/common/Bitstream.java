@@ -12,17 +12,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.servlet.ServletContext;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import org.apache.log4j.Logger;
 import org.dspace.content.Bundle;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.BitstreamService;
-import org.dspace.content.service.BundleService;
 import org.dspace.core.Constants;
-import org.dspace.core.Context;
-import org.dspace.utils.DSpace;
 
 /**
  * Created with IntelliJ IDEA.
@@ -33,9 +27,6 @@ import org.dspace.utils.DSpace;
  */
 @XmlRootElement(name = "bitstream")
 public class Bitstream extends DSpaceObject {
-    protected BitstreamService bitstreamService = ContentServiceFactory.getInstance().getBitstreamService();
-    protected BundleService bundleService = ContentServiceFactory.getInstance().getBundleService();
-
     Logger log = Logger.getLogger(Bitstream.class);
 
     private String bundleName;
@@ -54,30 +45,29 @@ public class Bitstream extends DSpaceObject {
 
     }
 
-    public Bitstream(org.dspace.content.Bitstream bitstream, ServletContext servletContext, String expand, Context context) throws SQLException{
-        super(bitstream, servletContext);
-        setup(bitstream, servletContext, expand, context);
+    public Bitstream(org.dspace.content.Bitstream bitstream, String expand) throws SQLException{
+        super(bitstream);
+        setup(bitstream, expand);
     }
 
-    public void setup(org.dspace.content.Bitstream bitstream, ServletContext servletContext, String expand, Context context) throws SQLException{
+    public void setup(org.dspace.content.Bitstream bitstream, String expand) throws SQLException{
         List<String> expandFields = new ArrayList<String>();
         if(expand != null) {
             expandFields = Arrays.asList(expand.split(","));
         }
 
         //A logo bitstream might not have a bundle...
-        if(bitstream.getBundles() != null & bitstream.getBundles().size() >= 0) {
-            if(bitstreamService.getParentObject(context, bitstream).getType() == Constants.ITEM) {
-                bundleName = bitstream.getBundles().get(0).getName();
+        if(bitstream.getBundles() != null & bitstream.getBundles().length >= 0) {
+            if(bitstream.getParentObject().getType() == Constants.ITEM) {
+                bundleName = bitstream.getBundles()[0].getName();
             }
         }
 
         description = bitstream.getDescription();
-        format = bitstreamService.getFormatDescription(context, bitstream);
+        format = bitstream.getFormatDescription();
         sizeBytes = bitstream.getSize();
-        String path = new DSpace().getRequestService().getCurrentRequest().getHttpServletRequest().getContextPath();
-        retrieveLink = path + "/bitstreams/" + bitstream.getID() + "/retrieve";
-        mimeType = bitstreamService.getFormat(context, bitstream).getMIMEType();
+        retrieveLink = "/bitstreams/" + bitstream.getID() + "/retrieve";
+        mimeType = bitstream.getFormat().getMIMEType();
         sequenceId = bitstream.getSequenceID();
         CheckSum checkSum = new CheckSum();
         checkSum.setCheckSumAlgorith(bitstream.getChecksumAlgorithm());
@@ -85,7 +75,7 @@ public class Bitstream extends DSpaceObject {
         this.setCheckSum(checkSum);
 
         if(expandFields.contains("parent") || expandFields.contains("all")) {
-            parentObject = new DSpaceObject(bitstreamService.getParentObject(context, bitstream), servletContext);
+            parentObject = new DSpaceObject(bitstream.getParentObject());
         } else {
             this.addExpand("parent");
         }
@@ -93,13 +83,13 @@ public class Bitstream extends DSpaceObject {
         if(expandFields.contains("policies") || expandFields.contains("all")) {
             // Find policies without context.
         	List<ResourcePolicy> tempPolicies = new ArrayList<ResourcePolicy>();
-        	List<Bundle> bundles = bitstream.getBundles();
+        	Bundle[] bundles = bitstream.getBundles();
 			for (Bundle bundle : bundles) {
-				List<org.dspace.authorize.ResourcePolicy> bitstreamsPolicies = bundleService.getBitstreamPolicies(context, bundle);
+				List<org.dspace.authorize.ResourcePolicy> bitstreamsPolicies = bundle.getBitstreamPolicies();
 				for (org.dspace.authorize.ResourcePolicy policy : bitstreamsPolicies) {
-                    if(policy.getdSpaceObject().equals(bitstream)) {
-                        tempPolicies.add(new ResourcePolicy(policy));
-                    }
+					if (policy.getResourceID() == this.getId()) {
+						tempPolicies.add(new ResourcePolicy(policy));
+					}
 				}
 			}
 			

@@ -34,20 +34,6 @@
 	if (request.getAttribute("browseWithdrawn") != null || request.getAttribute("browsePrivate") != null)
 	{
 	    layoutNavbar = "admin";
-            
-            // Is the logged in user an admin or community admin or collection admin
-            Boolean admin = (Boolean)request.getAttribute("is.admin");
-            boolean isAdmin = (admin == null ? false : admin.booleanValue());
-    
-            Boolean communityAdmin = (Boolean)request.getAttribute("is.communityAdmin");
-            boolean isCommunityAdmin = (communityAdmin == null ? false : communityAdmin.booleanValue());
-
-            Boolean collectionAdmin = (Boolean)request.getAttribute("is.collectionAdmin");
-            boolean isCollectionAdmin = (collectionAdmin == null ? false : collectionAdmin.booleanValue());
-            
-            if(!isAdmin && (isCommunityAdmin || isCollectionAdmin)){
-                layoutNavbar = "community-or-collection-admin";
-            }
 	}
 
 	// get the BrowseInfo object
@@ -74,12 +60,12 @@
 
     if (collection != null)
     {
-        linkText = collection.getName();
+        linkText = collection.getMetadata("name");
         linkBack = "/handle/" + collection.getHandle();
     }
     else if (community != null)
     {
-        linkText = community.getName();
+        linkText = community.getMetadata("name");
         linkBack = "/handle/" + community.getHandle();
     }
 %>
@@ -94,7 +80,7 @@
 	    {
    %>
             	<fmt:message key="browse.no-results.col">
-                    <fmt:param><%= collection.getName() %></fmt:param>
+                    <fmt:param><%= collection.getMetadata("name")%></fmt:param>
                 </fmt:message>
    <%
 	    }
@@ -102,7 +88,7 @@
 	    {
    %>
    		<fmt:message key="browse.no-results.com">
-            <fmt:param><%= community.getName() %></fmt:param>
+            <fmt:param><%= community.getMetadata("name")%></fmt:param>
         </fmt:message>
    <%
  	    }

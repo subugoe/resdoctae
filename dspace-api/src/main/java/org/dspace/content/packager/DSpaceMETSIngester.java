@@ -20,15 +20,14 @@ import org.dspace.content.crosswalk.CrosswalkException;
 import org.dspace.content.crosswalk.MetadataValidationException;
 import org.dspace.core.Context;
 import org.dspace.core.Constants;
+import org.dspace.core.PluginManager;
 import org.dspace.app.mediafilter.MediaFilter;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.core.service.PluginService;
 
 import org.jdom.Element;
 
 /**
  * Packager plugin to ingest a
- * METS (Metadata Encoding and Transmission Standard) package
+ * METS (Metadata Encoding & Transmission Standard) package
  * that conforms to the DSpace METS SIP (Submission Information Package) Profile.
  * See <a href="http://www.loc.gov/standards/mets/">http://www.loc.gov/standards/mets/</a>
  * for more information on METS, and
@@ -49,7 +48,7 @@ public class DSpaceMETSIngester
        extends AbstractMETSIngester
 {
     // first part of required mets@PROFILE value
-    protected static final String PROFILE_START = "DSpace METS SIP Profile";
+    private static final String PROFILE_START = "DSpace METS SIP Profile";
 
     // just check the profile name.
     @Override
@@ -76,11 +75,6 @@ public class DSpaceMETSIngester
      * 3. If (1) or (2) succeeds, crosswalk it and ignore all other DMDs with
      *    same GROUPID<br>
      * 4. Crosswalk remaining DMDs not eliminated already.
-     * @throws CrosswalkException if crosswalk error
-     * @throws PackageValidationException if validation error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
     public void crosswalkObjectDmd(Context context, DSpaceObject dso,
@@ -172,10 +166,6 @@ public class DSpaceMETSIngester
      * supplied by explicit argument first, else use collection's
      * default deposit license.
      * For Creative Commons, look for a rightsMd containing a CC license.
-     * @throws PackageValidationException if validation error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
     public void addLicense(Context context, Item item, String license,
@@ -209,14 +199,12 @@ public class DSpaceMETSIngester
     // only needed when importing a SIP without canonical DSpace derived file naming.
     private String makeDerivedFilename(String bundleName, String origName)
     {
-        PluginService pluginService = CoreServiceFactory.getInstance().getPluginService();
-
         // get the MediaFilter that would create this bundle:
-        String mfNames[] = pluginService.getAllPluginNames(MediaFilter.class);
+        String mfNames[] = PluginManager.getAllPluginNames(MediaFilter.class);
 
         for (int i = 0; i < mfNames.length; ++i)
         {
-            MediaFilter mf = (MediaFilter)pluginService.getNamedPlugin(MediaFilter.class, mfNames[i]);
+            MediaFilter mf = (MediaFilter)PluginManager.getNamedPlugin(MediaFilter.class, mfNames[i]);
             if (bundleName.equals(mf.getBundleName()))
             {
                 return mf.getFilteredName(origName);
@@ -229,10 +217,6 @@ public class DSpaceMETSIngester
     /**
      * Take a second pass over files to correct names of derived files
      * (e.g. thumbnails, extracted text) to what DSpace expects:
-     * @throws MetadataValidationException if validation error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
     public void finishBitstream(Context context,
@@ -257,8 +241,8 @@ public class DSpaceMETSIngester
                 {
                     //String mfileId = mfile.getAttributeValue("ID");
                     //Bitstream bs = (Bitstream)fileIdToBitstream.get(mfileId);
-                    bs.setName(context, newName);
-                    bitstreamService.update(context, bs);
+                    bs.setName(newName);
+                    bs.update();
                 }
             }
         }

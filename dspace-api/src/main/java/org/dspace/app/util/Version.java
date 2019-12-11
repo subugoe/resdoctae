@@ -12,10 +12,8 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
-
-import org.dspace.app.util.factory.UtilServiceFactory;
 import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 /**
  * Display information about this DSpace, its environment, and how it was built.
@@ -52,26 +50,28 @@ public class Version
                           sys.get("os.version"));
 
         // UIs used
-        List<WebApp> apps = UtilServiceFactory.getInstance().getWebAppService().getApps();
+        List<AbstractDSpaceWebapp> apps = AbstractDSpaceWebapp.getApps();
         System.out.println("  Applications:");
-        for (WebApp app : apps)
+        for (AbstractDSpaceWebapp app : apps)
         {
             System.out.printf("                %s at %s\n",
-                    app.getAppName(), app.getUrl());
+                    app.getKind(), app.getURL());
         }
 
         // Is Discovery available?
-        ConfigurationService config = DSpaceServicesFactory.getInstance().getConfigurationService();
-        String[] consumers = config.getArrayProperty("event.dispatcher.default.consumers");
-        String discoveryStatus = "not enabled.";
-        for (String consumer : consumers) {
-            if (consumer.equals("discovery"))
-            {
-                discoveryStatus = "enabled.";
-                break;
-            }
+        ConfigurationService config = new DSpace().getConfigurationService();
+        String consumers = config.getPropertyAsType("event.dispatcher.default.consumers", ""); // Avoid null pointer
+        List<String> consumerList = Arrays.asList(consumers.split("\\s*,\\s*"));
+        if (consumerList.contains("discovery"))
+        {
+            System.out.println("     Discovery:  enabled.");
         }
-        System.out.println("     Discovery:  " + discoveryStatus);
+
+        // Is Lucene search enabled?
+        if (consumerList.contains("search"))
+        {
+            System.out.println(" Lucene search:  enabled.");
+        }
 
         // Java version
         System.out.printf("           JRE:  %s version %s\n",

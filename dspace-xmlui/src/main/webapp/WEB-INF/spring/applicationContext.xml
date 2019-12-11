@@ -43,8 +43,8 @@
             <ref bean="dspace.eventService"/>
         </property>
     </bean>
-
-    <!-- Inject the SolrLoggerUsageEventListener into the EventService  -->
+     
+    <!-- Inject the Default LoggerUsageEventListener into the EventService  -->
     <bean class="org.dspace.statistics.SolrLoggerUsageEventListener">
         <property name="eventService" >
             <ref bean="dspace.eventService"/>
@@ -64,16 +64,16 @@
             <ref bean="dspace.eventService" />
         </property>
     </bean>-->
-
-    <!-- TabFileUsageEventListener -->
-    <!-- Uncomment to enable TabFileUsageEventListener
-    <bean class="org.dspace.usage.TabFileUsageEventListener">
+          
+    <!-- 
+    Uncomment to enable TabFileUsageEventListener 
+    <bean class="org.dspace.app.statistics.TabFileUsageEventListener">
         <property name="eventService" >
             <ref bean="dspace.eventService"/>
         </property>
     </bean>
     -->
-
+    
     <!-- 
     Uncomment to enable PassiveUsageEventListener
     <bean class="org.dspace.app.statistics.PassiveUsageEventListener">

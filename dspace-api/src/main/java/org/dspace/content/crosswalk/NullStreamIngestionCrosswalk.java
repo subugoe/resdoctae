@@ -30,7 +30,6 @@ import org.dspace.core.Context;
 public class NullStreamIngestionCrosswalk
     implements StreamIngestionCrosswalk
 {
-    @Override
     public void ingest(Context context, DSpaceObject dso, InputStream in, String MIMEType)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {

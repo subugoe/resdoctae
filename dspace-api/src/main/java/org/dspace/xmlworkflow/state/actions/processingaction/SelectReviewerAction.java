@@ -11,20 +11,15 @@ import org.dspace.app.util.Util;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
 import org.dspace.eperson.EPerson;
-import org.dspace.eperson.service.EPersonService;
-import org.dspace.workflow.WorkflowException;
+import org.dspace.xmlworkflow.WorkflowException;
 import org.dspace.xmlworkflow.state.Step;
 import org.dspace.xmlworkflow.state.actions.ActionResult;
 import org.dspace.xmlworkflow.storedcomponents.WorkflowItemRole;
 import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
-import org.dspace.xmlworkflow.storedcomponents.service.WorkflowItemRoleService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.sql.SQLException;
-import java.util.List;
-import java.util.UUID;
 
 /**
  * Processing class for an action where an assigned user can
@@ -43,12 +38,6 @@ public class SelectReviewerAction extends ProcessingAction{
     public static final int RESULTS_PER_PAGE = 5;
 
     private String roleId;
-
-    @Autowired(required = true)
-    protected EPersonService ePersonService;
-
-    @Autowired(required = true)
-    protected WorkflowItemRoleService workflowItemRoleService;
 
     @Override
     public void activate(Context c, XmlWorkflowItem wf) throws SQLException, IOException, AuthorizeException, WorkflowException {
@@ -73,8 +62,8 @@ public class SelectReviewerAction extends ProcessingAction{
                 page = 0;
             }
 
-            int resultCount = ePersonService.searchResultCount(c, query);
-            List<EPerson> epeople = ePersonService.search(c, query, page*RESULTS_PER_PAGE, RESULTS_PER_PAGE);
+            int resultCount = EPerson.searchResultCount(c, query);
+            EPerson[] epeople = EPerson.search(c, query, page*RESULTS_PER_PAGE, RESULTS_PER_PAGE);
 
 
             request.setAttribute("eperson-result-count", resultCount);
@@ -85,14 +74,14 @@ public class SelectReviewerAction extends ProcessingAction{
         }else
         if(submitButton.startsWith("submit_select_reviewer_")){
             //Retrieve the identifier of the eperson which will do the reviewing
-            UUID reviewerId = UUID.fromString(submitButton.substring(submitButton.lastIndexOf("_") + 1));
-            EPerson reviewer = ePersonService.find(c, reviewerId);
+            int reviewerId = Integer.parseInt(submitButton.substring(submitButton.lastIndexOf("_") + 1));
+            EPerson reviewer = EPerson.find(c, reviewerId);
             //We have a reviewer, assign him, the workflowitemrole will be translated into a task in the autoassign
-            WorkflowItemRole workflowItemRole = workflowItemRoleService.create(c);
+            WorkflowItemRole workflowItemRole = WorkflowItemRole.create(c);
             workflowItemRole.setEPerson(reviewer);
             workflowItemRole.setRoleId(getRoleId());
-            workflowItemRole.setWorkflowItem(wfi);
-            workflowItemRoleService.update(c, workflowItemRole);
+            workflowItemRole.setWorkflowItemId(wfi.getID());
+            workflowItemRole.update();
             return new ActionResult(ActionResult.TYPE.TYPE_OUTCOME, ActionResult.OUTCOME_COMPLETE);
         }
 

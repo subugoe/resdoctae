@@ -12,7 +12,7 @@ import java.util.*;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
 
 /**
  * Implements MARC 21 standards to disregard initial
@@ -39,7 +39,6 @@ public class MARC21InitialArticleWord extends InitialArticleWord
      * Return the list of definite and indefinite article codes
      * for this language.
      */
-    @Override
     protected String[] getArticleWords(String lang)
     {
         // No language - no words
@@ -278,15 +277,18 @@ public class MARC21InitialArticleWord extends InitialArticleWord
         }
 
         // Setup default stop words for null languages
-        String[] defaultLangs = DSpaceServicesFactory.getInstance().getConfigurationService().getArrayProperty("marc21wordfilter.defaultlang");
-        if (ArrayUtils.isNotEmpty(defaultLangs))
+        String defaultLangs = ConfigurationManager.getProperty("marc21wordfilter.defaultlang");
+        if (!StringUtils.isEmpty(defaultLangs))
         {
+            String[] langArr = defaultLangs.split("[, ]+");
+            if (langArr != null && langArr.length > 0)
+            {
                 int wordCount = 0;
-                ArticlesForLang[] afl = new ArticlesForLang[defaultLangs.length];
+                ArticlesForLang[] afl = new ArticlesForLang[langArr.length];
 
                 for (int idx = 0; idx < afl.length; idx++)
                 {
-                    Language l = Language.getLanguage(defaultLangs[idx]);
+                    Language l = Language.getLanguage(langArr[idx]);
                     if (l != null && ianaArticleMap.containsKey(l.IANA))
                     {
                         afl[idx] = ianaArticleMap.get(l.IANA);
@@ -310,6 +312,7 @@ public class MARC21InitialArticleWord extends InitialArticleWord
                         }
                     }
                 }
+            }
         }
     }
 
@@ -329,7 +332,6 @@ public class MARC21InitialArticleWord extends InitialArticleWord
     // Compare strings according to their length - longest to shortest
     private static class InverseLengthComparator implements Comparator, Serializable
     {
-        @Override
         public int compare(Object arg0, Object arg1)
         {
             return ((String)arg1).length() - ((String)arg0).length(); 

@@ -25,9 +25,6 @@ import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.MetadataField;
 import org.dspace.content.MetadataSchema;
 import org.dspace.content.NonUniqueMetadataException;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.MetadataFieldService;
-import org.dspace.content.service.MetadataSchemaService;
 import org.dspace.core.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,7 +44,6 @@ import org.xml.sax.SAXException;
  * 
  * The format of the XML file is as follows:
  * 
- * {@code
  * <dspace-dc-types>
  *   <dc-type>
  *     <schema>icadmin</schema>
@@ -59,29 +55,15 @@ import org.xml.sax.SAXException;
  *   [....]
  *   
  * </dspace-dc-types>
- * }
  */
 public class MetadataImporter
 {
-    protected static MetadataSchemaService metadataSchemaService = ContentServiceFactory.getInstance().getMetadataSchemaService();
-    protected static MetadataFieldService metadataFieldService = ContentServiceFactory.getInstance().getMetadataFieldService();
-
     /** logging category */
     private static final Logger log = LoggerFactory.getLogger(MetadataImporter.class);
 
-    /**
-     * main method for reading user input from the command line
-     * @param args arguments
-     * @throws ParseException if parse error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws TransformerException if transformer error
-     * @throws ParserConfigurationException if config error
-     * @throws AuthorizeException if authorization error
-     * @throws SAXException if parser error
-     * @throws NonUniqueMetadataException if duplicate metadata
-     * @throws RegistryImportException if import fails
-     **/
+	/**
+	 * main method for reading user input from the command line
+	 */
     public static void main(String[] args)
     	throws ParseException, SQLException, IOException, TransformerException,
     			ParserConfigurationException, AuthorizeException, SAXException,
@@ -115,15 +97,6 @@ public class MetadataImporter
      * Load the data from the specified file path into the database
      * 
      * @param 	file	the file path containing the source data
-     * @param   forceUpdate whether to force update
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws TransformerException if transformer error
-     * @throws ParserConfigurationException if config error
-     * @throws AuthorizeException if authorization error
-     * @throws SAXException if parser error
-     * @throws NonUniqueMetadataException if duplicate metadata
-     * @throws RegistryImportException if import fails
      */
     public static void loadRegistry(String file, boolean forceUpdate)
     	throws SQLException, IOException, TransformerException, ParserConfigurationException, 
@@ -179,12 +152,7 @@ public class MetadataImporter
      *            DSpace context object
      * @param node
      *            the node in the DOM tree
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws TransformerException if transformer error
-     * @throws AuthorizeException if authorization error
-     * @throws NonUniqueMetadataException if duplicate metadata
-     * @throws RegistryImportException if import fails
+     * @throws NonUniqueMetadataException
      */
     private static void loadSchema(Context context, Node node, boolean updateExisting)
         throws SQLException, IOException, TransformerException,
@@ -205,13 +173,14 @@ public class MetadataImporter
         }
 
         // check to see if the schema already exists
-        MetadataSchema s = metadataSchemaService.find(context, name);
+        MetadataSchema s = MetadataSchema.find(context, name);
         
         if (s == null)
         {
             // Schema does not exist - create
             log.info("Registering Schema " + name + " (" + namespace + ")");
-            metadataSchemaService.create(context, name, namespace);
+            MetadataSchema schema = new MetadataSchema(namespace, name);
+            schema.create(context);
         }
         else
         {
@@ -228,7 +197,7 @@ public class MetadataImporter
                 // Update the existing schema namespace and continue to type import
                 log.info("Updating Schema " + name + ": New namespace " + namespace);
                 s.setNamespace(namespace);
-                metadataSchemaService.update(context, s);
+                s.update(context);
             }
             else
             {
@@ -247,12 +216,7 @@ public class MetadataImporter
      *            DSpace context object
      * @param node
      *            the node in the DOM tree
-     * @throws SQLException if database error
-     * @throws IOException if IO error
-     * @throws TransformerException if transformer error
-     * @throws AuthorizeException if authorization error
-     * @throws NonUniqueMetadataException if duplicate metadata
-     * @throws RegistryImportException if import fails
+     * @throws NonUniqueMetadataException
      */
     private static void loadType(Context context, Node node)
             throws SQLException, IOException, TransformerException,
@@ -272,14 +236,14 @@ public class MetadataImporter
 
         
         // Find the matching schema object
-        MetadataSchema schemaObj = metadataSchemaService.find(context, schema);
+        MetadataSchema schemaObj = MetadataSchema.find(context, schema);
         
         if (schemaObj == null)
         {
             throw new RegistryImportException("Schema '" + schema + "' is not registered and does not exist.");
         }
         
-        MetadataField mf = metadataFieldService.findByElement(context, schemaObj, element, qualifier);
+        MetadataField mf = MetadataField.findByElement(context, schemaObj.getSchemaID(), element, qualifier);
         if (mf != null)
         {
             // Metadata field already exists, skipping it
@@ -291,8 +255,12 @@ public class MetadataImporter
         if(qualifier==null)
             fieldName = schema + "." + element;
         log.info("Registering metadata field " + fieldName);
-        MetadataField field = metadataFieldService.create(context, schemaObj, element, qualifier, scopeNote);
-        metadataFieldService.update(context, field);
+        MetadataField field = new MetadataField();
+        field.setSchemaID(schemaObj.getSchemaID());
+        field.setElement(element);
+        field.setQualifier(qualifier);
+        field.setScopeNote(scopeNote);
+        field.create(context);
     }
     
     /**

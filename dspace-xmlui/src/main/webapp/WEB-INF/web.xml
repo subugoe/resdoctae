@@ -33,13 +33,20 @@
         <description>An override of the session cookie path</description>
         </context-param-->
 
-  <!-- ConfigurationService initialization for dspace.dir -->
+
+    <!-- DSpace Configuration Information -->
+    <context-param>
+        <param-name>dspace-config</param-name>
+        <param-value>/opt/dspace/adw/config/dspace.cfg</param-value>
+    </context-param>
+
+  <!-- new ConfigurationService initialization for dspace.dir -->
   <context-param>
     <description>
-      The location of the DSpace home directory
+      The location of the main DSpace configuration file
     </description>
     <param-name>dspace.dir</param-name>
-    <param-value>${dspace.dir}</param-value>
+    <param-value>/opt/dspace/adw</param-value>
   </context-param>
   
   <!--  configures the locations that Spring configurations are searched for. -->
@@ -153,24 +160,23 @@
     -->
 
   <!-- Servlet Context Listener ======================================= -->
-    <!-- Listener to initialize / clean up the application -->
+  
+    <!--
+       DSpace Kernel startup listener. This listener is in charge of initializing/starting the
+       DSpace Kernel. It MUST be listed BEFORE any other DSpace listeners, as DSpace services
+       will not function until the Kernel is initialized.
+    -->
     <listener>
-        <listener-class>org.dspace.app.util.DSpaceContextListener</listener-class>
+       <listener-class>org.dspace.servicemanager.servlet.DSpaceKernelServletContextListener</listener-class>
     </listener>
-
-    <!-- kernel start listener (from impl), starts up the kernel for standalong webapps -->
-  <listener>
-     <listener-class>org.dspace.servicemanager.servlet.DSpaceKernelServletContextListener</listener-class>
-  </listener>
-
-    <listener>
-        <listener-class>org.dspace.app.util.DSpaceWebappListener</listener-class>
-    </listener>
-
   
     <!-- Listener to clean up Commons-FileUpload -->
     <listener>
       <listener-class>org.apache.commons.fileupload.servlet.FileCleanerCleanup</listener-class>
+    </listener>
+    <!-- Listener to initialize / clean up the application -->
+    <listener>
+        <listener-class>org.dspace.app.util.DSpaceContextListener</listener-class>
     </listener>
 
     <!--

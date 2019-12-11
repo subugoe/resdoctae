@@ -8,44 +8,43 @@
 package org.dspace.content;
 
 import java.io.Serializable;
-import java.util.*;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.builder.HashCodeBuilder;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.sort.OrderFormat;
 
 /**
  * Compare two Items by their DCValues.
- *
+ * 
  * The DCValues to be compared are specified by the element, qualifier and
  language parameters to the constructor. If the Item has more than one
  matching Metadatum, then the max parameter to the constructor specifies whether
  the maximum or minimum lexicographic value will be used.
- *
+ * 
  * @author Peter Breton
  * @version $Revision$
  */
 public class ItemComparator implements Comparator, Serializable
 {
     /** Dublin Core element */
-    protected String element;
+    private String element;
 
     /** Dublin Core qualifier */
-    protected String qualifier;
+    private String qualifier;
 
     /** Language */
-    protected String language;
+    private String language;
 
     /** Whether maximum or minimum value will be used */
-    protected boolean max;
-
-    protected transient ItemService itemService
-            = ContentServiceFactory.getInstance().getItemService();
+    private boolean max;
 
     /**
      * Constructor.
-     *
+     * 
      * @param element
      *            The Dublin Core element
      * @param qualifier
@@ -69,24 +68,23 @@ public class ItemComparator implements Comparator, Serializable
     /**
      * Compare two Items by checking their DCValues for element, qualifier, and
      * language.
-     *
+     * 
      * <p>
-     * Return greater than or equal to 1 if the first is lexicographically greater than the second; 
-     * less than or equal to -1 if the second is lexicographically greater than the first, and 0
+     * Return >= 1 if the first is lexicographically greater than the second; <=
+     * -1 if the second is lexicographically greater than the first, and 0
      * otherwise.
      * </p>
-     *
+     * 
      * @param first
      *            The first object to compare. Must be an object of type
      *            org.dspace.content.Item.
      * @param second
      *            The second object to compare. Must be an object of type
      *            org.dspace.content.Item.
-     * @return greater than or equal 1 if the first is lexicographically greater than the second; 
-     *         less than or equal -1 if the second is lexicographically greater than the first, and
+     * @return >= 1 if the first is lexicographically greater than the second; <=
+     *         -1 if the second is lexicographically greater than the first, and
      *         0 otherwise.
      */
-    @Override
     public int compare(Object first, Object second)
     {
         if ((!(first instanceof Item)) || (!(second instanceof Item)))
@@ -122,12 +120,11 @@ public class ItemComparator implements Comparator, Serializable
      * Return true if the object is equal to this one, false otherwise. Another
      * object is equal to this one if it is also an ItemComparator, and has the
      * same values for element, qualifier, language, and max.
-     *
+     * 
      * @param obj
      *            The object to compare to.
      * @return True if the other object is equal to this one, false otherwise.
      */
-    @Override
     public boolean equals(Object obj)
     {
         if (!(obj instanceof ItemComparator))
@@ -142,19 +139,16 @@ public class ItemComparator implements Comparator, Serializable
                 && equalsWithNull(language, other.language) && (max == other.max);
     }
 
-    @Override
     public int hashCode()
     {
         return new HashCodeBuilder().append(element).append(qualifier).append(language).append(max).toHashCode();
     }
 
     /**
-     * @param first
-     * @param second
-     * @return true if the first string is equal to the second. Either or both
+     * Return true if the first string is equal to the second. Either or both
      * may be null.
      */
-    protected boolean equalsWithNull(String first, String second)
+    private boolean equalsWithNull(String first, String second)
     {
         if (first == null && second == null)
         {
@@ -174,41 +168,41 @@ public class ItemComparator implements Comparator, Serializable
      * values, null is returned. If there is exactly one value, then it is
      * returned. Otherwise, either the maximum or minimum lexicographical value
      * is returned; the parameter to the constructor says which.
-     *
+     * 
      * @param item
      *            The item to check
      * @return The chosen value, or null
      */
-    protected String getValue(Item item)
+    private String getValue(Item item)
     {
         // The overall array and each element are guaranteed non-null
-        List<MetadataValue> dcvalues = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, element, qualifier, language);
+        Metadatum[] dcvalues = item.getDC(element, qualifier, language);
 
-        if (dcvalues.isEmpty())
+        if (dcvalues.length == 0)
         {
             return null;
         }
 
-        if (dcvalues.size() == 1)
+        if (dcvalues.length == 1)
         {
-            return normalizeTitle(dcvalues.get(0));
+            return normalizeTitle(dcvalues[0]);
         }
 
         // We want to sort using Strings, but also keep track of
         // which Metadatum the value came from.
-        Map<String, Integer> values = new HashMap<>();
+        Map<String, Integer> values = new HashMap<String, Integer>();
 
-        for (int i = 0; i < dcvalues.size(); i++)
+        for (int i = 0; i < dcvalues.length; i++)
         {
-            String value = dcvalues.get(i).getValue();
+            String value = dcvalues[i].value;
 
             if (value != null)
             {
-                values.put(value, i);
+                values.put(value, Integer.valueOf(i));
             }
         }
 
-        if (values.isEmpty())
+        if (values.size() == 0)
         {
             return null;
         }
@@ -217,23 +211,21 @@ public class ItemComparator implements Comparator, Serializable
         String chosen = max ? Collections.max(valueSet)
                 : Collections.min(valueSet);
 
-        int index = values.get(chosen);
+        int index = (values.get(chosen)).intValue();
 
-        return normalizeTitle(dcvalues.get(index));
+        return normalizeTitle(dcvalues[index]);
     }
 
     /**
      * Normalize the title of a Metadatum.
-     * @param value
-     * @return normalized title
      */
-    protected String normalizeTitle(MetadataValue value)
+    private String normalizeTitle(Metadatum value)
     {
         if (!"title".equals(element))
         {
-            return value.getValue();
+            return value.value;
         }
 
-        return OrderFormat.makeSortString(value.getValue(), value.getLanguage(), OrderFormat.TITLE);
+        return OrderFormat.makeSortString(value.value, value.language, OrderFormat.TITLE);
     }
 }

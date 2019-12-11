@@ -26,16 +26,16 @@ public abstract class BitstreamFilter {
 	/**
 	 *  The filter method 
 	 *  
-	 * @param bitstream Bitstream
+	 * @param bitstream
 	 * @return whether the bitstream matches the criteria
-	 * @throws BitstreamFilterException if filter error
+	 * @throws BitstreamFilterException
 	 */
 	public abstract boolean accept(Bitstream bitstream) throws BitstreamFilterException;
 	
 	/**
 	 * 
 	 * @param filepath - The complete path for the properties file
-	 * @throws IOException if IO error
+	 * @throws IOException
 	 */
 	public void initProperties(String filepath)
 	throws IOException

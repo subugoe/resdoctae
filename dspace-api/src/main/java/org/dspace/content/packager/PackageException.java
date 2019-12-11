@@ -62,7 +62,6 @@ public class PackageException extends Exception
     /**
      * Write details of this exception to the indicated logger.
      * Dump a stack trace to the log to aid in debugging.
-     * @param log logger
      */
     public void log(Logger log)
     {

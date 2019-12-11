@@ -7,34 +7,36 @@
  */
 package org.dspace.app.xmlui.aspect.submission;
 
-import org.apache.cocoon.environment.ObjectModelHelper;
-import org.apache.cocoon.environment.Request;
-import org.apache.commons.lang.StringUtils;
-import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
-import org.dspace.app.xmlui.utils.UIException;
-import org.dspace.app.xmlui.wing.Message;
-import org.dspace.app.xmlui.wing.WingException;
-import org.dspace.app.xmlui.wing.element.*;
-import org.dspace.authorize.AuthorizeException;
-import org.dspace.content.Collection;
-import org.dspace.content.Item;
-import org.dspace.content.MetadataValue;
-import org.dspace.content.WorkspaceItem;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.ItemService;
-import org.dspace.content.service.SupervisedItemService;
-import org.dspace.content.service.WorkspaceItemService;
-import org.dspace.core.Constants;
-import org.dspace.core.Context;
-import org.dspace.eperson.EPerson;
-import org.xml.sax.SAXException;
-
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import org.apache.cocoon.environment.ObjectModelHelper;
+import org.apache.cocoon.environment.Request;
+
+import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
+import org.dspace.app.xmlui.utils.UIException;
+import org.dspace.app.xmlui.wing.Message;
+import org.dspace.app.xmlui.wing.WingException;
+import org.dspace.app.xmlui.wing.element.Body;
+import org.dspace.app.xmlui.wing.element.Cell;
+import org.dspace.app.xmlui.wing.element.CheckBox;
+import org.dspace.app.xmlui.wing.element.Division;
+import org.dspace.app.xmlui.wing.element.PageMeta;
+import org.dspace.app.xmlui.wing.element.Para;
+import org.dspace.app.xmlui.wing.element.Row;
+import org.dspace.app.xmlui.wing.element.Table;
+import org.dspace.authorize.AuthorizeException;
+import org.dspace.content.Collection;
+import org.dspace.content.Metadatum;
+import org.dspace.content.Item;
+import org.dspace.content.ItemIterator;
+import org.dspace.content.SupervisedItem;
+import org.dspace.content.WorkspaceItem;
+import org.dspace.core.Constants;
+import org.dspace.eperson.EPerson;
+import org.xml.sax.SAXException;
 
 /**
  * @author Scott Phillips
@@ -105,11 +107,6 @@ public class Submissions extends AbstractDSpaceTransformer
     protected static final Message T_c_displayall =
             message("xmlui.Submission.Submissions.completed.displayall");
 
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    protected WorkspaceItemService workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
-    protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected SupervisedItemService supervisedItemService = ContentServiceFactory.getInstance().getSupervisedItemService();
-
     @Override
     public void addPageMeta(PageMeta pageMeta)
         throws SAXException, WingException, UIException, SQLException,
@@ -126,9 +123,6 @@ public class Submissions extends AbstractDSpaceTransformer
     public void addBody(Body body) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException
     {
-        Context.Mode originalMode = context.getCurrentMode();
-        context.setMode(Context.Mode.READ_ONLY);
-
         Request request = ObjectModelHelper.getRequest(objectModel);
         boolean displayAll = false;
         //This param decides whether we display all of the user's previous
@@ -145,8 +139,6 @@ public class Submissions extends AbstractDSpaceTransformer
         this.addUnfinishedSubmissions(div);
 //        this.addSubmissionsInWorkflowDiv(div);
         this.addPreviousSubmissions(div, displayAll);
-
-        context.setMode(originalMode);
     }
 
     /**
@@ -176,14 +168,14 @@ public class Submissions extends AbstractDSpaceTransformer
     {
 
         // User's WorkflowItems
-    	List<WorkspaceItem> unfinishedItems = workspaceItemService.findByEPerson(context, context.getCurrentUser());
-    	List<WorkspaceItem> supervisedItems = supervisedItemService.findbyEPerson(context, context.getCurrentUser());
+    	WorkspaceItem[] unfinishedItems = WorkspaceItem.findByEPerson(context,context.getCurrentUser());
+    	SupervisedItem[] supervisedItems = SupervisedItem.findbyEPerson(context, context.getCurrentUser());
 
-    	if (unfinishedItems.size() <= 0 && supervisedItems.size() <= 0)
+    	if (unfinishedItems.length <= 0 && supervisedItems.length <= 0)
     	{
-            List<Collection> collections = collectionService.findAuthorizedOptimized(context, Constants.ADD);
+            Collection[] collections = Collection.findAuthorizedOptimized(context, Constants.ADD);
 
-            if (collections.size() > 0)
+            if (collections.length > 0)
             {
                 Division start = division.addDivision("start-submision");
                 start.setHead(T_s_head1);
@@ -205,12 +197,12 @@ public class Submissions extends AbstractDSpaceTransformer
 
     	// Calculate the number of rows.
     	// Each list pluss the top header and bottom row for the button.
-    	int rows = unfinishedItems.size() + supervisedItems.size() + 2;
-    	if (supervisedItems.size() > 0 && unfinishedItems.size() > 0)
+    	int rows = unfinishedItems.length + supervisedItems.length + 2;
+    	if (supervisedItems.length > 0 && unfinishedItems.length > 0)
         {
             rows++; // Authoring heading row
         }
-    	if (supervisedItems.size() > 0)
+    	if (supervisedItems.length > 0)
         {
             rows++; // Supervising heading row
         }
@@ -222,35 +214,36 @@ public class Submissions extends AbstractDSpaceTransformer
         header.addCellContent(T_s_column3);
         header.addCellContent(T_s_column4);
 
-        if (supervisedItems.size() > 0 && unfinishedItems.size() > 0)
+        if (supervisedItems.length > 0 && unfinishedItems.length > 0)
         {
             header = table.addRow();
             header.addCell(null,Cell.ROLE_HEADER,0,5,null).addContent(T_s_head3);
         }
 
-        if (unfinishedItems.size() > 0)
+        if (unfinishedItems.length > 0)
         {
             for (WorkspaceItem workspaceItem : unfinishedItems) 
             {
-                String title = workspaceItem.getItem().getName();
+                Metadatum[] titles = workspaceItem.getItem().getDC("title", null, Item.ANY);
                 EPerson submitterEPerson = workspaceItem.getItem().getSubmitter();
 
                 int workspaceItemID = workspaceItem.getID();
                 String url = contextPath+"/submit?workspaceID="+workspaceItemID;
                 String submitterName = submitterEPerson.getFullName();
                 String submitterEmail = submitterEPerson.getEmail();
-                String collectionName = workspaceItem.getCollection().getName();
+                String collectionName = workspaceItem.getCollection().getMetadata("name");
 
                 Row row = table.addRow(Row.ROLE_DATA);
                 CheckBox remove = row.addCell().addCheckBox("workspaceID");
                 remove.setLabel("remove");
                 remove.addOption(workspaceItemID);
 
-                if (StringUtils.isNotBlank(title))
+                if (titles.length > 0)
                 {
-                    if (title.length() > 50)
-                        title = title.substring(0, 50) + " ...";
-                    row.addCell().addXref(url,title);
+                    String displayTitle = titles[0].value;
+                    if (displayTitle.length() > 50)
+                        displayTitle = displayTitle.substring(0, 50) + " ...";
+                    row.addCell().addXref(url,displayTitle);
                 }
                 else
                     row.addCell().addXref(url,T_untitled);
@@ -266,7 +259,7 @@ public class Submissions extends AbstractDSpaceTransformer
             header.addCell(0,5).addHighlight("italic").addContent(T_s_info3);
         }
 
-        if (supervisedItems.size() > 0)
+        if (supervisedItems.length > 0)
         {
             header = table.addRow();
             header.addCell(null,Cell.ROLE_HEADER,0,5,null).addContent(T_s_head4);
@@ -275,27 +268,28 @@ public class Submissions extends AbstractDSpaceTransformer
         for (WorkspaceItem workspaceItem : supervisedItems) 
         {
 
-            String title = workspaceItem.getItem().getName();
+            Metadatum[] titles = workspaceItem.getItem().getDC("title", null, Item.ANY);
             EPerson submitterEPerson = workspaceItem.getItem().getSubmitter();
 
             int workspaceItemID = workspaceItem.getID();
             String url = contextPath+"/submit?workspaceID="+workspaceItemID;
             String submitterName = submitterEPerson.getFullName();
             String submitterEmail = submitterEPerson.getEmail();
-            String collectionName = workspaceItem.getCollection().getName();
+            String collectionName = workspaceItem.getCollection().getMetadata("name");
 
             Row row = table.addRow(Row.ROLE_DATA);
             CheckBox selected = row.addCell().addCheckBox("workspaceID");
             selected.setLabel("select");
             selected.addOption(workspaceItemID);
 
-            if (StringUtils.isNotBlank(title))
+            if (titles.length > 0)
             {
-                if (title.length() > 50)
+                String displayTitle = titles[0].value;
+                if (displayTitle.length() > 50)
                 {
-                    title = title.substring(0, 50) + " ...";
+                    displayTitle = displayTitle.substring(0, 50) + " ...";
                 }
-                row.addCell().addXref(url,title);
+                row.addCell().addXref(url,displayTitle);
             }
             else
             {
@@ -309,7 +303,7 @@ public class Submissions extends AbstractDSpaceTransformer
 
         header = table.addRow();
         Cell lastCell = header.addCell(0,5);
-        if (unfinishedItems.size() > 0 || supervisedItems.size() > 0)
+        if (unfinishedItems.length > 0 || supervisedItems.length > 0)
         {
             lastCell.addButton("submit_submissions_remove").setValue(T_s_submit_remove);
         }
@@ -340,7 +334,7 @@ public class Submissions extends AbstractDSpaceTransformer
             throws SQLException,WingException
     {
         // Turn the iterator into a list (to get size info, in order to put in a table)
-        List<Item> subList = new LinkedList<>();
+        List subList = new LinkedList();
 
         Integer limit;
 
@@ -350,15 +344,23 @@ public class Submissions extends AbstractDSpaceTransformer
             //Set a default limit of 50
             limit = 50;
         }
-        Iterator<Item> subs = itemService.findBySubmitterDateSorted(context, context.getCurrentUser(), limit);
+        ItemIterator subs = Item.findBySubmitterDateSorted(context, context.getCurrentUser(), limit);
 
         //NOTE: notice we are adding each item to this list in *reverse* order...
         // this is a very basic attempt at making more recent submissions float 
         // up to the top of the list (findBySubmitter() doesn't guarrantee
         // chronological order, but tends to return older items near top of the list)
-        while (subs.hasNext())
+        try
         {
-            subList.add(subs.next());
+            while (subs.hasNext())
+            {
+                subList.add(subs.next());
+            }
+        }
+        finally
+        {
+            if (subs != null)
+                subs.close();
         }
 
         // No tasks, so don't show the table.
@@ -382,7 +384,7 @@ public class Submissions extends AbstractDSpaceTransformer
         int count = 0;
 
         // Populate table
-        Iterator<Item> i = subList.iterator();
+        Iterator i = subList.iterator();
         while(i.hasNext())
         {
             count++;
@@ -390,20 +392,20 @@ public class Submissions extends AbstractDSpaceTransformer
             if(count>limit && !displayAll)
                 break;
 
-            Item published = i.next();
+            Item published = (Item) i.next();
             String collUrl = contextPath+"/handle/"+published.getOwningCollection().getHandle();
             String itemUrl = contextPath+"/handle/"+published.getHandle();
-            java.util.List<MetadataValue> titles = itemService.getMetadata(published, "dc", "title", null, Item.ANY);
-            String collectionName = published.getOwningCollection().getName();
-            java.util.List<MetadataValue> ingestDate = itemService.getMetadata(published, "dc", "date", "accessioned", Item.ANY);
+            Metadatum[] titles = published.getMetadata("dc", "title", null, Item.ANY);
+            String collectionName = published.getOwningCollection().getMetadata("name");
+            Metadatum[] ingestDate = published.getMetadata("dc", "date", "accessioned", Item.ANY);
 
             Row row = table.addRow();
 
             // Item accession date
-            if (ingestDate != null && ingestDate.size() > 0 &&
-                ingestDate.get(0).getValue() != null)
+            if (ingestDate != null && ingestDate.length > 0 &&
+                ingestDate[0].value != null)
             {
-                String displayDate = ingestDate.get(0).getValue().substring(0, 10);
+                String displayDate = ingestDate[0].value.substring(0,10);
                 Cell cellDate = row.addCell();
                 cellDate.addContent(displayDate);
             }
@@ -411,10 +413,10 @@ public class Submissions extends AbstractDSpaceTransformer
                 row.addCell().addContent("");
 
             // The item description
-            if (titles != null && titles.size() > 0 &&
-                titles.get(0).getValue() != null)
+            if (titles != null && titles.length > 0 &&
+                titles[0].value != null)
             {
-                String displayTitle = titles.get(0).getValue();
+                String displayTitle = titles[0].value;
                 if (displayTitle.length() > 50)
                     displayTitle = displayTitle.substring(0,50)+ " ...";
                 row.addCell().addXref(itemUrl,displayTitle);

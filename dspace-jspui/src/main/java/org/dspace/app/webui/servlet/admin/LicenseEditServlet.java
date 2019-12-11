@@ -18,10 +18,10 @@ import org.dspace.app.webui.servlet.DSpaceServlet;
 import org.dspace.app.webui.util.JSPManager;
 import org.dspace.app.webui.util.UIUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
 import org.dspace.core.I18nUtil;
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.core.service.LicenseService;
+import org.dspace.core.LicenseManager;
 
 /**
  * Servlet for editing the default license
@@ -30,14 +30,10 @@ import org.dspace.core.service.LicenseService;
  */
 public class LicenseEditServlet extends DSpaceServlet
 {
-	private final transient LicenseService licenseService
-             = CoreServiceFactory.getInstance().getLicenseService();
-	
     /**
      * Handle GET requests. This does nothing but forwards
      * the request on to the POST handler.
      */
-    @Override
     protected void doDSGet(Context c, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -49,7 +45,6 @@ public class LicenseEditServlet extends DSpaceServlet
     /**
      * Handle the POST requests.
      */
-    @Override
     protected void doDSPost(Context c, HttpServletRequest request,
             HttpServletResponse response) throws ServletException, IOException,
             SQLException, AuthorizeException
@@ -65,7 +60,7 @@ public class LicenseEditServlet extends DSpaceServlet
         else if (!button.equals("submit_save"))
         {
             // Get the existing text from the ConfigurationManager
-            String license = licenseService.getLicenseText(I18nUtil.getDefaultLicense(c));
+            String license = LicenseManager.getLicenseText(I18nUtil.getDefaultLicense(c));
 
             // Pass the existing license back to the JSP
             request.setAttribute("license", license);
@@ -82,7 +77,7 @@ public class LicenseEditServlet extends DSpaceServlet
             if (license.trim().equals(""))
             {
             	// Get the existing text from the ConfigurationManager
-                license = licenseService.getLicenseText(I18nUtil.getDefaultLicense(c));
+                license = LicenseManager.getLicenseText(I18nUtil.getDefaultLicense(c));
 
                 // Pass the existing license back to the JSP
                 request.setAttribute("license", license);
@@ -96,7 +91,7 @@ public class LicenseEditServlet extends DSpaceServlet
             else
             {
 	            // Write the string out to file
-            	licenseService.writeLicenseFile(I18nUtil.getDefaultLicense(c), license);
+            	LicenseManager.writeLicenseFile(I18nUtil.getDefaultLicense(c), license);
 
 	            // Pass the existing license back to the JSP
 	            request.setAttribute("license", license);

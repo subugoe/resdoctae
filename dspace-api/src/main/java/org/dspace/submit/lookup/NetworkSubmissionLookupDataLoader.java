@@ -14,7 +14,10 @@ import gr.ekt.bte.core.Value;
 import gr.ekt.bte.exceptions.MalformedSourceException;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.HttpException;
@@ -75,7 +78,7 @@ public abstract class NetworkSubmissionLookupDataLoader implements
                         : null;
                 String year = getSearchTerms().get("year") != null ? getSearchTerms()
                         .get("year").iterator().next()
-                        : String.valueOf(Calendar.getInstance().get(Calendar.YEAR));
+                        : null;
                 int yearInt = Integer.parseInt(year);
                 results = search(null, title, authors, yearInt);
             }

@@ -35,7 +35,7 @@ import java.sql.SQLException;
  */
 public class PageNotFoundTransformer extends AbstractDSpaceTransformer
 {
-    /* Language Strings */
+    /** Language Strings */
     private static final Message T_title =
         message("xmlui.PageNotFound.title");
     
@@ -51,16 +51,15 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
     private static final Message T_dspace_home =
         message("xmlui.general.dspace_home");
     
+    
     /** Where the body element is stored while we wait to see if it is empty */
     private SAXEvent bodyEvent;
     
     /** Have we determined that the body is empty, and hence a we should generate a page not found. */
     private boolean bodyEmpty;
     
-    
     /**
      * Receive notification of the beginning of a document.
-     * @throws org.xml.sax.SAXException passed through.
      */
     @Override
     public void startDocument() throws SAXException
@@ -73,7 +72,6 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
 
     /**
      * Process the SAX event.
-     * @throws org.xml.sax.SAXException passed through.
      * @see org.xml.sax.ContentHandler#startElement
      */
     @Override
@@ -102,7 +100,6 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
 
     /**
      * Process the SAX event.
-     * @throws org.xml.sax.SAXException passed through.
      * @see org.xml.sax.ContentHandler#endElement
      */
     @Override
@@ -125,18 +122,9 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
 
         super.endElement(namespaceURI, localName, qName);
     } 
-
-    /** What to add at the end of the body.
-     *
-     * @throws org.xml.sax.SAXException passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws org.apache.cocoon.ResourceNotFoundException
-     *          unless redirecting or body is nonempty.
-     */
+  
+    
+    /** What to add at the end of the body */
     @Override
     public void addBody(Body body) throws SAXException, WingException,
             UIException, SQLException, IOException, AuthorizeException, ResourceNotFoundException
@@ -168,19 +156,10 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
         }
     }
 
-    /**
-     * What page metadata to add to the document.
-     *
-     * @throws org.xml.sax.SAXException passed through.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
-     * @throws org.dspace.app.xmlui.utils.UIException passed through.
-     * @throws java.sql.SQLException passed through.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     */
+    /** What page metadata to add to the document */
     @Override
-    public void addPageMeta(PageMeta pageMeta)
-            throws SAXException, WingException, UIException, SQLException, IOException,
+    public void addPageMeta(PageMeta pageMeta) throws SAXException,
+            WingException, UIException, SQLException, IOException,
             AuthorizeException
     {
         if (this.bodyEmpty)
@@ -192,11 +171,41 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
             pageMeta.addTrailLink(contextPath + "/",T_dspace_home);
         }
     }
-
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     /**
      * Send the given recorded sax event.
-     * @param event the event.
-     * @throws org.xml.sax.SAXException passed through.
      */
     public void sendEvent(SAXEvent event) throws SAXException
     {
@@ -209,7 +218,8 @@ public class PageNotFoundTransformer extends AbstractDSpaceTransformer
             super.endElement(event.namespaceURI,event.localName,event.qName);
         }
     }
-
+    
+    
     /**
      * This private class remembers start and end element SAX events.
      */

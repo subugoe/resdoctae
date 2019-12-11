@@ -49,22 +49,22 @@ public class ReferenceSet extends AbstractWingElement implements
     public static final String[] TYPES = { TYPE_SUMMARY_LIST, TYPE_SUMMARY_VIEW, TYPE_DETAIL_LIST, TYPE_DETAIL_VIEW };
 
     /** The name assigned to this metadata set */
-    private final String name;
+    private String name;
 
     /** The ordering mechanism to use. */
-    private final String orderBy;
+    private String orderBy;
 
     /** The reference type, see TYPES defined above */
-    private final String type;
+    private String type;
 
     /** Special rendering instructions */
-    private final String rend;
+    private String rend;
 
-    /** The head label for this reference set */
+    /** The head label for this referenceset */
     private Head head;
 
     /** All content of this container, items & lists */
-    private java.util.List<AbstractWingElement> contents = new ArrayList<>();
+    private java.util.List<AbstractWingElement> contents = new ArrayList<AbstractWingElement>();
 
     /**
      * Construct a new referenceSet
@@ -86,7 +86,6 @@ public class ReferenceSet extends AbstractWingElement implements
      * @param rend
      *            (May be null) a rendering hint used to override the default
      *            display of the element.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     protected ReferenceSet(WingContext context, boolean childreference, String name, String type, String orderBy, String rend)
             throws WingException
@@ -110,26 +109,25 @@ public class ReferenceSet extends AbstractWingElement implements
 
     /**
      * Set the head element which is the label associated with this referenceset.
-     * @return the new head.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Head setHead() throws WingException
     {
         this.head = new Head(context, null);
         return head;
+
     }
 
     /**
-     * Set the head element which is the label associated with this reference set.
+     * Set the head element which is the label associated with this referenceset.
      * 
      * @param characters
      *            (May be null) Unprocessed characters to be referenced
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void setHead(String characters) throws WingException
     {
-        Head newHead = this.setHead();
-        newHead.addContent(characters);
+        Head head = this.setHead();
+        head.addContent(characters);
+
     }
 
     /**
@@ -138,12 +136,11 @@ public class ReferenceSet extends AbstractWingElement implements
      * @param message
      *            (Required) A key into the i18n catalogue for translation into
      *            the user's preferred language.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public void setHead(Message message) throws WingException
     {
-        Head newHead = this.setHead();
-        newHead.addContent(message);
+        Head head = this.setHead();
+        head.addContent(message);
     }
 
     /**
@@ -151,8 +148,6 @@ public class ReferenceSet extends AbstractWingElement implements
      * 
      * @param object
      *            (Required) The referenced object.
-     * @return the reference.
-     * @throws org.dspace.app.xmlui.wing.WingException passed through.
      */
     public Reference addReference(Object object)
             throws WingException
@@ -174,9 +169,7 @@ public class ReferenceSet extends AbstractWingElement implements
      * @param namespaces
      *            (Required) SAX Helper class to keep track of namespaces able
      *            to determine the correct prefix for a given namespace URI.
-     * @throws org.xml.sax.SAXException passed through.
      */
-    @Override
     public void toSAX(ContentHandler contentHandler, LexicalHandler lexicalHandler, 
             NamespaceSupport namespaces) throws SAXException
     {
@@ -215,7 +208,9 @@ public class ReferenceSet extends AbstractWingElement implements
         endElement(contentHandler, namespaces, E_REFERENCE_SET);
     }
 
-    @Override
+    /**
+     * dispose
+     */
     public void dispose()
     {
         if (contents != null)

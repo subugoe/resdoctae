@@ -8,17 +8,15 @@
 package org.dspace.content.crosswalk;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.ArrayList;
 
 import java.sql.SQLException;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.*;
 import org.dspace.core.Constants;
 import org.dspace.core.Context;
 import org.dspace.core.ConfigurationManager;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
 import org.dspace.content.Bitstream;
 import org.dspace.content.BitstreamFormat;
@@ -33,11 +31,8 @@ import org.dspace.authorize.AuthorizeException;
 import org.apache.log4j.Logger;
 import org.dspace.content.packager.DSpaceAIPIngester;
 import org.dspace.content.packager.METSManifest;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
+import org.dspace.handle.HandleManager;
 
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
 import org.jdom.Element;
 import org.jdom.Namespace;
 
@@ -67,16 +62,11 @@ import org.jdom.Namespace;
  * @author Larry Stone
  * @version $Revision: 1.2 $
  */
-public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCrosswalk
+public class AIPTechMDCrosswalk
+    implements DisseminationCrosswalk, IngestionCrosswalk
 {
     /** log4j category */
     private static Logger log = Logger.getLogger(AIPTechMDCrosswalk.class);
-    protected final BitstreamFormatService bitstreamFormatService = ContentServiceFactory.getInstance().getBitstreamFormatService();
-    protected final SiteService siteService = ContentServiceFactory.getInstance().getSiteService();
-    protected final CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected final EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
-    protected final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-    protected final HandleService handleService = HandleServiceFactory.getInstance().getHandleService();
 
     /**
      * Get XML namespaces of the elements this crosswalk may return.
@@ -157,7 +147,6 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * When there are no results, an
      * empty list is returned, but never <code>null</code>.
      *
-     * @param context context
      * @param dso the  DSpace Object whose metadata to export.
      * @return results of crosswalk as list of XML elements.
      *
@@ -168,11 +157,11 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * @throws AuthorizeException current user not authorized for this operation.
      */
     @Override
-    public List<Element> disseminateList(Context context, DSpaceObject dso)
+    public List<Element> disseminateList(DSpaceObject dso)
         throws CrosswalkException, IOException, SQLException,
                AuthorizeException
     {
-        Element dim = disseminateElement(context, dso);
+        Element dim = disseminateElement(dso);
         return dim.getChildren();
     }
 
@@ -182,7 +171,6 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * This is typically the root element of a document.
      * <p>
      *
-     * @param context context
      * @param dso the  DSpace Object whose metadata to export.
      * @return root Element of the target metadata, never <code>null</code>
      *
@@ -193,11 +181,11 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * @throws AuthorizeException current user not authorized for this operation.
      */
     @Override
-    public Element disseminateElement(Context context, DSpaceObject dso)
+    public Element disseminateElement(DSpaceObject dso)
         throws CrosswalkException, IOException, SQLException,
                AuthorizeException
     {
-        List<MockMetadataValue> dc = new ArrayList<>();
+        List<Metadatum> dc = new ArrayList<Metadatum>();
         if (dso.getType() == Constants.ITEM)
         {
             Item item = (Item)dso;
@@ -213,12 +201,12 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
             {
                 dc.add(makeDC("relation", "isPartOf", "hdl:" + owner));
             }
-            List<Collection> inColl = item.getCollections();
-            for (int i = 0; i < inColl.size(); ++i)
+            Collection inColl[] = item.getCollections();
+            for (int i = 0; i < inColl.length; ++i)
             {
-                if (!inColl.get(i).getID().equals(owningColl.getID()))
+                if (inColl[i].getID() != owningColl.getID())
                 {
-                    String h = inColl.get(i).getHandle();
+                    String h = inColl[i].getHandle();
                     if (h != null)
                     {
                         dc.add(makeDC("relation", "isReferencedBy", "hdl:" + h));
@@ -253,25 +241,25 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
             {
                 dc.add(makeDC("format", null, bsUfmt));
             }
-            BitstreamFormat bsf = bitstream.getFormat(context);
+            BitstreamFormat bsf = bitstream.getFormat();
             dc.add(makeDC("format", "medium", bsf.getShortDescription()));
             dc.add(makeDC("format", "mimetype", bsf.getMIMEType()));
-            dc.add(makeDC("format", "supportlevel", bitstreamFormatService.getSupportLevelText(bsf)));
+            dc.add(makeDC("format", "supportlevel", bsf.getSupportLevelText()));
             dc.add(makeDC("format", "internal", Boolean.toString(bsf.isInternal())));
         }
         else if (dso.getType() == Constants.COLLECTION)
         {
             Collection collection = (Collection)dso;
             dc.add(makeDC("identifier", "uri", "hdl:" + dso.getHandle()));
-            List<Community> owners = collection.getCommunities();
-            String ownerHdl = owners.get(0).getHandle();
+            Community owners[] = collection.getCommunities();
+            String ownerHdl = owners[0].getHandle();
             if (ownerHdl != null)
             {
                 dc.add(makeDC("relation", "isPartOf", "hdl:" + ownerHdl));
             }
-            for (int i = 1; i < owners.size(); ++i)
+            for (int i = 1; i < owners.length; ++i)
             {
-                String h = owners.get(i).getHandle();
+                String h = owners[i].getHandle();
                 if (h != null)
                 {
                     dc.add(makeDC("relation", "isReferencedBy", "hdl:" + h));
@@ -282,15 +270,15 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
         {
             Community  community = (Community)dso;
             dc.add(makeDC("identifier", "uri", "hdl:" + dso.getHandle()));
-            List<Community> parentCommunities = community.getParentCommunities();
+            Community owner = community.getParentCommunity();
             String ownerHdl = null;
-            if (CollectionUtils.isEmpty(parentCommunities))
+            if (owner == null)
             {
-                ownerHdl = siteService.findSite(context).getHandle();
+                ownerHdl = Site.getSiteHandle();
             }
             else
             {
-                ownerHdl = parentCommunities.get(0).getHandle();
+                ownerHdl = owner.getHandle();
             }
 
             if (ownerHdl != null)
@@ -307,17 +295,18 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
             dc.add(makeDC("identifier", "uri", site.getURL()));
         }
 
-        return XSLTDisseminationCrosswalk.createDIM(dso, dc);
+        Metadatum result[] = (Metadatum[])dc.toArray(new Metadatum[dc.size()]);
+        return XSLTDisseminationCrosswalk.createDIM(dso, result);
     }
 
-    private static MockMetadataValue makeDC(String element, String qualifier, String value)
+    private static Metadatum makeDC(String element, String qualifier, String value)
     {
-        MockMetadataValue dcv = new MockMetadataValue();
-        dcv.setSchema("dc");
-        dcv.setLanguage(null);
-        dcv.setElement(element);
-        dcv.setQualifier(qualifier);
-        dcv.setValue(value);
+        Metadatum dcv = new Metadatum();
+        dcv.schema = "dc";
+        dcv.language = null;
+        dcv.element = element;
+        dcv.qualifier = qualifier;
+        dcv.value = value;
         return dcv;
     }
 
@@ -325,17 +314,12 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * Ingest a whole document.  Build Document object around root element,
      * and feed that to the transformation, since it may get handled
      * differently than a List of metadata elements.
-     * @param createMissingMetadataFields whether to create missing fields
-     * @throws CrosswalkException if crosswalk error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
-    public void ingest(Context context, DSpaceObject dso, Element root, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, Element root)
         throws CrosswalkException, IOException, SQLException, AuthorizeException
     {
-        ingest(context, dso, root.getChildren(), createMissingMetadataFields);
+        ingest(context, dso, root.getChildren());
     }
 
     /**
@@ -343,15 +327,9 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
      * Translation produces a list of DIM "field" elements;
      * these correspond directly to Item.addMetadata() calls so
      * they are simply executed.
-     * @param createMissingMetadataFields whether to create missing fields
-     * @param dimList List of elements
-     * @throws CrosswalkException if crosswalk error
-     * @throws IOException if IO error
-     * @throws SQLException if database error
-     * @throws AuthorizeException if authorization error
      */
     @Override
-    public void ingest(Context context, DSpaceObject dso, List<Element> dimList, boolean createMissingMetadataFields)
+    public void ingest(Context context, DSpaceObject dso, List<Element> dimList)
         throws CrosswalkException,
                IOException, SQLException, AuthorizeException
     {
@@ -369,7 +347,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
             // if we get <dim> in a list, recurse.
             if (field.getName().equals("dim") && field.getNamespace().equals(XSLTCrosswalk.DIM_NS))
             {
-                ingest(context, dso, field.getChildren(), createMissingMetadataFields);
+                ingest(context, dso, field.getChildren());
             }
             else if (field.getName().equals("field") && field.getNamespace().equals(XSLTCrosswalk.DIM_NS))
             {
@@ -389,19 +367,19 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                         Bitstream bitstream = (Bitstream)dso;
                         if (dcField.equals("title"))
                         {
-                            bitstream.setName(context, value);
+                            bitstream.setName(value);
                         }
                         else if (dcField.equals("title.alternative"))
                         {
-                            bitstream.setSource(context, value);
+                            bitstream.setSource(value);
                         }
                         else if (dcField.equals("description"))
                         {
-                            bitstream.setDescription(context, value);
+                            bitstream.setDescription(value);
                         }
                         else if (dcField.equals("format"))
                         {
-                            bitstream.setUserFormatDescription(context, value);
+                            bitstream.setUserFormatDescription(value);
                         }
                         else if (dcField.equals("format.medium"))
                         {
@@ -413,7 +391,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                         }
                         else if (dcField.equals("format.supportlevel"))
                         {
-                            int sl = bitstreamFormatService.getSupportLevelID(value);
+                            int sl = BitstreamFormat.getSupportLevelID(value);
                             if (sl < 0)
                             {
                                 throw new MetadataValidationException("Got unrecognized value for bitstream support level: " + value);
@@ -439,7 +417,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                         // item submitter
                         if (dcField.equals("creator"))
                         {
-                            EPerson sub = ePersonService.findByEmail(context, value);
+                            EPerson sub = EPerson.findByEmail(context, value);
 
                             // if eperson doesn't exist yet, optionally create it:
                             if (sub == null)
@@ -451,10 +429,10 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                                 //Create the EPerson if specified and person doesn't already exit
                                 if (ConfigurationManager.getBooleanProperty(METSManifest.CONFIG_METS_PREFIX + configName + ".ingest.createSubmitter"))
                                 {
-                                    sub = ePersonService.create(context);
+                                    sub = EPerson.create(context);
                                     sub.setEmail(value);
                                     sub.setCanLogIn(false);
-                                    ePersonService.update(context, sub);
+                                    sub.update();
                                 }
                                 else
                                 {
@@ -471,7 +449,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                             //check if item is withdrawn
                             if (value.equalsIgnoreCase("WITHDRAWN"))
                             {
-                                itemService.withdraw(context, item);
+                                item.withdraw();
                             }
                         }
                         else if(dcField.equals("identifier.uri") ||
@@ -503,16 +481,16 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
                                 }
 
                                 //Get parent object (if it exists)
-                                DSpaceObject parentDso = handleService.resolveToObject(context, parentHandle);
+                                DSpaceObject parentDso = HandleManager.resolveToObject(context, parentHandle);
                                 //For Items, this parent *must* be a Collection
                                 if(parentDso!=null && parentDso.getType()==Constants.COLLECTION)
                                 {
                                     Collection collection = (Collection) parentDso;
 
                                     //If this item is not already mapped into this collection, map it!
-                                    if (!itemService.isIn(item, collection))
+                                    if (!item.isIn(collection))
                                     {
-                                        collectionService.addItem(context, collection, item);
+                                        collection.addItem(item);
                                     }
                                 }
                             }
@@ -561,7 +539,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
         // takes the accumulation of a few values:
         if (type == Constants.BITSTREAM && bsfShortName != null)
         {
-            BitstreamFormat bsf = bitstreamFormatService.findByShortDescription(context, bsfShortName);
+            BitstreamFormat bsf = BitstreamFormat.findByShortDescription(context, bsfShortName);
             if (bsf == null && bsfMIMEType != null)
             {
                 bsf = PackageUtils.findOrCreateBitstreamFormat(context,
@@ -573,7 +551,7 @@ public class AIPTechMDCrosswalk implements IngestionCrosswalk, DisseminationCros
             }
             if (bsf != null)
             {
-                ((Bitstream) dso).setFormat(context, bsf);
+                ((Bitstream) dso).setFormat(bsf);
             }
             else
             {

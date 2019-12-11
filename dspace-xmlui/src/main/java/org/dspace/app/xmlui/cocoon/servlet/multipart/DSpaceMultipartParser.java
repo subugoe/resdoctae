@@ -188,7 +188,8 @@ public class DSpaceMultipartParser {
     private void parsePart(DSpaceTokenStream ts)
             throws IOException, MultipartException {
 
-        Hashtable headers = readHeaders(ts);
+        Hashtable headers = new Hashtable();
+        headers = readHeaders(ts);
         try {
             if (headers.containsKey("filename")) {
                 if (!"".equals(headers.get("filename"))) {

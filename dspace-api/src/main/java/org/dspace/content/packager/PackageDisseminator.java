@@ -67,10 +67,6 @@ public interface PackageDisseminator
      * @param pkgFile File where export package should be written
      * @throws PackageValidationException if package cannot be created or there is
      *  a fatal error in creating it.
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
      */
     void disseminate(Context context, DSpaceObject object,
                      PackageParameters params, File pkgFile)
@@ -107,10 +103,6 @@ public interface PackageDisseminator
      * @return List of all package Files which were successfully disseminated
      * @throws PackageValidationException if package cannot be created or there is
      *  a fatal error in creating it.
-     * @throws CrosswalkException if crosswalk error
-     * @throws AuthorizeException if authorization error
-     * @throws SQLException if database error
-     * @throws IOException if IO error
      */
     List<File> disseminateAll(Context context, DSpaceObject dso,
                      PackageParameters params, File pkgFile)
@@ -123,7 +115,6 @@ public interface PackageDisseminator
      * Required when sending the package via HTTP, to
      * provide the Content-Type header.
      *
-     * @param params Package Parameters
      * @return the MIME type (content-type header) of the package to be returned
      */
     String getMIMEType(PackageParameters params);

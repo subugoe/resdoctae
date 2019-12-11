@@ -8,19 +8,17 @@
 
 package org.dspace.eperson;
 
-import java.io.IOException;
 import java.sql.SQLException;
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-
 import org.apache.commons.cli.*;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.core.Context;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.EPersonService;
+import org.dspace.storage.rdbms.DatabaseManager;
+import org.dspace.storage.rdbms.TableRow;
+import org.dspace.storage.rdbms.TableRowIterator;
 
 /**
  * Tools for manipulating EPersons and Groups.
@@ -29,14 +27,8 @@ import org.dspace.eperson.service.EPersonService;
  */
 public class Groomer
 {
-    private static final ThreadLocal<DateFormat> dateFormat = new ThreadLocal<DateFormat>() {
-        @Override
-        protected DateFormat initialValue() {
-            return DateFormat.getDateInstance(DateFormat.SHORT);
-        }
-    };
+    private static final DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
 
-    private static final EPersonService ePersonService = EPersonServiceFactory.getInstance().getEPersonService();
     /**
      * Command line tool for "grooming" the EPerson collection.
      */
@@ -56,7 +48,7 @@ public class Groomer
 
         options.addOption("b", "last-used-before", true,
                 "date of last login was before this (for example:  "
-                        + dateFormat.get().format(Calendar.getInstance().getTime())
+                        + dateFormat.format(Calendar.getInstance().getTime())
                         + ')');
         options.addOption("d", "delete", false, "delete matching epersons");
 
@@ -108,7 +100,7 @@ public class Groomer
 
             Date before = null;
             try {
-                before = dateFormat.get().parse(command.getOptionValue('b'));
+                before = dateFormat.parse(command.getOptionValue('b'));
             } catch (java.text.ParseException ex) {
                 System.err.println(ex.getMessage());
                 System.exit(1);
@@ -117,12 +109,22 @@ public class Groomer
             boolean delete = command.hasOption('d');
 
             Context myContext = new Context();
-            List<EPerson> epeople = ePersonService.findNotActiveSince(myContext, before);
+            final TableRowIterator tri = DatabaseManager.queryTable(myContext,
+                    "EPerson",
+                    "SELECT eperson_id, email, netid FROM EPerson WHERE last_active < ?",
+                    new java.sql.Date(before.getTime()));
 
             myContext.turnOffAuthorisationSystem();
-            for (EPerson account : epeople)
+            while (tri.hasNext())
             {
-                System.out.print(account.getID());
+                TableRow row = tri.next();
+                if (null == row)
+                    break;
+
+                int id = row.getIntColumn("eperson_id");
+                EPerson account = EPerson.find(myContext, id);
+
+                System.out.print(id);
                 System.out.print('\t');
                 System.out.print(account.getLastActive());
                 System.out.print('\t');
@@ -135,7 +137,7 @@ public class Groomer
 
                 if (delete)
                 {
-                    List<String> whyNot = ePersonService.getDeleteConstraints(myContext, account);
+                    List<String> whyNot = account.getDeleteConstraints();
                     if (!whyNot.isEmpty())
                     {
                         System.out.print("\tCannot be deleted; referenced in");
@@ -148,8 +150,8 @@ public class Groomer
                     }
                     else
                         try {
-                            ePersonService.delete(myContext, account);
-                        } catch (AuthorizeException | IOException ex) {
+                            account.delete();
+                        } catch (AuthorizeException | EPersonDeletionException ex) {
                             System.err.println(ex.getMessage());
                         }
                     }
@@ -162,15 +164,16 @@ public class Groomer
     /**
      * List accounts having no password salt.
      *
-     * @throws SQLException if database error
+     * @throws SQLException
      */
     private static void findUnsalted()
             throws SQLException
     {
         Context myContext = new Context();
-        List<EPerson> ePersons = ePersonService.findUnsalted(myContext);
-        for (EPerson ePerson : ePersons)
-            System.out.println(ePerson.getEmail());
+        final TableRowIterator tri = DatabaseManager.query(myContext,
+                "SELECT email FROM EPerson WHERE password IS NOT NULL AND digest_algorithm IS NULL");
+        for (TableRow row = tri.next(); tri.hasNext(); row = tri.next())
+            System.out.println(row.getStringColumn("email"));
         myContext.abort(); // No changes to commit
     }
 }

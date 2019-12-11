@@ -17,7 +17,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.dspace.app.util.SubmissionInfo;
 import org.dspace.authorize.AuthorizeException;
 import org.dspace.content.InProgressSubmission;
-import org.dspace.content.factory.ContentServiceFactory;
 import org.dspace.core.Context;
 import org.dspace.submit.AbstractProcessingStep;
 
@@ -44,7 +43,6 @@ public class SkipInitialQuestionsStep extends AbstractProcessingStep
      * multi-files and published before so that the input-form configuration
      * will be used as is
      */
-    @Override
     public int doProcessing(Context context, HttpServletRequest request,
             HttpServletResponse response, SubmissionInfo subInfo)
             throws ServletException, IOException, SQLException,
@@ -54,11 +52,10 @@ public class SkipInitialQuestionsStep extends AbstractProcessingStep
         submissionItem.setMultipleFiles(true);
         submissionItem.setMultipleTitles(true);
         submissionItem.setPublishedBefore(true);
-        ContentServiceFactory.getInstance().getInProgressSubmissionService(submissionItem).update(context, submissionItem);
+        submissionItem.update();
         return STATUS_COMPLETE;
     }
 
-    @Override
     public int getNumberOfPages(HttpServletRequest request,
             SubmissionInfo subInfo) throws ServletException
     {

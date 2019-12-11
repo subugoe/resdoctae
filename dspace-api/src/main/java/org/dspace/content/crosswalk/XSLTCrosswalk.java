@@ -8,22 +8,16 @@
 package org.dspace.content.crosswalk;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import javax.xml.transform.Source;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerConfigurationException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.stream.StreamSource;
 
+import org.apache.log4j.Logger;
 import org.dspace.core.ConfigurationManager;
 import org.dspace.core.SelfNamedPlugin;
 import org.jdom.Namespace;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jdom.transform.XSLTransformException;
+import org.jdom.transform.XSLTransformer;
 
 /**
  * Configurable XSLT-driven Crosswalk
@@ -71,14 +65,14 @@ import org.slf4j.LoggerFactory;
  * was modified since it was last loaded.  This lets you edit and test
  * stylesheets without restarting DSpace.
  * <p>
- * You must use the <code>PluginService</code> to instantiate an
+ * You must use the <code>PluginManager</code> to instantiate an
  * XSLT crosswalk plugin, e.g.
- * <pre> IngestionCrosswalk xwalk = CoreServiceFactory.getInstance().getPluginService().getPlugin(IngestionCrosswalk.class, "LOM");</pre>
+ * <pre> IngestionCrosswalk xwalk = PluginManager.getPlugin(IngestionCrosswalk.class, "LOM");</pre>
  * <p>
  * Since there is significant overhead in reading the properties file to
  * configure the crosswalk, and a crosswalk instance may be used any number
  * of times, we recommend caching one instance of the crosswalk for each
- * alias and simply reusing those instances.  The <code>PluginService</code>
+ * alias and simply reusing those instances.  The <code>PluginManager</code>
  * does this automatically.
  *
  * @author Larry Stone
@@ -87,7 +81,7 @@ import org.slf4j.LoggerFactory;
 public abstract class XSLTCrosswalk extends SelfNamedPlugin
 {
     /** log4j category */
-    private static final Logger LOG = LoggerFactory.getLogger(XSLTCrosswalk.class);
+    private static Logger log = Logger.getLogger(XSLTCrosswalk.class);
 
     /**
      * DSpace XML Namespace in JDOM form.
@@ -102,41 +96,34 @@ public abstract class XSLTCrosswalk extends SelfNamedPlugin
 
     /**
      * Derive list of plugin name from DSpace configuration entries
-     * for crosswalks.
-     *
-     * @param direction
-     *  "dissemination" or "submission", so it looks for keys like
-     *  <code>crosswalk.submission.{NAME}.stylesheet</code>
-     * @return names to be given to the plugins of that direction.
+     * for crosswalks. The <em>direction</em> parameter should be either
+     * "dissemination" or "submission", so it looks for keys like
+     * <code>crosswalk.submission.{NAME}.stylesheet</code>
      */
     protected static String[] makeAliases(String direction)
     {
         String prefix = CONFIG_PREFIX+direction+".";
         String suffix = CONFIG_STYLESHEET;
 
-        List<String> aliasList = new ArrayList<>();
+        List<String> aliasList = new ArrayList<String>();
         Enumeration<String> pe = (Enumeration<String>)ConfigurationManager.propertyNames();
 
-        LOG.debug("XSLTCrosswalk: Looking for config prefix = {}", prefix);
+        log.debug("XSLTCrosswalk: Looking for config prefix = "+prefix);
         while (pe.hasMoreElements())
         {
             String key = pe.nextElement();
             if (key.startsWith(prefix) && key.endsWith(suffix))
             {
-                LOG.debug("Getting XSLT plugin name from config line: {}", key);
+                log.debug("Getting XSLT plugin name from config line: "+key);
                 aliasList.add(key.substring(prefix.length(), key.length()-suffix.length()));
             }
         }
         return aliasList.toArray(new String[aliasList.size()]);
     }
 
-    /** We need to force this, because some dependency elsewhere interferes. */
-    private static final String TRANSFORMER_FACTORY_CLASS
-            = "com.sun.org.apache.xalan.internal.xsltc.trax.TransformerFactoryImpl";
-
-    private Transformer transformer = null;
-    private File transformFile = null;
-    private long transformLastModified = 0;
+    private XSLTransformer transformer = null;
+    private File transformerFile = null;
+    private long transformerLastModified = 0;
 
     /**
      * Initialize the Transformation stylesheet from configured stylesheet file.
@@ -144,53 +131,46 @@ public abstract class XSLTCrosswalk extends SelfNamedPlugin
      *    "dissemination"
      * @return transformer or null if there was error initializing.
      */
-    protected Transformer getTransformer(String direction)
+    protected XSLTransformer getTransformer(String direction)
     {
-        if (transformFile == null)
+        if (transformerFile == null)
         {
             String myAlias = getPluginInstanceName();
             if (myAlias == null)
             {
-                LOG.error("Must use PluginService to instantiate XSLTCrosswalk so the class knows its name.");
+                log.error("Must use PluginManager to instantiate XSLTCrosswalk so the class knows its name.");
                 return null;
             }
             String cmPropName = CONFIG_PREFIX+direction+"."+myAlias+CONFIG_STYLESHEET;
             String fname = ConfigurationManager.getProperty(cmPropName);
             if (fname == null)
             {
-                LOG.error("Missing configuration filename for XSLT-based crosswalk: no "+
-                          "value for property = {}", cmPropName);
+                log.error("Missing configuration filename for XSLT-based crosswalk: no "+
+                          "value for property = "+cmPropName);
                 return null;
             }
             else
             {
                 String parent = ConfigurationManager.getProperty("dspace.dir") +
                     File.separator + "config" + File.separator;
-                transformFile = new File(parent, fname);
+                transformerFile = new File(parent, fname);
             }
         }
 
         // load if first time, or reload if stylesheet changed:
         if (transformer == null ||
-            transformFile.lastModified() > transformLastModified)
+            transformerFile.lastModified() > transformerLastModified)
         {
             try
             {
-                LOG.debug((transformer == null ? "Loading {} XSLT stylesheet from {}" : "Reloading {} XSLT stylesheet from {}"),
-                        getPluginInstanceName(), transformFile.toString());
-
-                Source transformSource
-                        = new StreamSource(new FileInputStream(transformFile));
-                TransformerFactory transformerFactory
-                        = TransformerFactory.newInstance(
-                                TRANSFORMER_FACTORY_CLASS, null);
-                transformer = transformerFactory.newTransformer(transformSource);
-                transformLastModified = transformFile.lastModified();
+                log.debug((transformer == null ? "Loading " : "Reloading")+
+                          getPluginInstanceName()+" XSLT stylesheet from "+transformerFile.toString());
+                transformer = new XSLTransformer(transformerFile);
+                transformerLastModified = transformerFile.lastModified();
             }
-            catch (TransformerConfigurationException | FileNotFoundException e)
+            catch (XSLTransformException e)
             {
-                LOG.error("Failed to initialize XSLTCrosswalk({}):  {}",
-                        getPluginInstanceName(), e.toString());
+                log.error("Failed to initialize XSLTCrosswalk("+getPluginInstanceName()+"):"+e.toString());
             }
         }
         return transformer;

@@ -9,9 +9,7 @@ package org.dspace.app.xmlui.aspect.administrative.mapper;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.UUID;
 
 import org.dspace.app.xmlui.cocoon.AbstractDSpaceTransformer;
 import org.dspace.app.xmlui.wing.Message;
@@ -24,15 +22,11 @@ import org.dspace.app.xmlui.wing.element.PageMeta;
 import org.dspace.app.xmlui.wing.element.Para;
 import org.dspace.app.xmlui.wing.element.Row;
 import org.dspace.app.xmlui.wing.element.Table;
-import org.dspace.authorize.factory.AuthorizeServiceFactory;
-import org.dspace.authorize.service.AuthorizeService;
+import org.dspace.authorize.AuthorizeManager;
 import org.dspace.content.Collection;
+import org.dspace.content.Metadatum;
 import org.dspace.content.Item;
-import org.dspace.content.MetadataSchema;
-import org.dspace.content.MetadataValue;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.CollectionService;
-import org.dspace.content.service.ItemService;
+import org.dspace.content.ItemIterator;
 import org.dspace.core.Constants;
 import org.xml.sax.SAXException;
 
@@ -59,10 +53,6 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 	private static final Message T_column4 = message("xmlui.administrative.mapper.BrowseItemForm.column4");
 	
 	private static final Message T_no_remove = message("xmlui.administrative.mapper.BrowseItemForm.no_remove");
-
-	protected CollectionService collectionService = ContentServiceFactory.getInstance().getCollectionService();
-    protected ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-	protected AuthorizeService authorizeService = AuthorizeServiceFactory.getInstance().getAuthorizeService();
 	
 	public void addPageMeta(PageMeta pageMeta) throws WingException  
 	{
@@ -77,8 +67,8 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 	public void addBody(Body body) throws SAXException, WingException, SQLException
 	{
 		// Get our parameters and state;
-		UUID collectionID = UUID.fromString(parameters.getParameter("collectionID", null));
-		Collection collection = collectionService.find(context,collectionID);
+		int collectionID = parameters.getParameterAsInteger("collectionID",-1);
+		Collection collection = Collection.find(context,collectionID);
 		
 		List<Item> items = getMappedItems(collection);
 		
@@ -86,7 +76,7 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 		Division div = body.addInteractiveDivision("browse-items",contextPath + "/admin/mapper", Division.METHOD_GET,"primary administrative mapper");
 		div.setHead(T_head1);
 		
-		if (authorizeService.authorizeActionBoolean(context, collection, Constants.REMOVE))
+		if (AuthorizeManager.authorizeActionBoolean(context, collection, Constants.REMOVE))
 		{
 			Para actions = div.addPara();
 			actions.addButton("submit_unmap").setValue(T_submit_unmap);
@@ -115,19 +105,19 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 		{
 			String itemID = String.valueOf(item.getID());
 			Collection owningCollection = item.getOwningCollection();
-			String owning = owningCollection.getName();
+			String owning = owningCollection.getMetadata("name");
 			String author = "unknown";
-			List<MetadataValue> dcAuthors = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "contributor", Item.ANY, Item.ANY);
-			if (dcAuthors != null && dcAuthors.size() >= 1)
+			Metadatum[] dcAuthors = item.getDC("contributor",Item.ANY,Item.ANY);
+			if (dcAuthors != null && dcAuthors.length >= 1)
             {
-                author = dcAuthors.get(0).getValue();
+                author = dcAuthors[0].value;
             }
 			
 			String title = "untitled";
-			List<MetadataValue> dcTitles = itemService.getMetadata(item, MetadataSchema.DC_SCHEMA, "title", null, Item.ANY);
-			if (dcTitles != null && dcTitles.size() >= 1)
+			Metadatum[] dcTitles = item.getDC("title",null,Item.ANY);
+			if (dcTitles != null && dcTitles.length >= 1)
             {
-                title = dcTitles.get(0).getValue();
+                title = dcTitles[0].value;
             }
 
 			String url = contextPath+"/handle/"+item.getHandle();
@@ -143,7 +133,7 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 			row.addCell().addXref(url,title);
 		}
 		
-		if (authorizeService.authorizeActionBoolean(context, collection, Constants.REMOVE))
+		if (AuthorizeManager.authorizeActionBoolean(context, collection, Constants.REMOVE))
 		{
 			Para actions = div.addPara();
 			actions.addButton("submit_unmap").setValue(T_submit_unmap);
@@ -177,17 +167,27 @@ public class BrowseItemForm extends AbstractDSpaceTransformer {
 		ArrayList<Item> items = new ArrayList<Item>();
 		
 		// get all items from that collection
-        Iterator<Item> iterator = itemService.findByCollection(context, collection);
-		while (iterator.hasNext())
-		{
-			Item item = iterator.next();
+        ItemIterator iterator = collection.getItems();
+        try
+        {
+            while (iterator.hasNext())
+            {
+                Item item = iterator.next();
 
-			if (! itemService.isOwningCollection(item, collection))
-			{
-				items.add(item);
-			}
-		}
-
+                if (! item.isOwningCollection(collection))
+                {
+                    items.add(item);
+                }
+            }
+        }
+        finally
+        {
+            if (iterator != null)
+            {
+                iterator.close();
+            }
+        }
+        
         return items;
 	}
 

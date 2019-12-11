@@ -16,11 +16,11 @@ import java.util.regex.PatternSyntaxException;
 
 import javax.imageio.ImageIO;
 
+import org.dspace.app.mediafilter.MediaFilter;
+import org.dspace.app.mediafilter.SelfRegisterInputFormats;
 import org.dspace.content.Bitstream;
 import org.dspace.content.Bundle;
 import org.dspace.content.Item;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.ItemService;
 import org.dspace.core.Context;
 import org.im4java.core.ConvertCmd;
 import org.im4java.core.Info;
@@ -36,14 +36,12 @@ import org.dspace.core.ConfigurationManager;
  * no bigger than. Creates only JPEGs.
  */
 public abstract class ImageMagickThumbnailFilter extends MediaFilter {
-        protected static int width = 180;
-        protected static int height = 120;
+        private static int width = 180;
+        private static int height = 120;
         private static boolean flatten = true;
         static String bitstreamDescription = "IM Thumbnail";
         static final String defaultPattern = "Generated Thumbnail";
         static Pattern replaceRegex = Pattern.compile(defaultPattern);
-        protected final ItemService itemService = ContentServiceFactory.getInstance().getItemService();
-
         static String cmyk_profile;
         static String srgb_profile;
 
@@ -66,12 +64,12 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                 } catch (PatternSyntaxException e) {
                         System.err.println("Invalid thumbnail replacement pattern: " + e.getMessage());
                 }
+
         }
 
         public ImageMagickThumbnailFilter() {
         }
 
-        @Override
         public String getFilteredName(String oldFilename) {
                 return oldFilename + ".jpg";
         }
@@ -80,7 +78,6 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
          * @return String bundle name
          * 
          */
-        @Override
         public String getBundleName() {
                 return "THUMBNAIL";
         }
@@ -88,7 +85,6 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
         /**
          * @return String bitstreamformat
          */
-        @Override
         public String getFormatString() {
                 return "JPEG";
         }
@@ -96,12 +92,11 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
         /**
          * @return String bitstreamDescription
          */
-        @Override
         public String getDescription() {
                 return bitstreamDescription;
         }
 
-        public File inputStreamToTempFile(InputStream source, String prefix, String suffix) throws IOException {
+        public static File inputStreamToTempFile(InputStream source, String prefix, String suffix) throws IOException {
                 File f = File.createTempFile(prefix, suffix);
                 f.deleteOnExit();
                 FileOutputStream fos = new FileOutputStream(f);
@@ -116,8 +111,7 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                 return f;
         }
 
-        public File getThumbnailFile(File f, boolean verbose)
-                        throws IOException, InterruptedException, IM4JavaException {
+        public static File getThumbnailFile(File f) throws IOException, InterruptedException, IM4JavaException {
                 File f2 = new File(f.getParentFile(), f.getName() + ".jpg");
                 f2.deleteOnExit();
                 ConvertCmd cmd = new ConvertCmd();
@@ -126,15 +120,14 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                 op.addImage(f.getAbsolutePath());
                 op.thumbnail(width, height);
                 op.addImage(f2.getAbsolutePath());
-                if (verbose) {
+                if (MediaFilterManager.isVerbose) {
                         System.out.println("IM Thumbnail Param: " + op);
                 }
                 cmd.run(op);
                 return f2;
         }
 
-        public File getImageFile(File f, int page, boolean verbose)
-                        throws IOException, InterruptedException, IM4JavaException {
+        public static File getImageFile(File f, int page) throws IOException, InterruptedException, IM4JavaException {
                 File f2 = new File(f.getParentFile(), f.getName() + ".jpg");
                 f2.deleteOnExit();
                 ConvertCmd cmd = new ConvertCmd();
@@ -147,7 +140,7 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                 // PDFs using the CMYK color system can be handled specially if
                 // profiles are defined
                 if (cmyk_profile != null && srgb_profile != null) {
-                        Info imageInfo = new Info(f.getAbsolutePath(), true);
+                        Info imageInfo = new Info(f.getAbsolutePath() + s, true);
                         String imageClass = imageInfo.getImageClass();
                         if (imageClass.contains("CMYK")) {
                                 op.profile(cmyk_profile);
@@ -155,17 +148,16 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                         }
                 }
                 op.addImage(f2.getAbsolutePath());
-                if (verbose) {
+                if (MediaFilterManager.isVerbose) {
                         System.out.println("IM Image Param: " + op);
                 }
                 cmd.run(op);
                 return f2;
         }
 
-        @Override
-        public boolean preProcessBitstream(Context c, Item item, Bitstream source, boolean verbose) throws Exception {
+        public boolean preProcessBitstream(Context c, Item item, Bitstream source) throws Exception {
                 String nsrc = source.getName();
-                for (Bundle b : itemService.getBundles(item, "THUMBNAIL")) {
+                for (Bundle b : item.getBundles("THUMBNAIL")) {
                         for (Bitstream bit : b.getBitstreams()) {
                                 String n = bit.getName();
                                 if (n != null) {
@@ -179,14 +171,14 @@ public abstract class ImageMagickThumbnailFilter extends MediaFilter {
                                 // is found, halt processing
                                 if (description != null) {
                                         if (replaceRegex.matcher(description).matches()) {
-                                                if (verbose) {
+                                                if (MediaFilterManager.isVerbose) {
                                                         System.out.println(description + " " + nsrc
                                                                         + " matches pattern and is replacable.");
                                                 }
                                                 continue;
                                         }
                                         if (description.equals(bitstreamDescription)) {
-                                                if (verbose) {
+                                                if (MediaFilterManager.isVerbose) {
                                                         System.out.println(bitstreamDescription + " " + nsrc
                                                                         + " is replacable.");
                                                 }

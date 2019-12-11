@@ -67,8 +67,8 @@ public class AttributeMap extends HashMap<String, String>
      * strings. The values "yes" or "no" will be used in replacement of the
      * boolean value.
      * 
-     * @param key the attribute's name.
-     * @param value the value of the attribute.
+     * @param key
+     * @param value
      * @return previous value bound to the key, if any.
      */
     public String put(String key, boolean value)

@@ -13,8 +13,6 @@ import org.apache.log4j.Logger;
 import org.dspace.app.xmlui.utils.ContextUtil;
 import org.dspace.core.Context;
 import org.dspace.eperson.Group;
-import org.dspace.eperson.factory.EPersonServiceFactory;
-import org.dspace.eperson.service.GroupService;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -29,7 +27,6 @@ public class SpecifiedGroupAuthenticatedSelector implements Selector {
 
     private String SPECIFIED_GROUP = "statistics_viewer";
 
-    protected GroupService groupService = EPersonServiceFactory.getInstance().getGroupService();
 
     @Override
     public boolean select(String groupName, Map objectModel, Parameters parameters) {
@@ -39,11 +36,11 @@ public class SpecifiedGroupAuthenticatedSelector implements Selector {
             try
             {
                 Context context = ContextUtil.obtainContext(objectModel);
-                Group statsGroup = groupService.findByName(context, groupName);
+                Group statsGroup = Group.findByName(context, groupName);
 
                 if(statsGroup != null && context.getCurrentUser() != null) {
                     //The Stats Group exists, now lets check that the current user is a member.
-                    if(groupService.isMember(context, statsGroup)) {
+                    if(statsGroup.isMember(context.getCurrentUser())) {
                         //YES, this person is a member of this group. Let them through.
                         authorized = true;
                     }

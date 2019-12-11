@@ -24,12 +24,7 @@ All extra tools in the Mirage 2 build process run on either Node.js or Ruby, so 
     mvn package -Dmirage2.on=true -Dmirage2.deps.included=false
 ```
 
-> *WARNING:* Git will need to be installed on the machine running the build in all cases. It will not be installed automatically
-
 ## Prerequisites for OSX / Linux ##
-
-### Git ###
-If you don't have git installed, go to the [git downloads page](http://git-scm.com/downloads) and follow the instructions for your OS
 
 ### Node ###
 
@@ -38,19 +33,19 @@ We recommend using [nvm](https://github.com/creationix/nvm) (Node Version Manage
 First download and install nvm:
 
 ```bash
-    curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.7/install.sh | bash 
+    curl https://raw.githubusercontent.com/creationix/nvm/v0.5.1/install.sh | sh 
 ```
 
-Then, close and reopen your terminal, and install a node version. We’ve been using v6.5.0 during the development of the theme, but it may very well work on other versions
+Then, close and reopen your terminal, and install a node version. We’ve been using v0.10.31 during the development of the theme, but it may very well work on other versions
 
 ```bash
-    nvm install 6.5.0 
+    nvm install 0.10.31 
 ```
 
 Set the node version you installed as the default version.
 
 ```bash
-    nvm alias default 6.5.0
+    nvm alias default 0.10.31
 ```
 
 
@@ -77,6 +72,7 @@ Afterwards the command `grunt --version` should show the grunt-cli version numbe
 
 For the same reasons as with Node, we’d advise using ruby via [RVM](http://rvm.io/)  (Ruby Version Manager). Even on OSX, which comes with a version of ruby preinstalled, you can save yourself a lot of hassle by using RVM instead. (In most cases there is no need to uninstall the system ruby first). Note that **you need sudo rights to perform the RVM installation**. You won't need sudo again to use RVM, ruby or gem later on
 
+Ruby 2.2.x (or JRuby 9.1.x.x) or above when pre-installing dependencies locally.
 
 #### OSX Ruby Note ####
 On OSX, you need to have the XCode command line tools installed. To test if they're installed try to type `make` in your terminal, if it says "command not found" follow [these instructions](http://www.computersnyou.com/2025/2013/06/install-command-line-tools-in-osx-10-9-mavericks-how-to/) to install them  
@@ -110,14 +106,11 @@ Afterwards the command `compass` should show a help message.
 
 ## Prerequisites for Windows ##
 
-### Git ###
-If you don't have git installed, you can download the installer [here](http://git-scm.com/download/win).
-
-### Node ###
+### Node on Windows ###
 
 Download and install [Node.js](http://nodejs.org/) using the Windows installer version.
 
-### Bower ###
+### Bower on Windows ###
 
 You can install [Bower](http://bower.io/) using the node package manager. The `-g` means install it globally, not as part of a specific project.
 
@@ -129,7 +122,7 @@ Execute following command in Windows command prompt:
 ```
 Afterwards the command `bower` should show a help message.
 
-### Grunt ###
+### Grunt on Windows ###
 
 [Grunt](http://gruntjs.com/) should also be installed globally using the node package manager:
 
@@ -141,9 +134,11 @@ Perform the following in a Windows command prompt:
 
 Afterwards the command `grunt --version` should show the grunt-cli version number
 
-### Ruby ###
+### Ruby on Windows ###
 
 Download and install: [Ruby Installer](http://rubyinstaller.org/)
+
+Ruby 2.2.x (or JRuby 9.1.x.x) or above when pre-installing dependencies locally.
 
 Make sure its environment variables are set in system variables
 
@@ -157,7 +152,7 @@ Open "advanced sytem settings". Open "Advanced" tab, and click "environment vari
 
 Add new variables `GEM_HOME` and `GEM_PATH` pointing to your Ruby gems directory.
 
-### Compass ###
+### Compass on Windows ###
 
 > *WARNING:* **Make sure you are using compatible versions of SASS and Compass.** For example, [Compass v0.12.0 was incompatible with SASS v3.3](https://github.com/Compass/compass/issues/1544). But, Compass v1.0.0 is compatible with SASS v3.3
 

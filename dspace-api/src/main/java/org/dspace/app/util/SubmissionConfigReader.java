@@ -15,7 +15,8 @@ import org.w3c.dom.*;
 import javax.xml.parsers.*;
 
 import org.apache.log4j.Logger;
-import org.dspace.services.factory.DSpaceServicesFactory;
+
+import org.dspace.core.ConfigurationManager;
 
 /**
  * Item Submission configuration generator for DSpace. Reads and parses the
@@ -56,8 +57,7 @@ public class SubmissionConfigReader
     private static Logger log = Logger.getLogger(SubmissionConfigReader.class);
 
 	/** The fully qualified pathname of the directory containing the Item Submission Configuration file */
-    private String configDir = DSpaceServicesFactory.getInstance()
-            .getConfigurationService().getProperty("dspace.dir")
+    private String configDir = ConfigurationManager.getProperty("dspace.dir")
             + File.separator + "config" + File.separator;
             
     /**
@@ -88,7 +88,6 @@ public class SubmissionConfigReader
     /**
      * Load Submission Configuration from the
      * item-submission.xml configuration file 
-     * @throws ServletException if servlet error
      */
     public SubmissionConfigReader() throws ServletException
     {
@@ -207,7 +206,7 @@ public class SubmissionConfigReader
     /**
      * Returns a particular global step definition based on its ID.
      * <P>
-     * Global step definitions are those defined in the {@code <step-definitions>}
+     * Global step definitions are those defined in the <step-definitions>
      * section of the configuration file.
      * 
      * @param stepID

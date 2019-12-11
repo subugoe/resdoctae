@@ -23,41 +23,55 @@ import javax.script.ScriptException;
 
 import org.apache.log4j.Logger;
 
-import org.dspace.core.factory.CoreServiceFactory;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.core.ConfigurationManager;
+import org.dspace.core.PluginManager;
 
 /**
  * TaskResolver takes a logical name of a curation task and attempts to deliver 
  * a suitable implementation object. Supported implementation types include:
- * (1) Classpath-local Java classes configured and loaded via PluginService.
- * (2) Local script-based tasks, viz. coded in any scripting language whose
+ * <ol>
+ *  <li> Classpath-local Java classes configured and loaded via PluginManager</li>.
+ *  <li> Local script-based tasks, viz. coded in any scripting language whose
  * runtimes are accessible via the JSR-223 scripting API. This really amounts
- * to the family of dynamic JVM languages: JRuby, Jython, Groovy, Javascript, etc
- * Note that the requisite jars and other resources for these languages must be
- * installed in the DSpace instance for them to be used here.
- * Further work may involve remote URL-loadable code, etc.
- *
+ * to the family of dynamic JVM languages: JRuby, Jython, Groovy, Javascript, etc.</li>
+ * </ol>
+ * <p>
+ * Note that the requisite jars and other resources for these languages must
+ * be installed in the DSpace instance for them to be used here.
+ * Further work may involve remote URL-loadable code, etc. 
+ * 
+ * <p>
  * Scripted tasks are managed in a directory configured with the
- * dspace/config/modules/curate.cfg property "script.dir". A catalog of
- * scripted tasks named 'task.catalog" is kept in this directory.
+ * {@code dspace/config/modules/curate.cfg} property "script.dir".
+ * A catalog of
+ * scripted tasks named "task.catalog" is kept in this directory.
  * Each task has a 'descriptor' property with value syntax:
+ * <br/>
  * {@code <engine>|<relFilePath>|<implClassCtor>}
+ *
+ * <p>
  * An example property:
- * 
+ * <br/>
  * {@code linkchecker = ruby|rubytask.rb|LinkChecker.new}
- * 
+ *
+ * <p>
  * This descriptor means that a 'ruby' script engine will be created,
- * a script file named 'rubytask.rb' in the directory {@code <script.dir>} will be
- * loaded and the resolver will expect an evaluation of 'LinkChecker.new' will 
- * provide a correct implementation object.
- * 
+ * a script file named 'rubytask.rb' in the directory {@code <script.dir>}
+ * will be
+ * loaded and the resolver will expect an evaluation of 'LinkChecker.new'
+ * will provide a correct implementation object.
+ *
+ * <p>
  * Script files may embed their descriptors to facilitate deployment.
- * To accomplish this, a script must include the descriptor string with syntax:
- * {@code $td=<descriptor>} somewhere on a comment line. for example:
- * 
- * {@code My descriptor $td=ruby|rubytask.rb|LinkChecker.new}
- * 
- * For portability, the {@code <relFilePath>} component may be omitted in this context.
+ * To accomplish this, a script must include the descriptor string with
+ * syntax {@code $td=<descriptor>} somewhere on a comment line. For example:
+ *
+ * <p>
+ * {@code # My descriptor $td=ruby|rubytask.rb|LinkChecker.new}
+ *
+ * <p>
+ * For portability, the {@code <relFilePath>} component may be omitted in
+ * this context.
  * Thus, {@code $td=ruby||LinkChecker.new} will be expanded to a descriptor
  * with the name of the embedding file.
  * 
@@ -70,15 +84,14 @@ public class TaskResolver
 	private static Logger log = Logger.getLogger(TaskResolver.class);
 	
 	// base directory of task scripts & catalog name
-	protected static final String CATALOG = "task.catalog";
-	protected final String scriptDir;
+	private static final String CATALOG = "task.catalog";
+	private static final String scriptDir = ConfigurationManager.getProperty("curate", "script.dir");
 	
 	// catalog of script tasks
-	protected Properties catalog;
+	private Properties catalog;
 	
 	public TaskResolver()
 	{
-            scriptDir = DSpaceServicesFactory.getInstance().getConfigurationService().getProperty("curate.script.dir");
 	}
 		
 	/**
@@ -196,7 +209,7 @@ public class TaskResolver
 	 */
 	public ResolvedTask resolveTask(String taskName)
 	{
-		CurationTask ctask = (CurationTask)CoreServiceFactory.getInstance().getPluginService().getNamedPlugin(CurationTask.class, taskName);
+		CurationTask ctask = (CurationTask)PluginManager.getNamedPlugin("curate", CurationTask.class, taskName);
 		if (ctask != null)
 		{
 			return new ResolvedTask(taskName, ctask);
@@ -256,7 +269,7 @@ public class TaskResolver
 	/**
 	 * Loads catalog of descriptors for tasks if not already loaded
 	 */
-	protected void loadCatalog()
+	private void loadCatalog()
 	{
 		if (catalog == null)
 		{

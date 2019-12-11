@@ -25,7 +25,7 @@ import org.dspace.core.ConfigurationManager;
 public class ConsumerProfile
 {
     /** log4j category */
-    private static Logger log = Logger.getLogger(ConsumerProfile.class);
+    private static Logger log = Logger.getLogger(EventManager.class);
 
     /** Name matching the key in DSpace Configuration */
     private String name;

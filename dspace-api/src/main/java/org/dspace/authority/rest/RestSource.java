@@ -23,5 +23,4 @@ public abstract class RestSource implements SolrAuthorityInterface {
     public RestSource(String url) {
         this.restConnector = new RESTConnector(url);
     }
-
 }

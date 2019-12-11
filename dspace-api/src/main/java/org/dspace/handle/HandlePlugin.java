@@ -23,26 +23,21 @@ import net.handle.hdllib.Util;
 import net.handle.util.StreamTable;
 
 import org.apache.log4j.Logger;
+import org.dspace.core.ConfigurationManager;
 import org.dspace.core.Context;
-import org.dspace.handle.factory.HandleServiceFactory;
-import org.dspace.handle.service.HandleService;
-import org.dspace.servicemanager.DSpaceKernelImpl;
-import org.dspace.servicemanager.DSpaceKernelInit;
-import org.dspace.services.ConfigurationService;
-import org.dspace.services.factory.DSpaceServicesFactory;
 
 /**
  * Extension to the CNRI Handle Server that translates requests to resolve
  * handles into DSpace API calls. The implementation simply stubs out most of
  * the methods, and delegates the rest to the
- * {@link HandleService}. This only provides some of the
+ * {@link org.dspace.handle.HandleManager}. This only provides some of the
  * functionality (namely, the resolving of handles to URLs) of the CNRI
  * HandleStorage interface.
  * 
  * <p>
  * This class is intended to be embedded in the CNRI Handle Server. It conforms
  * to the HandleStorage interface that was delivered with Handle Server version
- * 6.2.0.
+ * 5.2.0.
  * </p>
  * 
  * @author Peter Breton
@@ -53,68 +48,32 @@ public class HandlePlugin implements HandleStorage
     /** log4j category */
     private static Logger log = Logger.getLogger(HandlePlugin.class);
 
-    /** The DSpace service manager kernel **/
-    private static transient DSpaceKernelImpl kernelImpl;
-
-    /** References to DSpace Services **/
-    protected HandleService handleService;
-    protected ConfigurationService configurationService;
+    /**
+     * Constructor
+     */
+    public HandlePlugin()
+    {
+    }
 
     ////////////////////////////////////////
     // Non-Resolving methods -- unimplemented
     ////////////////////////////////////////
 
     /**
-     * HandleStorage interface init method.
-     * <p>
-     * For DSpace, we have to startup the DSpace Kernel when HandlePlugin
-     * initializes, as the HandlePlugin relies on HandleService (and other services)
-     * which are loaded by the Kernel.
-     * @param st StreamTable
-     * @throws Exception if DSpace Kernel fails to startup
+     * HandleStorage interface method - not implemented.
      */
-    @Override
     public void init(StreamTable st) throws Exception
     {
+        // Not implemented
         if (log.isInfoEnabled())
         {
-            log.info("Called init (Starting DSpace Kernel)");
+            log.info("Called init (not implemented)");
         }
-
-        // Initialise the service manager kernel
-        try
-        {
-            kernelImpl = DSpaceKernelInit.getKernel(null);
-            if (!kernelImpl.isRunning())
-            {
-                kernelImpl.start();
-            }
-        } catch (Exception e)
-        {
-            // Failed to start so destroy it and log and throw an exception
-            try
-            {
-                kernelImpl.destroy();
-            }
-            catch (Exception e1)
-            {
-                // Nothing to do
-            }
-            String message = "Failed to startup DSpace Kernel: " + e.getMessage();
-            System.err.println(message);
-            e.printStackTrace();
-            throw new IllegalStateException(message, e);
-        }
-
-        // Get a reference to the HandleService & ConfigurationService
-        handleService = HandleServiceFactory.getInstance().getHandleService();
-        configurationService = DSpaceServicesFactory.getInstance().getConfigurationService();
     }
 
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void setHaveNA(byte[] theHandle, boolean haveit)
             throws HandleException
     {
@@ -128,7 +87,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void createHandle(byte[] theHandle, HandleValue[] values)
             throws HandleException
     {
@@ -142,7 +100,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public boolean deleteHandle(byte[] theHandle) throws HandleException
     {
         // Not implemented
@@ -157,7 +114,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void updateValue(byte[] theHandle, HandleValue[] values)
             throws HandleException
     {
@@ -171,7 +127,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void deleteAllRecords() throws HandleException
     {
         // Not implemented
@@ -184,7 +139,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void checkpointDatabase() throws HandleException
     {
         // Not implemented
@@ -195,30 +149,20 @@ public class HandlePlugin implements HandleStorage
     }
 
     /**
-     * HandleStorage interface shutdown() method.
-     * <P>
-     * For DSpace, we need to destroy the kernel created in init().
+     * HandleStorage interface method - not implemented.
      */
-    @Override
     public void shutdown()
     {
+        // Not implemented
         if (log.isInfoEnabled())
         {
-            log.info("Called shutdown (Destroying DSpace Kernel)");
-        }
-
-        // Destroy the DSpace kernel if it is still alive
-        if (kernelImpl != null)
-        {
-            kernelImpl.destroy();
-            kernelImpl = null;
+            log.info("Called shutdown (not implemented)");
         }
     }
 
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void scanHandles(ScanCallback callback) throws HandleException
     {
         // Not implemented
@@ -231,7 +175,6 @@ public class HandlePlugin implements HandleStorage
     /**
      * HandleStorage interface method - not implemented.
      */
-    @Override
     public void scanNAs(ScanCallback callback) throws HandleException
     {
         // Not implemented
@@ -260,7 +203,6 @@ public class HandlePlugin implements HandleStorage
      * @exception HandleException
      *                If an error occurs while calling the Handle API.
      */
-    @Override
     public byte[][] getRawHandleValues(byte[] theHandle, int[] indexList,
             byte[][] typeList) throws HandleException
     {
@@ -282,7 +224,7 @@ public class HandlePlugin implements HandleStorage
 
             context = new Context();
 
-            String url = handleService.resolveToURL(context, handle);
+            String url = HandleManager.resolveToURL(context, handle);
 
             if (url == null)
             {
@@ -357,7 +299,6 @@ public class HandlePlugin implements HandleStorage
      * @exception HandleException
      *                If an error occurs while calling the Handle API.
      */
-    @Override
     public boolean haveNA(byte[] theHandle) throws HandleException
     {
         if (log.isInfoEnabled())
@@ -384,11 +325,11 @@ public class HandlePlugin implements HandleStorage
         // with their own prefixes and have the one instance handle both prefixes. In this case
         // all new handle would be given a unified prefix but all old handles would still be 
         // resolvable.
-        if (configurationService.getBooleanProperty("handle.plugin.checknameauthority",true))
+        if (ConfigurationManager.getBooleanProperty("handle.plugin.checknameauthority",true))
         {
 	        // First, construct a string representing the naming authority Handle
 	        // we'd expect.
-	        String expected = "0.NA/" + handleService.getPrefix();
+	        String expected = "0.NA/" + HandleManager.getPrefix();
 	
 	        // Which authority does the request pertain to?
 	        String received = Util.decodeString(theHandle);
@@ -413,7 +354,6 @@ public class HandlePlugin implements HandleStorage
      * @exception HandleException
      *                If an error occurs while calling the Handle API.
      */
-    @Override
     public Enumeration getHandlesForNA(byte[] theNAHandle)
             throws HandleException
     {
@@ -430,7 +370,7 @@ public class HandlePlugin implements HandleStorage
         {
             context = new Context();
 
-            List<String> handles = handleService.getHandlesForPrefix(context, naHandle);
+            List<String> handles = HandleManager.getHandlesForPrefix(context, naHandle);
             List<byte[]> results = new LinkedList<byte[]>();
 
             for (Iterator<String> iterator = handles.iterator(); iterator.hasNext();)

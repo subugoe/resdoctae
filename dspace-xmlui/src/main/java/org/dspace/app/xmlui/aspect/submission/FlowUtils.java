@@ -7,30 +7,37 @@
  */
 package org.dspace.app.xmlui.aspect.submission;
 
+import java.io.IOException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Map;
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+
 import org.apache.cocoon.environment.ObjectModelHelper;
 import org.apache.cocoon.environment.Request;
 import org.apache.cocoon.environment.http.HttpEnvironment;
 import org.apache.log4j.Logger;
 import org.dspace.app.util.DCInput;
+import org.dspace.app.util.SubmissionConfig;
+import org.dspace.app.util.SubmissionConfigReader;
 import org.dspace.app.util.SubmissionInfo;
 import org.dspace.app.util.SubmissionStepConfig;
+import org.dspace.app.xmlui.utils.UIException;
 import org.dspace.app.xmlui.utils.ContextUtil;
 import org.dspace.authorize.AuthorizeException;
+import org.dspace.content.Collection;
 import org.dspace.content.InProgressSubmission;
 import org.dspace.content.Item;
 import org.dspace.content.WorkspaceItem;
-import org.dspace.content.factory.ContentServiceFactory;
-import org.dspace.content.service.WorkspaceItemService;
 import org.dspace.core.Context;
+import org.dspace.core.LogManager;
+import org.dspace.handle.HandleManager;
 import org.dspace.submit.AbstractProcessingStep;
-import org.dspace.workflow.WorkflowItemService;
-import org.dspace.workflow.factory.WorkflowServiceFactory;
-
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Map;
+import org.dspace.workflow.WorkflowItem;
+import org.dspace.workflow.WorkflowManager;
+import org.dspace.xmlworkflow.storedcomponents.XmlWorkflowItem;
 
 /**
  * This is a utility class to aid in the submission flow scripts. 
@@ -51,51 +58,46 @@ public class FlowUtils {
     /** Where the submissionInfo is stored on an HTTP Request object */
     private static final String DSPACE_SUBMISSION_INFO = "dspace.submission.info";
 
-    protected static final WorkspaceItemService workspaceItemService = ContentServiceFactory.getInstance().getWorkspaceItemService();
-    protected static final WorkflowItemService workflowService = WorkflowServiceFactory.getInstance().getWorkflowItemService();
-
 	/**
-	 * Return the InProgressSubmission, either workspaceItem or workflowItem,
+	 * Return the InProgressSubmission, either workspaceItem or workflowItem, 
 	 * depending on the id provided. If the id begins with an S then it is a
 	 * considered a workspaceItem. If the id begins with a W then it is
 	 * considered a workflowItem.
-	 *
-	 * @param context session context.
-	 * @param inProgressSubmissionID the submission's ID.
+	 * 
+	 * @param context
+	 * @param inProgressSubmissionID
 	 * @return The InprogressSubmission or null if non found
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-	public static InProgressSubmission findSubmission(Context context, String inProgressSubmissionID)
-            throws SQLException, AuthorizeException, IOException {
+	public static InProgressSubmission findSubmission(Context context, String inProgressSubmissionID) throws SQLException, AuthorizeException, IOException {
 		char type = inProgressSubmissionID.charAt(0);
 		int id = Integer.valueOf(inProgressSubmissionID.substring(1));
 		
 		if (type == 'S')
 		{
-			return workspaceItemService.find(context, id);
+			return WorkspaceItem.find(context, id);
 		}
-		else if (type == 'W' || type == 'X') {
-            return workflowService.find(context, id);
+		else if (type == 'W')
+		{
+			return WorkflowItem.find(context, id);
+		}
+        else if (type == 'X')
+        {
+            return XmlWorkflowItem.find(context, id);
         }
 		return null;
 	}
-
+    
+    
 	/**
 	 * Return the workspace identified by the given id, the id should be 
 	 * prepended with the character S to signify that it is a workspace 
 	 * instead of a workflow.
 	 * 
-	 * @param context session context.
-	 * @param inProgressSubmissionID identifier of the submission.
-	 * @return The found workspace item, or null if none found.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
+	 * @param context
+	 * @param inProgressSubmissionID
+	 * @return The found workspaceitem or null if none found.
 	 */
-	public static WorkspaceItem findWorkspace(Context context, String inProgressSubmissionID)
-            throws SQLException, AuthorizeException, IOException {
+	public static WorkspaceItem findWorkspace(Context context, String inProgressSubmissionID) throws SQLException, AuthorizeException, IOException {
 		InProgressSubmission submission = findSubmission(context, inProgressSubmissionID);
 		if (submission instanceof WorkspaceItem)
         {
@@ -103,24 +105,20 @@ public class FlowUtils {
         }
 		return null;
 	}
-
+	
 	/**
      * Obtains the submission info for the current submission process.
      * If a submissionInfo object has already been created
      * for this HTTP request, it is re-used, otherwise it is created.
-     *
+     * 
      * @param objectModel
-     *            the Cocoon object model
+     *            the cocoon Objectmodel
      * @param workspaceID
      *            the workspaceID of the submission info to obtain         
      * 
-     * @return a SubmissionInfo object.
-     * @throws java.sql.SQLException on error.
-     * @throws java.io.IOException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
+     * @return a SubmissionInfo object
      */
-    public static SubmissionInfo obtainSubmissionInfo(Map objectModel, String workspaceID)
-            throws SQLException, IOException, AuthorizeException {
+    public static SubmissionInfo obtainSubmissionInfo(Map objectModel, String workspaceID) throws SQLException, IOException, AuthorizeException {
         Request request = ObjectModelHelper.getRequest(objectModel);
         Context context = ContextUtil.obtainContext(objectModel);
           
@@ -172,9 +170,6 @@ public class FlowUtils {
 	 * @param id The unique ID of the current workflow/workspace
      * @param step the step the user has just reached
      * @param page the page (within the step) the user has just reached
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
      */
     public static void setPageReached(Context context, String id, int step, int page)
             throws SQLException, AuthorizeException, IOException
@@ -189,13 +184,15 @@ public class FlowUtils {
 			{
 				workspaceItem.setStageReached(step);
 				workspaceItem.setPageReached(1);  //reset page to first page in new step
-				workspaceItemService.update(context, workspaceItem);
+				workspaceItem.update();
+				context.commit();
 			}
 			else if ((step == workspaceItem.getStageReached()) &&
 					 (page > workspaceItem.getPageReached()))
 			{
 				workspaceItem.setPageReached(page);
-                workspaceItemService.update(context, workspaceItem);
+				workspaceItem.update();
+				context.commit();
 			}
 		}
     }
@@ -208,9 +205,6 @@ public class FlowUtils {
      * @param id The unique ID of the current workflow/workspace
      * @param step the step to set as reached, can be also a previous reached step
      * @param page the page (within the step) to set as reached, can be also a previous reached page
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
      */
     public static void setBackPageReached(Context context, String id, int step,
             int page) throws SQLException, AuthorizeException, IOException
@@ -223,7 +217,8 @@ public class FlowUtils {
 
             workspaceItem.setStageReached(step);
             workspaceItem.setPageReached(page > 0 ? page : 1);
-            workspaceItemService.update(context, workspaceItem);
+            workspaceItem.update();
+            context.commit();
         }
     }
     
@@ -231,15 +226,10 @@ public class FlowUtils {
      * Find the maximum step the user has reached in the submission processes. 
      * If this submission is a workflow then return max-int.
      * 
-     * @param context The current DSpace context.
-	 * @param id The unique ID of the current workflow/workspace.
-     * @return step that has been reached.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
+     * @param context The current DSpace content
+	 * @param id The unique ID of the current workflow/workspace
      */
-	public static int getMaximumStepReached(Context context, String id)
-            throws SQLException, AuthorizeException, IOException {
+	public static int getMaximumStepReached(Context context, String id) throws SQLException, AuthorizeException, IOException {
 		
 		InProgressSubmission submission = findSubmission(context, id);
 		
@@ -265,14 +255,9 @@ public class FlowUtils {
      * 
      * @param context The current DSpace content
 	 * @param id The unique ID of the current workflow/workspace
-     * @return the furthest page reached.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
      */
-	public static int getMaximumPageReached(Context context, String id)
-            throws SQLException, AuthorizeException, IOException {
-
+	public static int getMaximumPageReached(Context context, String id) throws SQLException, AuthorizeException, IOException {
+		
 		InProgressSubmission submission = findSubmission(context, id);
 		
 		if (submission instanceof WorkspaceItem)
@@ -331,25 +316,23 @@ public class FlowUtils {
 	 * @param context The current DSpace content
 	 * @param id The unique ID of the current workspace/workflow
 	 * @param request The cocoon request object.
-     * @throws java.sql.SQLException passed through.
-     * @throws org.dspace.authorize.AuthorizeException passed through.
-     * @throws java.io.IOException passed through.
 	 */
-	public static void processSaveOrRemove(Context context, String id, Request request)
-            throws SQLException, AuthorizeException, IOException
+	public static void processSaveOrRemove(Context context, String id, Request request) throws SQLException, AuthorizeException, IOException
 	{
 		if (request.getParameter("submit_remove") != null)
 		{
 			// If they selected to remove the item then delete everything.
 			WorkspaceItem workspace = findWorkspace(context,id);
-			workspaceItemService.deleteAll(context, workspace);
+			workspace.deleteAll();
+	        context.commit();
 		}
 	}
 	
+
 	/**
 	 * Return the HTML / DRI field name for the given input.
 	 * 
-	 * @param input the given input.
+	 * @param input
 	 * @return field name as a String (e.g. dc_contributor_editor)
 	 */
 	public static String getFieldName(DCInput input)
@@ -383,7 +366,6 @@ public class FlowUtils {
      *            The HTTP Servlet Request object
      * @param subInfo
      *            the current SubmissionInfo object
-     * @return the list of steps and pages.
      *  
      */
     public static StepAndPage[] getListOfAllSteps(HttpServletRequest request, SubmissionInfo subInfo)

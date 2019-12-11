@@ -14,10 +14,6 @@ import org.dspace.xmlworkflow.state.actions.Action;
 import org.dspace.xmlworkflow.storedcomponents.*;
 import org.dspace.xmlworkflow.RoleMembers;
 import org.dspace.xmlworkflow.WorkflowConfigurationException;
-import org.dspace.xmlworkflow.storedcomponents.service.ClaimedTaskService;
-import org.dspace.xmlworkflow.storedcomponents.service.PoolTaskService;
-import org.dspace.xmlworkflow.storedcomponents.service.WorkflowItemRoleService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -35,22 +31,15 @@ import java.sql.SQLException;
  */
 public abstract class UserSelectionAction extends Action {
 
-    protected Logger log = Logger.getLogger(UserSelectionAction.class);
+    protected static Logger log = Logger.getLogger(UserSelectionAction.class);
 
     public abstract boolean isFinished(XmlWorkflowItem wfi);
-
-    @Autowired(required = true)
-    protected ClaimedTaskService claimedTaskService;
-    @Autowired(required = true)
-    protected PoolTaskService poolTaskService;
-    @Autowired(required = true)
-    protected WorkflowItemRoleService workflowItemRoleService;
 
     @Override
     public boolean isAuthorized(Context context, HttpServletRequest request, XmlWorkflowItem wfi) throws SQLException, AuthorizeException, IOException, WorkflowConfigurationException {
         PoolTask task = null;
         if(context.getCurrentUser() != null)
-            task = poolTaskService.findByWorkflowIdAndEPerson(context, wfi, context.getCurrentUser());
+            task = PoolTask.findByWorkflowIdAndEPerson(context, wfi.getID(), context.getCurrentUser().getID());
 
         //Check if we have pooled the current task
         return task != null &&
@@ -67,7 +56,7 @@ public abstract class UserSelectionAction extends Action {
      * @throws SQLException ...
      * @throws AuthorizeException thrown if the current user isn't authorized
      */
-    public abstract void regenerateTasks(Context c, XmlWorkflowItem wfi, RoleMembers roleMembers) throws SQLException, AuthorizeException, IOException;
+    public abstract void regenerateTasks(Context c, XmlWorkflowItem wfi, RoleMembers roleMembers) throws SQLException, AuthorizeException;
 
     /**
      * Verifies if the user selection action is valid

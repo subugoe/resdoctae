@@ -17,8 +17,10 @@ import java.util.List;
 
 import org.dspace.servicemanager.MockServiceManagerSystem;
 import org.dspace.servicemanager.SampleAnnotationBean;
+import org.dspace.servicemanager.ServiceConfig;
 import org.dspace.servicemanager.config.DSpaceConfigurationService;
 import org.dspace.servicemanager.example.ConcreteExample;
+import org.dspace.services.ConfigurationService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,8 +41,8 @@ public class TestSpringServiceManager {
     @Before
     public void init() {
         configurationService = new DSpaceConfigurationService();
-        configurationService.loadConfig(SampleAnnotationBean.class.getName() + ".sampleValue", "beckyz");
-        configurationService.loadConfig("fakeBean.fakeParam", "beckyz");
+        configurationService.loadConfig("testName@" + SampleAnnotationBean.class.getName(), "beckyz");
+        configurationService.loadConfig("fakeParam@fakeBean", "beckyz");
 
         ssm = new SpringServiceManager(new MockServiceManagerSystem(ssm), configurationService, true, true, SPRING_TEST_CONFIG_FILE);
     }
@@ -137,6 +139,11 @@ public class TestSpringServiceManager {
         assertNotNull(l2);
         assertEquals(1, l2.size());
         l2 = null;
+
+        List<ServiceConfig> l3 = ssm.getServicesByType(ServiceConfig.class);
+        assertNotNull(l3);
+        assertEquals(0, l3.size());
+        l3 = null;
     }
 
     /**

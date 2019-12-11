@@ -16,12 +16,9 @@ import org.apache.solr.common.SolrDocumentList;
 import org.apache.solr.common.params.CommonParams;
 import org.dspace.authority.AuthoritySearchService;
 import org.dspace.authority.AuthorityValue;
-import org.dspace.authority.factory.AuthorityServiceFactory;
 import org.dspace.authority.SolrAuthorityInterface;
-import org.dspace.authority.service.AuthorityValueService;
-import org.dspace.content.Collection;
 import org.dspace.core.ConfigurationManager;
-import org.dspace.services.factory.DSpaceServicesFactory;
+import org.dspace.utils.DSpace;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -38,12 +35,10 @@ import java.util.Map;
 public class SolrAuthority implements ChoiceAuthority {
 
     private static final Logger log = Logger.getLogger(SolrAuthority.class);
-    protected SolrAuthorityInterface source = DSpaceServicesFactory.getInstance().getServiceManager()
-                                                       .getServiceByName("AuthoritySource", SolrAuthorityInterface.class);
-    protected boolean externalResults = false;
-    protected final AuthorityValueService authorityValueService = AuthorityServiceFactory.getInstance().getAuthorityValueService();
+    protected SolrAuthorityInterface source = new DSpace().getServiceManager().getServiceByName("AuthoritySource", SolrAuthorityInterface.class);
+    private boolean externalResults = false;
 
-    public Choices getMatches(String field, String text, Collection collection, int start, int limit, String locale, boolean bestMatch) {
+    public Choices getMatches(String field, String text, int collection, int start, int limit, String locale, boolean bestMatch) {
         if(limit == 0)
             limit = 10;
 
@@ -105,7 +100,7 @@ public class SolrAuthority implements ChoiceAuthority {
                 for (int i = 0; i < maxDocs; i++) {
                     SolrDocument solrDocument = authDocs.get(i);
                     if (solrDocument != null) {
-                        AuthorityValue val = authorityValueService.fromSolr(solrDocument);
+                        AuthorityValue val = AuthorityValue.fromSolr(solrDocument);
 
                         Map<String, String> extras = val.choiceSelectMap();
                         extras.put("insolr", val.getId());
@@ -181,12 +176,12 @@ public class SolrAuthority implements ChoiceAuthority {
     }
 
     @Override
-    public Choices getMatches(String field, String text, Collection collection, int start, int limit, String locale) {
+    public Choices getMatches(String field, String text, int collection, int start, int limit, String locale) {
         return getMatches(field, text, collection, start, limit, locale, true);
     }
 
     @Override
-    public Choices getBestMatch(String field, String text, Collection collection, String locale) {
+    public Choices getBestMatch(String field, String text, int collection, String locale) {
         Choices matches = getMatches(field, text, collection, 0, 1, locale, false);
         if (matches.values.length !=0 && !matches.values[0].value.equalsIgnoreCase(text)) {
             matches = new Choices(false);
@@ -250,7 +245,9 @@ public class SolrAuthority implements ChoiceAuthority {
 
 
     public static AuthoritySearchService getSearchService() {
-        org.dspace.kernel.ServiceManager manager = DSpaceServicesFactory.getInstance().getServiceManager();
+        DSpace dspace = new DSpace();
+
+        org.dspace.kernel.ServiceManager manager = dspace.getServiceManager();
 
         return manager.getServiceByName(AuthoritySearchService.class.getName(), AuthoritySearchService.class);
     }
