@@ -1,5 +1,4 @@
-Institutional Repository of the Göttingen Academy of Sciences
-============================
+# Institutional Repository of the Göttingen Academy of Sciences
 https://rep.adw-goe.de/
 
 ## The installation is based on Dspace 5.x and Docker
