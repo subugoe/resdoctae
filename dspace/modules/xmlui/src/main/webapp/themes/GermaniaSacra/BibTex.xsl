@@ -78,6 +78,10 @@
 		<xsl:when test="//dim:field[@element='type' and @qualifier='subtype'] = 'monograph'">
 			<xsl:text>@book&#123;</xsl:text><xsl:value-of select="substring-before(dim:field[@qualifier='author'], ', ')"/><xsl:text>.</xsl:text><xsl:value-of select="dim:field[@element='date'][@qualifier='issued']" />
 		</xsl:when>
+		<xsl:when test="//dim:field[@element='type' and @qualifier='subtype'] = 'dataCollection'">
+                        <xsl:text>@other&#123;</xsl:text><xsl:value-of select="substring-before(dim:field[@element='creator'], ', ')"/><xsl:text>.</xsl:text><xsl:value-of select="dim:field[@element='date'][@qualifier='issued']" />
+
+                </xsl:when>
 		<xsl:otherwise>
 			<xsl:text>@collection&#123;</xsl:text><xsl:value-of select="substring-before(dim:field[@qualifier='editor'], ', ')"/><xsl:text>.</xsl:text><xsl:value-of select="dim:field[@element='date'][@qualifier='issued']" />
 		</xsl:otherwise>

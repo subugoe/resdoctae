@@ -215,6 +215,12 @@
         <!--load-on-startup>1</load-on-startup>
     </servlet-->
 
+    <session-config>
+	    <cookie-config>
+		    <http-only>true</http-only>
+		    <security>true</security>
+	    </cookie-config>
+    </session-config>
 
     <!-- Spring Servlet -->
     <servlet>

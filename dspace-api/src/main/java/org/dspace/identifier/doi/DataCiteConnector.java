@@ -9,6 +9,8 @@ package org.dspace.identifier.doi;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -21,6 +23,7 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -335,6 +338,7 @@ implements DOIConnector
     public boolean isDOIRegistered(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException
     {
+	log.debug("ISDOIREGISTERED....");
         DataCiteResponse response = sendDOIGetRequest(doi);
         
         switch (response.getStatusCode())
@@ -450,7 +454,8 @@ implements DOIConnector
     @Override
     public void reserveDOI(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException
-    {   
+    {  
+	log.debug("RESERVING DOI...."); 
         // check if DOI is reserved at the registration agency
         if (this.isDOIReserved(context, doi))
         {
@@ -572,8 +577,9 @@ implements DOIConnector
     public void registerDOI(Context context, DSpaceObject dso, String doi)
             throws DOIIdentifierException
     {
+	log.debug("REGISTERING DOI...");
         // check if the DOI is already registered online
-        if (this.isDOIRegistered(context, doi))
+        /*if (this.isDOIRegistered(context, doi))
         {
             // if it is registered for another object we should notify an admin
             if (!this.isDOIRegistered(context, dso, doi))
@@ -605,7 +611,7 @@ implements DOIConnector
                         + "before you can register it.",
                         DOIIdentifierException.RESERVE_FIRST);
             }
-        }
+        }*/
 
         // send doi=<doi>\nurl=<url> to mds/doi
         DataCiteResponse resp = null;
@@ -666,7 +672,8 @@ implements DOIConnector
     @Override
     public void updateMetadata(Context context, DSpaceObject dso, String doi) 
             throws DOIIdentifierException
-    { 
+    {
+	log.debug("UPDATING METADATA...."); 
         // check if doi is reserved for another object
         if (!this.isDOIReserved(context, dso, doi) && this.isDOIReserved(context, doi))
         {
@@ -684,8 +691,9 @@ implements DOIConnector
     protected DataCiteResponse sendDOIPostRequest(String doi, String url)
             throws DOIIdentifierException
     {
+	log.debug("SENDING DOI POST REQUEST....");
         // post mds/doi/
-        // body must contaion "doi=<doi>\nurl=<url>}n"
+        // body must contaion "doi=<doi>\nurl=<url>}"
         URIBuilder uribuilder = new URIBuilder();
         uribuilder.setScheme(SCHEME).setHost(HOST).setPath(DOI_PATH);
         
@@ -709,10 +717,11 @@ implements DOIConnector
         try
         {
             String req = "doi=" + doi.substring(DOI.SCHEME.length()) + "\n" + "url=" + url + "\n";
+	    log.debug("SEND: " + req + " TO: " + SCHEME + "://" + HOST +
+                    DOI_PATH + "/" + doi.substring(DOI.SCHEME.length()));
             ContentType contentType = ContentType.create("text/plain", "UTF-8");
             reqEntity = new StringEntity(req, contentType);
             httppost.setEntity(reqEntity);
-            
             return sendHttpRequest(httppost, doi);
         }
         finally
@@ -734,6 +743,7 @@ implements DOIConnector
     protected DataCiteResponse sendMetadataDeleteRequest(String doi)
             throws DOIIdentifierException
     {
+	log.debug("SENDING METADATA DELETE REQUEST....");
         // delete mds/metadata/<doi>
         URIBuilder uribuilder = new URIBuilder();
         uribuilder.setScheme(SCHEME).setHost(HOST).setPath(METADATA_PATH
@@ -753,6 +763,7 @@ implements DOIConnector
             throw new RuntimeException("The URL we constructed to check a DOI "
                     + "produced a URISyntaxException. Please check the configuration parameters!", e);
         }
+	log.debug("sendHttpRequest 767");
         return sendHttpRequest(httpdelete, doi);
     }
     
@@ -778,7 +789,9 @@ implements DOIConnector
         HttpGet httpget = null;
         try
         {
-            httpget = new HttpGet(uribuilder.build());
+	    log.debug("Get request to: " + SCHEME + "://" + HOST +
+                    DOI_PATH + "/" + doi.substring(DOI.SCHEME.length()));
+	    httpget = new HttpGet(uribuilder.build());
         }
         catch (URISyntaxException e)
         {
@@ -789,12 +802,14 @@ implements DOIConnector
             throw new RuntimeException("The URL we constructed to check a DOI "
                     + "produced a URISyntaxException. Please check the configuration parameters!", e);
         }
+	log.debug("sendHttpRequest 806");
         return sendHttpRequest(httpget, doi);
     }
     
     protected DataCiteResponse sendMetadataPostRequest(String doi, Element metadataRoot)
             throws DOIIdentifierException
     {
+	log.debug("SENDING METADATA POST REQUEST (with root)....");
         Format format = Format.getCompactFormat();
         format.setEncoding("UTF-8");
         XMLOutputter xout = new XMLOutputter(format);
@@ -804,6 +819,9 @@ implements DOIConnector
     protected DataCiteResponse sendMetadataPostRequest(String doi, String metadata)
             throws DOIIdentifierException
     {
+	log.debug("SENDING METADATA POST REQUEST (with metadata string)....");
+	log.debug("Post request to: " + SCHEME + "://" + HOST +
+                    DOI_PATH + "/" + doi.substring(DOI.SCHEME.length()));
         // post mds/metadata/
         // body must contain metadata in DataCite-XML.
         URIBuilder uribuilder = new URIBuilder();
@@ -831,7 +849,7 @@ implements DOIConnector
             ContentType contentType = ContentType.create("application/xml", "UTF-8");
             reqEntity = new StringEntity(metadata, contentType);
             httppost.setEntity(reqEntity);
-            
+            log.debug("sendHttpRequest  851"); 
             return sendHttpRequest(httppost, doi);
         }
         finally
@@ -859,6 +877,7 @@ implements DOIConnector
     protected DataCiteResponse sendHttpRequest(HttpUriRequest req, String doi)
             throws DOIIdentifierException
     {
+	log.debug("SENDING HTTP REQUEST....");
         DefaultHttpClient httpclient = new DefaultHttpClient();
         httpclient.getCredentialsProvider().setCredentials(
                 new AuthScope(HOST, 443),
@@ -879,41 +898,42 @@ implements DOIConnector
                 content = EntityUtils.toString(entity, "UTF-8");
             }
 
-            /* While debugging it can be useful to see whitch requests are send:
-             *
-             * log.debug("Going to send HTTP request of type " + req.getMethod() + ".");
-             * log.debug("Will be send to " + req.getURI().toString() + ".");
-             * if (req instanceof HttpEntityEnclosingRequestBase)
-             * {
-             *     log.debug("Request contains entity!");
-             *     HttpEntityEnclosingRequestBase reqee = (HttpEntityEnclosingRequestBase) req;
-             *     if (reqee.getEntity() instanceof StringEntity)
-             *     {
-             *         StringEntity se = (StringEntity) reqee.getEntity();
-             *         try {
-             *             BufferedReader br = new BufferedReader(new InputStreamReader(se.getContent()));
-             *             String line = null;
-             *             while ((line = br.readLine()) != null)
-             *             {
-             *                 log.debug(line);
-             *             }
-             *             log.info("----");
-             *         } catch (IOException ex) {
-             *             
-             *         }
-             *     }
-             * } else {
-             *     log.debug("Request contains no entity!");
-             * }
-             * log.debug("The request got http status code {}.", Integer.toString(statusCode));
-             * if (null == content)
-             * {
-             *     log.debug("The response did not contain any answer.");
-             * } else {
-             *     log.debug("DataCite says: {}", content);
-             * }
-             * 
-             */
+            // While debugging it can be useful to see whitch requests are send:
+             
+              log.debug("Going to send HTTP request of type " + req.getMethod() + ".");
+              log.debug("Will be send to " + req.getURI().toString() + ". with credentials " + this.getUsername() + " " + this.getPassword());
+              if (req instanceof HttpEntityEnclosingRequestBase)
+              {
+                  log.debug("Request contains entity!");
+                  HttpEntityEnclosingRequestBase reqee = (HttpEntityEnclosingRequestBase) req;
+                  if (reqee.getEntity() instanceof StringEntity)
+                  {
+                      StringEntity se = (StringEntity) reqee.getEntity();
+                      try {
+                          BufferedReader br = new BufferedReader(new InputStreamReader(se.getContent()));
+                          String line = null;
+                          while ((line = br.readLine()) != null)
+                          {
+                              log.debug(line);
+                          }
+                          log.info("----");
+                      } catch (IOException ex) {
+                          
+                      }
+                  }
+              } else {
+                  log.debug("Request contains no entity!");
+              }
+              log.debug("The request got http status code {}.", Integer.toString(statusCode));
+              if (null == content)
+              {
+                  log.debug("The response did not contain any answer.");
+              } else {
+                  log.debug("DataCite says: {}", content);
+              }
+              
+             //
+
 
             // We can handle some status codes here, others have to be handled above
             switch (statusCode)
@@ -923,6 +943,7 @@ implements DOIConnector
                 case (401) :
                 {
                     log.info("We were unable to authenticate against the DOI registry agency.");
+		    log.info("user: " +  USERNAME + " Passwd: " + PASSWORD);
                     log.info("The response was: {}", content);
                     throw new DOIIdentifierException("Cannot authenticate at the "
                             + "DOI registry agency. Please check if username "
@@ -1036,7 +1057,7 @@ implements DOIConnector
         {
             return root;
         }
-        Element identifier = new Element("identifier", "http://datacite.org/schema/kernel-2.2");
+	Element identifier = new Element("identifier", "http://datacite.org/schema/kernel-3");
         identifier.setAttribute("identifierType", "DOI");
         identifier.addContent(doi.substring(DOI.SCHEME.length()));
         return root.addContent(0, identifier);

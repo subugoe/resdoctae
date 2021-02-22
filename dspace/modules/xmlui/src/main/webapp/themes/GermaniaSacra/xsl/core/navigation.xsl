@@ -122,18 +122,25 @@
                     </form>
                 </div>
             </xsl:if>
-
-            <xsl:apply-templates/>
+	    <xsl:apply-templates select="dri:list[@n='browse']"/>
             <div class="list-group" id="aspect_viewArtifacts_Navigation_list_help">
-                <h2 class="ds-option-set-head  h6">Info &amp; Help</h2>
-                <div>
-                    <a class="list-group-item ds-option" href="/info/deposit-licence"><i18n:text>xmlui.static.navigation.deposit-licence</i18n:text></a>
-                    <a class="list-group-item ds-option" href="/info/publication"><i18n:text>xmlui.static.navigation.help-publication</i18n:text></a>
-                    <a class="list-group-item ds-option" href="/info/guides"><i18n:text>xmlui.guides</i18n:text></a>
-                    <a class="list-group-item ds-option" href="/info/services"><i18n:text>xmlui.static.navigation.services</i18n:text></a>
+                <h2 class="ds-option-set-head  h6">Folgen</h2>
+		<div>
+		    <a class="list-group-item ds-option" href="http://rep.adw-goe.de/handle/11858/212">Alte Folge</a>
+		    <a class="list-group-item ds-option" href="http://rep.adw-goe.de/handle/11858/214">Dritte Folge</a>
+		    <a class="list-group-item ds-option" href="http://rep.adw-goe.de/handle/11858/213">Neue Folge</a>
+		    <a class="list-group-item ds-option" href="http://rep.adw-goe.de/handle/11858/00-001S-0000-0023-9A78-6">Supplementbände</a>
+		    <a class="list-group-item ds-option" href="/handle/11858/00-001S-0000-0023-9A07-6">Miscellanea</a>
+		    <a class="list-group-item ds-option" href="https://rep.adw-goe.de/handle/11858/00-001S-0000-002D-B480-0">Studien zur Germania Sacra</a>
+		    <a class="list-group-item ds-option" href="http://rep.adw-goe.de/handle/11858/00-001S-0000-0023-9A96-2">Studien zur Germania Sacra; Neue Folge</a>
                 </div>
-            </div>
-
+	</div>
+	    <xsl:if test="//dri:userMeta/@authenticated='yes'">
+                <xsl:apply-templates select="dri:list[@n='account']"/>
+            </xsl:if>
+	    <xsl:apply-templates select="dri:list[@n='context']"/>
+	    <xsl:apply-templates select="dri:list[@n='administrative']"/>
+	    <xsl:apply-templates select="dri:list[@n='discovery']"/>
             <!-- DS-984 Add RSS Links to Options Box -->
 	    <!-- <xsl:if test="count(/dri:document/dri:meta/dri:pageMeta/dri:metadata[@element='feed']) != 0">
                 <div>
@@ -177,12 +184,13 @@
     </xsl:template>
 
 
+    <!-- Do not show global browsing menu -->
     <xsl:template match="dri:options//dri:list">
-	    <!-- <xsl:if test="@id != 'aspect.browseArtifacts.Navigation.list.context'"> -->
+	    <xsl:if test="@id != 'aspect.browseArtifacts.Navigation.list.global'"> 
             <xsl:apply-templates select="dri:head"/>
             <xsl:apply-templates select="dri:item"/>
             <xsl:apply-templates select="dri:list"/>
-	    <!-- </xsl:if> -->
+	    </xsl:if> 
     </xsl:template>
 
     <xsl:template match="dri:options/dri:list" priority="3">
@@ -239,9 +247,9 @@
     </xsl:template>
 
     <xsl:template match="dri:options/dri:list//dri:list/dri:head" priority="3">
-	    <!-- <xsl:choose>
+        <xsl:choose>
             <xsl:when test="../@n='global' or ../@n='context'"></xsl:when>
-	    <xsl:otherwise> -->
+            <xsl:otherwise>
                 <a class="list-group-item active">
                     <span>
                         <xsl:call-template name="standardAttributes">
@@ -253,8 +261,8 @@
                         <xsl:apply-templates/>
                     </span>
                 </a>
-		<!-- </xsl:otherwise>
-	</xsl:choose> -->
+            </xsl:otherwise>
+        </xsl:choose>
 
     </xsl:template>
 

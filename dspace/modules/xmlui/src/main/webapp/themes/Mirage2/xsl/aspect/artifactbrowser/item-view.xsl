@@ -286,7 +286,7 @@
 	<xsl:call-template name="itemSummaryView-DIM-series"/>
 	<xsl:call-template name="itemSummaryView-DIM-pages"/>
 	<xsl:call-template name="itemSummaryView-DIM-printedition"/>
-
+	<xsl:call-template name="itemSummaryView-DIM-notes"/>
 	<!-- <xsl:call-template name="itemSummaryView-DIM-abstract"/> -->
 	<xsl:call-template name="itemSummaryView-DIM-URI"/>
 	<xsl:call-template name="itemSummaryView-show-full"/>
@@ -448,18 +448,27 @@
 
     <xsl:template name="itemSummaryView-DIM-ispartof">
         <xsl:if test="dim:field[@element='relation' and @qualifier='ispartof' and descendant::text()]">
-            <div class="ispartof">
+		<div class="ispartof">
+			<!--	HIER: 	<xsl:value-of select="substring-after(dim:field[@element='relation' and @qualifier='ispartof'], 'rd-')"/> -->
 		    <!-- <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-ispartof</i18n:text>:</span> -->
                     <xsl:for-each select="dim:field[@element='relation' and @qualifier='ispartof']">
                         <xsl:choose>
-                            <xsl:when test="starts-with(., 'http')">
+                            <xsl:when test="contains(., 'hdl.handle.net')">
                                 <xsl:variable name="handle"><xsl:value-of select="substring-after(., 'hdl.handle.net')"/></xsl:variable>
                                 <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle',$handle, '/mets.xml')"/></xsl:variable>
                                 <a>
                                     <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute>
                                     <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
                                 </a>
-                            </xsl:when>
+			    </xsl:when>
+			    <xsl:when test="contains(., 'resolver.sub.uni-goettingen.de/purl?rd-')">
+                                <xsl:variable name="handle"><xsl:value-of select="substring-after(., 'rd-')"/></xsl:variable>
+				<xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle/',$handle, '/mets.xml')"/></xsl:variable>
+                                <a>
+                                    <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute>
+                                    <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
+                                </a>
+			    </xsl:when>
                             <xsl:otherwise>
 
                                 <xsl:value-of select="./node()"/>
@@ -617,28 +626,30 @@
    </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-doi">
-        <xsl:for-each select="dim:field[@qualifier='identifier' or @qualifier='doi']">
+	    <xsl:for-each select="dim:field[@qualifier='identifier' or @qualifier='doi']">
+	     <xsl:if test="not(starts-with(., '10.26015'))">	    
 		<div class="simple-item-view-other">
 		<span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-doi</i18n:text>: </span>
                 <a>
                     <xsl:attribute name="href">
-                            <xsl:value-of select="."/>
+			    <xsl:value-of select="concat('https://doi.or/', .)"/>
 		    </xsl:attribute>
 		    <xsl:value-of select="."/>
                 </a>
-            </div>
+		</div>
+	    </xsl:if>
         </xsl:for-each>
    </xsl:template>
 
 
     <xsl:template name="itemSummaryView-DIM-notes">
-        <xsl:if test="dim:field[@qualifier='notes' and @qualifier != 'intern' and descendant::text()]">
+        <xsl:if test="dim:field[@element='notes' and @qualifier != 'intern' and descendant::text()]">
             <div class="simple-item-view-other">
 
 
                 <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-notes</i18n:text>: </span>
                 <span>
-                    <xsl:for-each select="dim:field[@qualifier='notes' and @qualifier != 'intern']">
+                    <xsl:for-each select="dim:field[@element='notes' and @qualifier != 'intern']">
                         <xsl:value-of select="."/>
                     </xsl:for-each>
                 </span>
@@ -648,16 +659,24 @@
 
     <xsl:template name="itemSummaryView-DIM-URI">
         <xsl:if test="dim:field[@element='identifier' and @qualifier='uri' and descendant::text()]">
-            <div class="simple-item-view-bookmark">
-
-
+		<div class="simple-item-view-bookmark">
+		    <xsl:variable name="purl">
+			    <xsl:choose>
+				    <xsl:when test="starts-with(dim:field[@element='identifier' and @qualifier='doi'], '10.26015')">
+					    <xsl:value-of select="concat('https://doi.org/', dim:field[@element='identifier' and @qualifier='doi'])"/>
+				    </xsl:when>
+				    <xsl:otherwise>
+					    <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
+				    </xsl:otherwise>
+			    </xsl:choose>
+		</xsl:variable>
                 <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-uri</i18n:text>: </span>
                 <span>
                     <a>
                         <xsl:attribute name="href">
-                            <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
+				<xsl:value-of select="$purl"/>
                         </xsl:attribute>
-                        <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
+                        <xsl:value-of select="$purl"/>
                     </a>
                 </span>
             </div>
@@ -686,7 +705,7 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-show-full">
-        <div class="simple-item-view-show-full item-page-field-wrapper table">
+        <div class="hidden-sm hidden-xs simple-item-view-show-full">
 		<!--<h5>
                 <i18n:text>xmlui.mirage2.itemSummaryView.MetaData</i18n:text>
 	    </h5> -->
@@ -1201,23 +1220,31 @@
                 <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-haspart</i18n:text>: </span>
                 <span>
                     <ul>
-                        <xsl:for-each select="//dim:field[@element='relation' and @qualifier='haspart']">
+		    <xsl:for-each select="//dim:field[@element='relation' and @qualifier='haspart']">
+			    <li>
                             <xsl:choose>
-                                <xsl:when test="starts-with(., 'http')">
+                                <xsl:when test="contains(., 'hdl.handle.net')">
                                     <xsl:variable name="handle"><xsl:value-of select="substring-after(., 'hdl.handle.net')"/></xsl:variable>
                                     <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle',$handle, '/mets.xml')"/></xsl:variable>
-                                    <li>
                                         <a>
                                             <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute>
                                             <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
                                         </a>
-                                    </li>
-                                </xsl:when>
-                                <xsl:otherwise>
+			        </xsl:when>
+                            <xsl:when test="contains(., 'resolver.sub.uni-goettingen.de/purl?rd-')">
+                                <xsl:variable name="handle"><xsl:value-of select="substring-after(., 'rd-')"/></xsl:variable>
+                                <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle/',$handle, '/mets.xml')"/></xsl:variable>
+                                <a>
+                                    <xsl:attribute name="href"><xsl:value-of select="."/></xsl:attribute>
+                                    <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
+                                </a>
+                            </xsl:when>
+			    <xsl:otherwise>
 
-                                    <xsl:value-of select="./node()"/>
-                                </xsl:otherwise>
-                            </xsl:choose>
+					<xsl:value-of select="./node()"/>
+			    </xsl:otherwise>
+			    </xsl:choose>
+		    	</li>
                         </xsl:for-each>
                     </ul>
                 </span>

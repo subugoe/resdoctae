@@ -395,7 +395,11 @@
 
 			   .footer {
 			   	padding-top: 30px;
-			   }
+				}
+
+		    .print {
+		    	display: none;
+		    }
     	</style>
         </head>
     </xsl:template>
@@ -839,7 +843,7 @@
             <div class="row">
                 <hr/>
                 <div class="center hidden-print">
-			<a class="doku" href="/resDoctaeDoku.html">&#160;&#160;</a>
+			<a class="doku" href="/static/documents/resDoctaeDoku.html">&#160;&#160;</a>
 			<i18n:text>xmlui.contact.link</i18n:text>
 			<!-- <a>
                         <xsl:attribute name="href">

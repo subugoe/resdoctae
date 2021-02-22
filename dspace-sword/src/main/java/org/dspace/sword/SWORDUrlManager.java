@@ -22,6 +22,8 @@ import java.sql.SQLException;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author Richard Jones
  *
@@ -42,6 +44,7 @@ public class SWORDUrlManager
 		this.context = context;
 	}
 
+	public static final Logger log = Logger.getLogger(SWORDUrlManager.class);
 	/**
 	 * Get the generator URL for ATOM entry documents.  This can be
 	 * overridden from the default in configuration.
@@ -242,11 +245,11 @@ public class SWORDUrlManager
 		{
 			String sdBase = this.getBaseServiceDocumentUrl();
 			String mlBase = this.getBaseMediaLinkUrl();
-
+			log.debug("sdBase: " + sdBase + " mlBase: " + mlBase + " url: " + url);
 			if (url.startsWith(sdBase))
 			{
 				// we are dealing with a service document request
-				
+				log.debug("Dealing with ServiceDocument");	
 				// first, let's find the beginning of the handle
 				url = url.substring(sdBase.length());
 				if (url.startsWith("/"))
@@ -272,7 +275,7 @@ public class SWORDUrlManager
 			else if (url.startsWith(mlBase))
 			{
 				// we are dealing with a bitstream media link
-
+				log.debug("We are dealing with bitstream media link");
 				// find the index of the "/bitstream/" segment of the url
 				int bsi = url.indexOf("/bitstream/");
 

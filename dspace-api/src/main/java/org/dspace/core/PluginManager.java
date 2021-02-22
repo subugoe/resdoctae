@@ -317,6 +317,7 @@ public class PluginManager
             //    plugin.named.<INTF> = <CLASS> = <name>, <name> [,] \
             //                        <CLASS> = <name>, <name> [ ... ]
             String namedVal = getConfigProperty(module, NAMED_PREFIX+iname);
+	    log.debug("no namedPluginClass contains " + iname);
             if (namedVal != null)
             {
                 namedVal = namedVal.trim();
@@ -336,12 +337,15 @@ public class PluginManager
                                 namedVal.substring(prevEnd, classMatcher.start()).trim().split("\\s*,\\s*"));
                     }
                     prevClassName = classMatcher.group(1);
+		    log.debug("prevClassName not nul: " + prevClassName);
                     prevEnd = classMatcher.end();
+		    log.debug("prevEnd: " + prevEnd);
                 }
                 if (prevClassName != null)
                 {
                     found += installNamedConfigs(iname, prevClassName,
                             namedVal.substring(prevEnd).trim().split("\\s*,\\s*"));
+		    log.debug("Call installNamedConfigs with iname: " + iname + " prevClassName: " + prevClassName);
                 }
             }
 
@@ -405,6 +409,7 @@ public class PluginManager
             log.debug("Got Named Plugin, intfc="+iname+", name="+names[i]+", class="+classname);
             ++found;
         }
+	log.debug(found + " Classes found in installNamedConfigs");
         return found;
     }
 
@@ -441,8 +446,11 @@ public class PluginManager
         try
         {
             String iname = intfc.getName();
+	    log.debug("Calling configureNamedPlugin with module " + module + " name " + name);
             configureNamedPlugin(module, iname);
             String key = iname + SEP + name;
+	    log.debug("iname: " + iname + " SEP: " + SEP + " name: " + name);
+	    log.debug("key in getNamedPlugin: " + key);
             String cname = namedPluginClasses.get(key);
             if (cname == null)
             {

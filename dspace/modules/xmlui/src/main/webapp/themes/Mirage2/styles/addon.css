@@ -23,3 +23,33 @@
 .embargo-info {
     padding-top: 30px;
 }
+
+.simple-item-view-show-full > a {
+	text-decoration: none;
+}
+
+.print {
+	display: none;
+}
+
+.subtitle {
+    font-weight: normal;
+    font-size: 1.3em;
+    margin-bottom: 15px;
+    display:block;
+}
+
+.img-thumbnail.data {
+    padding: 2px;
+    background-color: black;
+}
+
+.list-group > a[href$="type=gs"],
+.btn-group > a[href$="type=gs"]
+{
+	display: none;
+}
+
+a[href$="type=volume"] {
+        display: none;
+}

@@ -146,14 +146,29 @@
                     </dt>
                     <dd class="col-sm-10">
                         <xsl:choose>
-                            <xsl:when test="starts-with(dim:field[@element='relation' and @qualifier='ispartof'], 'http')">
+                            <xsl:when test="contains(dim:field[@element='relation' and @qualifier='ispartof'], 'hdl.handle.net')">
                                 <xsl:variable name="handle"><xsl:value-of select="substring-after(dim:field[@element='relation' and @qualifier='ispartof'], 'hdl.handle.net')"/></xsl:variable>
                                 <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle',$handle, '/mets.xml')"/></xsl:variable>
                                 <a>
-                                    <xsl:attribute name="href"><xsl:value-of select="dim:field[@element='relation' and @qualifier='ispartof']"/></xsl:attribute>
+                                    <xsl:attribute name="href"><xsl:value-of select="concat('/handle/', $handle)"/></xsl:attribute>
                                     <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
-                                </a>
-                            </xsl:when>
+			    </a>
+			    </xsl:when>
+                            <xsl:when test="contains(dim:field[@element='relation' and @qualifier='ispartof'], 'resolver.sub.uni-goettingen.de/purl?rd-')">
+                                <xsl:variable name="handle"><xsl:value-of select="substring-after(dim:field[@element='relation' and @qualifier='ispartof'], 'rd-')"/></xsl:variable>
+                                <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/handle/',$handle, '/mets.xml')"/></xsl:variable>
+                                <a>
+					<xsl:attribute name="href"><xsl:value-of select="concat('/handle/', $handle)"/></xsl:attribute>
+                                    <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
+			    </a>
+		    	    </xsl:when>
+			    <xsl:when test="starts-with(dim:field[@element='relation' and @qualifier='ispartof'], '/handle')">	
+				    <a>
+					    <xsl:attribute name="href"><xsl:value-of select="dim:field[@element='relation' and @qualifier='ispartof']"/></xsl:attribute>
+				   <xsl:variable name="metsfile"><xsl:value-of select="concat('cocoon://metadata/',dim:field[@element='relation' and @qualifier='ispartof'], '/mets.xml')"/></xsl:variable>
+                                    <xsl:value-of select="document($metsfile)//dim:field[@element='title']"/>
+			    </a>
+			    </xsl:when>
                             <xsl:otherwise>
 
                                 <xsl:value-of select="dim:field[@element='relation' and @qualifier='ispartof']"/>
@@ -298,13 +313,17 @@
                                 </img>
                             </xsl:otherwise>
                         </xsl:choose>
-                    </xsl:when>
+	 	    </xsl:when>
+		    <xsl:when test="not(contains(mets:fileGrp[@USE='CONTENT']/mets:file[1]/@MIMETYPE, 'pdf'))">
+		    <!-- dataCollection -->
+			<img class="img-thumbnail data" alt="Thumbnail" title="Data collection" src="/static/images/dataCollection.gif"></img>
+		    </xsl:when>
                     <xsl:otherwise>
                         <img class="img-thumbnail" alt="xmlui.mirage2.item-list.thumbnail" i18n:attr="alt">
                             <xsl:attribute name="data-src">
                                 <xsl:text>holder.js/100%x</xsl:text>
                                 <xsl:value-of select="$thumbnail.maxheight"/>
-                                <xsl:text>/text:No Thumbnail</xsl:text>
+                                <xsl:text>No Thumbnail</xsl:text>
                             </xsl:attribute>
                         </img>
                     </xsl:otherwise>

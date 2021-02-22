@@ -187,7 +187,7 @@
                     <xsl:when test="mets:fileGrp[@USE='THUMBNAIL']">
                         <!-- Checking if Thumbnail is restricted and if so, show a restricted image -->
                         <xsl:variable name="src">
-                            <xsl:value-of select="mets:fileGrp[@USE='THUMBNAIL']/mets:file/mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
+                            <xsl:value-of select="mets:fileGrp[@USE='THUMBNAIL']/mets:file[1]/mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
                         </xsl:variable>
                         <xsl:choose>
                             <xsl:when test="contains($src,'isAllowed=n')">
@@ -206,16 +206,17 @@
                     </xsl:when>
 		    <xsl:otherwise>
 			    <img class="img-thumbnail" alt="Thumbnail" src="/themes/GermaniaSacra/images/no-document.png">
-			    <!-- <img class="img-thumbnail" alt="xmlui.mirage2.item-list.thumbnail" i18n:attr="alt">
+				    <!-- <img class="img-thumbnail" alt="xmlui.mirage2.item-list.thumbnail" i18n:attr="alt">
 				<xsl:attribute name="data-src">
                                 <xsl:text>holder.js/100%x</xsl:text>
                                 <xsl:value-of select="$thumbnail.maxheight"/>
-                                <xsl:text>/text:No Thumbnail</xsl:text>
+				<xsl:text>No thumbnail</xsl:text> 
+
 			    </xsl:attribute> -->
                         </img>
                     </xsl:otherwise>
                 </xsl:choose>
-            </a>
+	</a>
         </div>
     </xsl:template>
 

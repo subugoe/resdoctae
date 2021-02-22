@@ -25,7 +25,7 @@
 
 		<xsl:choose>
 			<!-- resolve only requests which are in the purl-mapping or starts with 'rd' (res doctae) -->
-			<xsl:when test="starts-with($query, 'purl=rd-')">
+			<xsl:when test="starts-with($query, 'purl=rd-5')">
 				<xsl:variable name="lpi"><xsl:value-of select="substring-after($query, 'rd-5/')" /></xsl:variable>
 				<url>
 					<xsl:value-of select="concat($baseURL, '/handle/11858/', $lpi)" />
@@ -35,6 +35,16 @@
 				<version>1.0</version>
                                 <access>free</access>
 			</xsl:when>
+			<xsl:when test="starts-with($query, 'purl=rd-11858')">
+                                <xsl:variable name="lpi"><xsl:value-of select="substring-after($query, 'rd-11858/')" /></xsl:variable>
+                                <url>
+                                        <xsl:value-of select="concat($baseURL, '/handle/11858/', $lpi)" />
+
+                                </url>
+                                <mime>text/html</mime>
+                                <version>1.0</version>
+                                <access>free</access>
+                        </xsl:when>
 			<xsl:otherwise>
 				<URL />
 			</xsl:otherwise>

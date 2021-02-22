@@ -1,0 +1,21 @@
+@media (min-width: 992px) {
+	#aspect_browseArtifacts_CollectionBrowse_div_collection-browse, #aspect_browseArtifacts_CommunityBrowse_div_community-browse {
+		display: none;
+	}
+}
+
+h1.first-page-header {
+	font-size: 1.6em;
+}
+
+a#listAll {
+	font-size: 1.3em;
+}
+
+.recentSubmissionViewMore > a {
+	font-size: 1.5em;
+}
+
+.simple-item-view-show-full {
+    margin: 0;
+}

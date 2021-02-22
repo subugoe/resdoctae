@@ -36,7 +36,8 @@
 	<message key="xmlui.general.next">Next</message>
 	<message key="xmlui.general.untitled">Untitled</message>
         <message key="xmlui.general.perform">Perform</message>
-        <message key="xmlui.general.queue">Queue</message>
+	<message key="xmlui.general.queue">Queue</message>
+	<message key="xmlui.general.site.head">Repository of the <br/>Göttingen Academy of Sciences</message>
 
 	<!--
 		Page not found keys
@@ -60,7 +61,7 @@
 	<!--
 		This section is for feed syndications (RSS, atom, etc)
 	-->
-	<message key="xmlui.feed.general_description">The DSpace digital repository system captures, stores, indexes, preserves, and distributes digital research material.</message>
+	<message key="xmlui.feed.general_description">The res doctae digital repository system captures, stores, indexes, preserves, and distributes digital research material.</message>
     <message key="xmlui.feed.header">RSS Feeds</message>
 	<message key="xmlui.feed.logo_title">The Channel Image</message>
 	<message key="xmlui.feed.untitled">Untitled</message>
@@ -92,7 +93,7 @@
 	<message key="xmlui.ArtifactBrowser.AbstractSearch.head2">Communities or Collections matching your query</message>
 	<message key="xmlui.ArtifactBrowser.AbstractSearch.head3">Items matching your query</message>
 	<message key="xmlui.ArtifactBrowser.AbstractSearch.no_results">Search produced no results.</message>
-	<message key="xmlui.ArtifactBrowser.AbstractSearch.all_of_dspace">All of DSpace</message>
+	<message key="xmlui.ArtifactBrowser.AbstractSearch.all_of_dspace">All of res doctae</message>
 
    <message key="xmlui.ArtifactBrowser.AbstractSearch.sort_by.title">title</message>
    <message key="xmlui.ArtifactBrowser.AbstractSearch.sort_by.dateissued">issue date</message>
@@ -159,6 +160,9 @@
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.title">title</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.dateissued">issue date</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.dateaccessioned">submit date</message>
+	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.volume">volume</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.volume">{0} by volume</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.volume">{0} by volume</message>
 
         <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.sort">{0}</message>
         <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.sort">{0}</message>
@@ -184,10 +188,13 @@
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.dateaccessioned">Browsing {0} by Submit Date {1}</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.dateaccessioned">Browsing {0} by Submit Date</message>
 
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.metadata.series">Series</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.series">Series</message>
+        <message key="xmlui.ArtifactBrowser.Navigation.browse_series">Series</message>
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.CollectionViewer.java -->
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.search_scope">Search Scope</message>
-	<message key="xmlui.ArtifactBrowser.CollectionViewer.all_of_dspace">All of DSpace</message>
+	<message key="xmlui.ArtifactBrowser.CollectionViewer.all_of_dspace">All of res doctae</message>
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.full_text_search">Search within this collection:</message>
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.head_browse">Browse by</message>
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.browse_titles">Titles</message>
@@ -205,7 +212,7 @@
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.CommunityViewer.java -->
 	<message key="xmlui.ArtifactBrowser.CommunityViewer.search_scope">Search Scope</message>
-	<message key="xmlui.ArtifactBrowser.CommunityViewer.all_of_dspace">All of DSpace</message>
+	<message key="xmlui.ArtifactBrowser.CommunityViewer.all_of_dspace">All of res doctae</message>
 	<message key="xmlui.ArtifactBrowser.CommunityViewer.full_text_search">Search within this community and its collections:</message>
 	<message key="xmlui.ArtifactBrowser.CommunityViewer.head_browse">Browse by</message>
 	<message key="xmlui.ArtifactBrowser.CommunityViewer.browse_titles">Titles</message>
@@ -230,7 +237,7 @@
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.title">Give feedback</message>
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.trail">Give feedback</message>
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.head">Give feedback</message>
-	<message key="xmlui.ArtifactBrowser.FeedbackForm.para1">Thanks for sharing your feedback about the DSpace system. Your comments are appreciated!</message>
+	<message key="xmlui.ArtifactBrowser.FeedbackForm.para1">Thanks for sharing your feedback about the res doctae system. Your comments are appreciated!</message>
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.email">Your Email</message>
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.email_help">This address will be used to follow up on your feedback.</message>
 	<message key="xmlui.ArtifactBrowser.FeedbackForm.comments">Comments</message>
@@ -243,28 +250,28 @@
 	<message key="xmlui.ArtifactBrowser.FeedbackSent.para1">Your comments have been received.</message>
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.FrontPageSearch.java -->
-	<message key="xmlui.ArtifactBrowser.FrontPageSearch.head">Search DSpace</message>
-	<message key="xmlui.ArtifactBrowser.FrontPageSearch.para1">Enter some text in the box below to search DSpace.</message>
+	<message key="xmlui.ArtifactBrowser.FrontPageSearch.head">Search res doctae</message>
+	<message key="xmlui.ArtifactBrowser.FrontPageSearch.para1">Enter some text in the box below to search res doctae.</message>
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.ItemViewer.java -->
 	<message key="xmlui.ArtifactBrowser.ItemViewer.trail">View Item</message>
 	<message key="xmlui.ArtifactBrowser.ItemViewer.head_parent_collections">This item belongs to the following Collection(s)</message>
 	<message key="xmlui.ArtifactBrowser.ItemViewer.show_simple">Show simple item record</message>
-	<message key="xmlui.ArtifactBrowser.ItemViewer.show_full">Show all data</message>
+	<message key="xmlui.ArtifactBrowser.ItemViewer.show_full">&#160;&#160;</message>
 
         <message key="xmlui.ArtifactBrowser.ItemViewer.withdrawn">This item has been withdrawn and is no longer available.</message>
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.Navigation.java -->
-	<message key="xmlui.ArtifactBrowser.Navigation.head_browse">Browse</message>
-	<message key="xmlui.ArtifactBrowser.Navigation.head_all_of_dspace">All of DSpace</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.head_browse">Browse by</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.head_all_of_dspace">All of res doctae</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.communities_and_collections">Reseach Projects &amp; -Series</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_title">Titles</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_author">Authors</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_subject">Subjects</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_dateissued">Issue Date</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_dateaccessioned">Submit Date</message>
-	<message key="xmlui.ArtifactBrowser.Navigation.head_this_collection"></message>
-	<message key="xmlui.ArtifactBrowser.Navigation.head_this_community"></message>
+	<message key="xmlui.ArtifactBrowser.Navigation.head_this_collection">This collection</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.head_this_community">This Area</message>
 
 	<!-- org.dspace.app.xmlui.artifactbrowser.SimpleSearch.java -->
 	<message key="xmlui.ArtifactBrowser.SimpleSearch.title">Search</message>
@@ -336,7 +343,7 @@
 	<!-- org.dspace.app.xmlui.eperson.CannotRegister.java -->
 	<message key="xmlui.EPerson.CannotRegister.title">Registration unavailable</message>
 	<message key="xmlui.EPerson.CannotRegister.head">Registration unavailable</message>
-	<message key="xmlui.EPerson.CannotRegister.para1">The configuration of this DSpace repository does not allow registration in this context. Please contact the <a href="../contact">site administrator</a> with questions or comments.</message>
+	<message key="xmlui.EPerson.CannotRegister.para1">The configuration of this res doctae repository does not allow registration in this context. Please contact the <a href="../contact">site administrator</a> with questions or comments.</message>
 
 	<!-- org.dspace.app.xmlui.eperson.EditProfile.java -->
 	<message key="xmlui.EPerson.EditProfile.title_update">Update Profile</message>
@@ -396,7 +403,7 @@
 	<!-- org.dspace.app.xmlui.eperson.PasswordLogin.java -->
 	<message key="xmlui.EPerson.PasswordLogin.title">Sign in</message>
 	<message key="xmlui.EPerson.PasswordLogin.trail">Sign in</message>
-	<message key="xmlui.EPerson.PasswordLogin.head1">Sign in to DSpace</message>
+	<message key="xmlui.EPerson.PasswordLogin.head1">Sign in to res doctae</message>
 	<message key="xmlui.EPerson.PasswordLogin.title">Sign in</message>
 	<message key="xmlui.EPerson.PasswordLogin.email_address">E-Mail Address</message>
 	<message key="xmlui.EPerson.PasswordLogin.error_bad_login">The email address and/or password supplied were not valid.</message>
@@ -404,13 +411,13 @@
 	<message key="xmlui.EPerson.PasswordLogin.forgot_link"> Forgot your password?</message>
 	<message key="xmlui.EPerson.PasswordLogin.submit">Sign in</message>
 	<message key="xmlui.EPerson.PasswordLogin.head2">Register new user</message>
-	<message key="xmlui.EPerson.PasswordLogin.para1">Register an account to subscribe to collections for email updates, and submit new items to DSpace.</message>
+	<message key="xmlui.EPerson.PasswordLogin.para1">Register an account to subscribe to collections for email updates, and submit new items to res doctae.</message>
 	<message key="xmlui.EPerson.PasswordLogin.register_link">Click here to register.</message>
 
 	<!-- org.dspace.app.xmlui.eperson.LDAPLogin.java -->
 	<message key="xmlui.EPerson.LDAPLogin.title">Sign in</message>
 	<message key="xmlui.EPerson.LDAPLogin.trail">Sign in</message>
-	<message key="xmlui.EPerson.LDAPLogin.head1">Sign in to DSpace</message>
+	<message key="xmlui.EPerson.LDAPLogin.head1">Sign in to res doctae</message>
 	<message key="xmlui.EPerson.LDAPLogin.title">Sign in</message>
 	<message key="xmlui.EPerson.LDAPLogin.username">User Name</message>
 	<message key="xmlui.EPerson.LDAPLogin.error_bad_login">The user name and/or password supplied were not valid.</message>
@@ -450,7 +457,7 @@
 	<!-- org.dspace.app.xmlui.eperson.RegistrationFinished.java -->
 	<message key="xmlui.EPerson.RegistrationFinished.title">Registration finished</message>
 	<message key="xmlui.EPerson.RegistrationFinished.head">Registration Finished</message>
-	<message key="xmlui.EPerson.RegistrationFinished.para1">You're now registered to use the DSpace system.  You can subscribe to collections to receive email updates about new items.</message>
+	<message key="xmlui.EPerson.RegistrationFinished.para1">You're now registered to use the res doctae system.  You can subscribe to collections to receive email updates about new items.</message>
 
 	<!-- org.dspace.app.xmlui.eperson.ResetPassword.java -->
 	<message key="xmlui.EPerson.ResetPassword.title">Reset password</message>
@@ -466,7 +473,7 @@
 	<!-- org.dspace.app.xmlui.eperson.StartForgotPassword.java -->
 	<message key="xmlui.EPerson.StartForgotPassword.title">Forgot Password</message>
 	<message key="xmlui.EPerson.StartForgotPassword.head">Forgot Password</message>
-	<message key="xmlui.EPerson.StartForgotPassword.para1">Enter the email address you provided when you registered with DSpace. An email will be sent to that address with further instructions.</message>
+	<message key="xmlui.EPerson.StartForgotPassword.para1">Enter the email address you provided when you registered with res doctae. An email will be sent to that address with further instructions.</message>
 	<message key="xmlui.EPerson.StartForgotPassword.email_address">Email Address</message>
 	<message key="xmlui.EPerson.StartForgotPassword.email_address_help">Enter the same address used when registering.</message>
 	<message key="xmlui.EPerson.StartForgotPassword.error_not_found">Email address not found.</message>
@@ -479,7 +486,7 @@
 	<message key="xmlui.EPerson.StartRegistration.reset_password_for">Reset password for</message>
 	<message key="xmlui.EPerson.StartRegistration.submit_reset">Reset password</message>
 	<message key="xmlui.EPerson.StartRegistration.head2">New user registration</message>
-	<message key="xmlui.EPerson.StartRegistration.para2">Register an account to subscribe to collections for email updates, and submit new items to DSpace.</message>
+	<message key="xmlui.EPerson.StartRegistration.para2">Register an account to subscribe to collections for email updates, and submit new items to res doctae.</message>
 	<message key="xmlui.EPerson.StartRegistration.email_address">Email Address</message>
 	<message key="xmlui.EPerson.StartRegistration.email_address_help">This address will be verified and used as your login name.</message>
 	<message key="xmlui.EPerson.StartRegistration.error_bad_email">Unable to send email to this address.</message>
@@ -508,8 +515,8 @@
 
 
 	<!-- general submission aspect messages -->
-	<message key="xmlui.Submission.general.mydspace_home">MyDSpace Home</message>
-	<message key="xmlui.Submission.general.go_mydspace">Go to MyDSpace Home</message>
+	<message key="xmlui.Submission.general.mydspace_home">Myres doctae Home</message>
+	<message key="xmlui.Submission.general.go_mydspace">Go to Myres doctae Home</message>
 	<message key="xmlui.Submission.general.submission.title">Item submission</message>
 	<message key="xmlui.Submission.general.submission.trail">Item submission</message>
 	<message key="xmlui.Submission.general.submission.head">Item submission</message>
@@ -587,7 +594,7 @@
 	<message key="xmlui.Submission.Submissions.status_unknown">Unknown state</message>
         <!-- Same transformer, completed submissions section -->
         <message key="xmlui.Submission.Submissions.completed.head">Archived Submissions</message>
-        <message key="xmlui.Submission.Submissions.completed.info">These are your completed submissions which have been accepted into DSpace.</message>
+        <message key="xmlui.Submission.Submissions.completed.info">These are your completed submissions which have been accepted into res doctae.</message>
         <message key="xmlui.Submission.Submissions.completed.column1">Date accepted</message>
         <message key="xmlui.Submission.Submissions.completed.column2">Title</message>
         <message key="xmlui.Submission.Submissions.completed.column3">Collection</message>
@@ -721,7 +728,7 @@
 
 	<!-- org.dspace.app.xmlui.Submission.submit.LicenseStep -->
 	<message key="xmlui.Submission.submit.LicenseStep.head">Distribution License</message>
-	<message key="xmlui.Submission.submit.LicenseStep.info1"><strong>There is one last step:</strong> In order for DSpace to reproduce, translate and distribute your submission worldwide, you must agree to the following terms.</message>
+	<message key="xmlui.Submission.submit.LicenseStep.info1"><strong>There is one last step:</strong> In order for res doctae to reproduce, translate and distribute your submission worldwide, you must agree to the following terms.</message>
 	<message key="xmlui.Submission.submit.LicenseStep.info2">Grant the standard distribution license by selecting 'I Grant the License'; and then click 'Complete Submission'.</message>
 	<message key="xmlui.Submission.submit.LicenseStep.info3">If you have questions regarding this license please contact the system administrators.</message>
 	<message key="xmlui.Submission.submit.LicenseStep.decision_label">Distribution license</message>
@@ -1112,7 +1119,7 @@
 	<!-- org.dspace.app.xmlui.administrative.registries.MetadatRegistryMain.java -->
 	<message key="xmlui.administrative.registries.MetadataRegistryMain.title">Metadata Registry</message>
 	<message key="xmlui.administrative.registries.MetadataRegistryMain.head1">Metadata registry</message>
-	<message key="xmlui.administrative.registries.MetadataRegistryMain.para1">The metadata registry maintains a list of all metadata fields available in the repository. These fields may be divided amongst multiple schemas.  However, DSpace requires the qualified Dublin Core schema. You may extend the Dublin Core schema with additional fields or add new schemas to the registry.</message>
+	<message key="xmlui.administrative.registries.MetadataRegistryMain.para1">The metadata registry maintains a list of all metadata fields available in the repository. These fields may be divided amongst multiple schemas.  However, res doctae requires the qualified Dublin Core schema. You may extend the Dublin Core schema with additional fields or add new schemas to the registry.</message>
 	<message key="xmlui.administrative.registries.MetadataRegistryMain.column1"></message>
 	<message key="xmlui.administrative.registries.MetadataRegistryMain.column2">ID</message>
 	<message key="xmlui.administrative.registries.MetadataRegistryMain.column3">Namespace</message>
@@ -1567,7 +1574,7 @@
 	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.trail">Harvesting</message>
 	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.options_harvest">Content Source</message>
 	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.label_source">Content source</message>
-	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.source_normal">This is a standard DSpace collection</message>
+	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.source_normal">This is a standard res doctae collection</message>
 	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.source_harvested">This collection harvests its content from an external source</message>
 	<message key="xmlui.administrative.collection.GeneralCollectionHarvestingForm.submit_save">Save</message>
 
@@ -1701,7 +1708,7 @@
 	<message key="xmlui.administrative.ControlPanel.trail">Control panel</message>
 	<message key="xmlui.administrative.ControlPanel.head">Control Panel</message>
 	<message key="xmlui.administrative.ControlPanel.option_java">Java Information</message>
-	<message key="xmlui.administrative.ControlPanel.option_dspace">DSpace Configuration</message>
+	<message key="xmlui.administrative.ControlPanel.option_dspace">res doctae Configuration</message>
 	<message key="xmlui.administrative.ControlPanel.option_alerts">System-wide Alerts</message>
 	<message key="xmlui.administrative.ControlPanel.hours">{0} h</message>
 	<message key="xmlui.administrative.ControlPanel.minutes">{0} m</message>
@@ -1726,11 +1733,11 @@
         <message key="xmlui.administrative.ControlPanel.cocoon_cache_clear">(Clear Cache Immediately)</message>
         <message key="xmlui.administrative.ControlPanel.cocoon_persistent_cache_size">Persistent Cache Size ({0})</message>
         <message key="xmlui.administrative.ControlPanel.cocoon_transient_cache_size">Transient Cache Size ({0})</message>
-	<message key="xmlui.administrative.ControlPanel.dspace_head">DSpace Settings</message>
-        <message key="xmlui.administrative.ControlPanel.dspace_version">DSpace Version</message>
-	<message key="xmlui.administrative.ControlPanel.dspace_dir">DSpace Installation Directory</message>
-	<message key="xmlui.administrative.ControlPanel.dspace_url">DSpace Base URL</message>
-	<message key="xmlui.administrative.ControlPanel.dspace_hostname">DSpace Host Name</message>
+	<message key="xmlui.administrative.ControlPanel.dspace_head">res doctae Settings</message>
+        <message key="xmlui.administrative.ControlPanel.dspace_version">res doctae Version</message>
+	<message key="xmlui.administrative.ControlPanel.dspace_dir">res doctae Installation Directory</message>
+	<message key="xmlui.administrative.ControlPanel.dspace_url">res doctae Base URL</message>
+	<message key="xmlui.administrative.ControlPanel.dspace_hostname">res doctae Host Name</message>
 	<message key="xmlui.administrative.ControlPanel.dspace_name">Name of the Site</message>
 	<message key="xmlui.administrative.ControlPanel.db_name">Database Name</message>
 	<message key="xmlui.administrative.ControlPanel.db_url">Database URL</message>
@@ -1790,7 +1797,7 @@
         <!-- System-wide Curation Tasks form (org.dspace.app.xmlui.aspect.administrative.CurateForm) -->
         <message key="xmlui.administrative.CurateForm.title">System Curation Tasks</message>
         <message key="xmlui.administrative.CurateForm.trail">Curation Tasks</message>
-        <message key="xmlui.administrative.CurateForm.object_label_name">Handle of DSpace Object</message>
+        <message key="xmlui.administrative.CurateForm.object_label_name">Handle of res doctae Object</message>
         <message key="xmlui.administrative.CurateForm.object_hint">Hint: Enter [your-handle-prefix]/0 to run a task across entire site (not all tasks may support this capability)</message>
         <message key="xmlui.administrative.CurateForm.task_label_name">Task</message>
     <!-- Used by Curate<DSO>Form classes also -->
@@ -1836,7 +1843,7 @@
 			<span id="ds-footer-logo">&#160;</span>
 		</a>
 		<p>
-			This website is using Manakin, a new front end for DSpace created by Texas A&amp;M University
+			This website is using Manakin, a new front end for res doctae created by Texas A&amp;M University
 			Libraries. The interface can be extensively modified through Manakin Aspects and XSL based Themes.
 			For more information visit
 			<a href="http://di.tamu.edu">http://di.tamu.edu</a> and
@@ -1846,7 +1853,7 @@
 	<message key="xmlui.dri2xhtml.structural.contact-link">Contact Us</message>
 	<message key="xmlui.dri2xhtml.structural.feedback-link">Send Feedback</message>
 
-	<message key="xmlui.dri2xhtml.structural.head-subtitle">DSpace/Manakin Repository</message>
+	<message key="xmlui.dri2xhtml.structural.head-subtitle">res doctae/Manakin Repository</message>
 
 	<message key="xmlui.dri2xhtml.structural.profile">Profile: </message>
 	<message key="xmlui.dri2xhtml.structural.logout">Logout</message>
@@ -1874,7 +1881,7 @@
 	<message key="xmlui.dri2xhtml.METS-1.0.no-title">Untitled</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.no-author">Unknown author</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.non-conformant">
-		This is not a DSpace object conformant to the METS 1.0 profile and as such cannot be
+		This is not a res doctae object conformant to the METS 1.0 profile and as such cannot be
         rendered effectively. You can override either the template that handles the general
         case in dri2xhtml to perform the needed function, or create your template to match
         whatever profile you use.
@@ -1885,7 +1892,7 @@
 	<message key="xmlui.dri2xhtml.METS-1.0.item-author">Author</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-abstract">Abstract</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-description">Description</message>
-	<message key="xmlui.dri2xhtml.METS-1.0.item-uri">URI</message>
+	<message key="xmlui.dri2xhtml.METS-1.0.item-uri">Citable Link (URI)</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-date">Issue date</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-publisher">Publisher</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-subject">Subject</message>
@@ -1925,8 +1932,8 @@
 	<!-- Internationalization elements specific to the Qualified Dublin Core metadata handler.
 		DS-METS-1.0-QDC.xsl -->
 	<message key="xmlui.dri2xhtml.METS-1.0.qdc-not-applicable">
-		Qualified Dublin Core (QDC) is not applicable to DSpace communities and collections at
-		this time. When using QDC, you should use the QDC crosswalk for DSpace items and either
+		Qualified Dublin Core (QDC) is not applicable to res doctae communities and collections at
+		this time. When using QDC, you should use the QDC crosswalk for res doctae items and either
 		DIM or MODS for processing of communities and collections.
 	</message>
 
@@ -2036,7 +2043,7 @@
      - JavaScript (AJAX) that completes the lookup popup window.
      - So, positional parameters are @1@, @2@, etc.
     -->
-  <message key="xmlui.ChoiceLookupTransformer.title">DSpace Value Lookup</message>
+  <message key="xmlui.ChoiceLookupTransformer.title">res doctae Value Lookup</message>
   <message key="xmlui.ChoiceLookupTransformer.accept">Accept</message>
   <message key="xmlui.ChoiceLookupTransformer.add">Add</message>
   <message key="xmlui.ChoiceLookupTransformer.cancel">Cancel</message>
@@ -3091,15 +3098,22 @@ transmission or making available to third parties of the metadata or individual 
         <message key="xmlui.Submission.submit.SelectTypeStep.publication_type_thesis">Dissertation</message>
         <message key="xmlui.Submission.submit.SelectTypeStep.publication_type_report">Report</message>
 
-        <message key="xmlui.ArtifactBrowser.Navigation.browse_lcAuthor">Autoren2</message>
-
+	<message key="xmlui.ArtifactBrowser.Navigation.browse_lcAuthor">Autoren2</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.browse_serie">Series</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.series.column_heading"> </message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.serie">Browes by series</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.metadata.serie">Browse {0} by series</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.serie">Browse {0} by series</message>
+	
 
         <message key="xmlui.item.type.anthology">Anthology</message>
         <message key="xmlui.item.type.anthologyArticle">Article</message>
         <message key="xmlui.item.type.monograph">Monograph</message>
         <message key="xmlui.item.type.conferenceObject">Proceedings</message>
         <message key="xmlui.item.type.conferencePaper">Article</message>
-        <message key="xmlui.item.type.journalArticle">Journal article</message>
+	<message key="xmlui.item.type.journalArticle">Journal article</message>
+
+	<message key="dataCollection">Data collection</message>
 
 
         <message key="eng">english</message>
@@ -3177,6 +3191,11 @@ transmission or making available to third parties of the metadata or individual 
 
 	 <message key="xmlui.dri2xhtml.METS-1.0.item-personDB">Persons database</message>
 	 <message key="xmlui.dri2xhtml.METS-1.0.item-klosterDB">Convent database</message>
+        <message key="xmlui.dri2xhtml.METS-1.0.item-files-gs-viewOpen">Read online</message>
+        <message key="xmlui.dri2xhtml.METS-1.0.item-files-gs-searchOpen">Search in this volume</message>
+        <message key="xmlui.dri2xhtml.METS-1.0.item-persDB">Person database</message>
+        <message key="xmlui.dri2xhtml.METS-1.0.item-persDB-long">Show all persons in the digital register</message>
+
 
         <message key="xmlui.dri2xhtml.METS-1.0.item-files-zip">Download all (zip Format)</message>
         <message key="xmlui.dri2xhtml.METS-1.0.item-notes">Notes</message>
@@ -3195,7 +3214,7 @@ transmission or making available to third parties of the metadata or individual 
   <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.volume">Browse {0} by volume</message>
   <message key="xmlui.ArtifactBrowser.CollectionViewer.browse_volume">Volume</message>
   <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.volume.column_heading">Volume</message>
-  <message key="xmlui.ArtifactBrowser.Navigation.browse_volume">By Volume</message>
+  <message key="xmlui.ArtifactBrowser.Navigation.browse_volume">Volume</message>
   <message key="xmlui.search.allhits">All hits</message>
   <message key="xmlui.dri2xhtml.default.textarea.value">&#160;</message>
 
@@ -3216,6 +3235,7 @@ transmission or making available to third parties of the metadata or individual 
   <message key="book">Book</message>
   <message key="bibliography">Bibliography</message>
   <message key="journalArticle">Journal Article</message>
+  <message key="dataCollection">Data collection</message>
   <message key="other">&#160;</message>
 
  <message key="xmlui.socialmedia.share">Share on:</message>
@@ -3460,7 +3480,7 @@ transmission or making available to third parties of the metadata or individual 
 
 <message key="xmlui.dri2xhtml.METS-1.0.item-edition">Edition</message>
 
-<message key="xmlui.ArtifactBrowser.AbstractRecentSubmissionTransformer.recent_submissions_more">View all</message>
+<message key="xmlui.ArtifactBrowser.AbstractRecentSubmissionTransformer.recent_submissions_more">View all ➤</message>
 <message key="xmlui.contact.link"><a href="https://adw-goe.de/en/about-us/contact/">Contact</a></message>
 <message key="xmlui.dri2xhtml.structural.impressum-link"><a href="https://adw-goe.de/en/imprint/">Impressum</a></message>
 <message key="xmlui.dri2xhtml.structural.dataprivacy-link"><a href="https://adw-goe.de/en/about-us/datenschutz">Privacy policy</a></message>
@@ -3495,5 +3515,48 @@ transmission or making available to third parties of the metadata or individual 
   <message key="xmlui.Submission.submit.PrefillStep.help">If your work already has a PPN  [Identifier of the library catlogue], please enter it in the form. The bibliographic data for the document will be automatically loaded and displayed in the next step. Otherwise simply continue with "Next".</message>
   <message key="xmlui.Submission.submit.PrefillStep.refresh_help">Please activate the "overwrite" checkbox only if you want to correct an already filled in ID.</message>
   <message key="xmlui.Submission.submit.PrefillStep.identifier.info"></message>
-  <message key="xmlui.all.publications">All Publications</message>
+  <message key="xmlui.all.publications">View all ➤</message>
+  <message key="xmlui.item.printondemand">Print on demand</message>
+  <message key="xmlui.no.files">No files available yet.</message>
+  <message key="xmlui.gs.series">Publication series</message>
+
+      <message key="xmlui.administrative.Navigation.administrative_message_catalogues">Message Catalogues</message>
+
+        <message key="xmlui.administrative.catalogue.title">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.trail">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.head">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.none.provided">Please select a message catalogue.</message>
+        <message key="xmlui.administrative.catalogue.does.not.exist">The selected catalogue does not exist.</message>
+        <message key="xmlui.administrative.catalogue.not.valid">The selected catalogue is not a valid catalogue file.</message>
+        <message key="xmlui.administrative.catalogue.message.not.loading">Message catalogue could not be loaded.</message>
+        <message key="xmlui.administrative.catalogue.message.update.success">The message was successfullly updated.</message>
+        <message key="xmlui.administrative.catalogue.message.update.failure">The message could not be updated.</message>
+        <message key="xmlui.administrative.catalogue.message.add">Add new message</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.message">Are you sure you want to delete the following key:</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.header">Delete Message</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.ok">Delete</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.cancel">Cancel</message>
+
+        <message key="xmlui.administrative.catalogue.message.description">Click the buttons next to an input field to edit or delete a message, or click “Add” to add a new message. Your changes will be made immediately. Please wait for the page to finish processing before starting another change.</message>
+        <message key="xmlui.administrative.catalogue.message.loading">Loading, please wait...</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.key">Key:</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.key.missing">Please provide a message key.</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.value">Text:</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.header">Add Message</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.ok">Add</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.cancel">Cancel</message>
+        <message key="xmlui.administrative.catalogue.message.server.error.add">A server error occurred and the message could not be added. Please contact a system administrator and try again later.</message>
+        <message key="xmlui.administrative.catalogue.message.server.error.delete">A server error occurred and the message could not be deleted. Please contact a system administrator and try again later.</message>
+        <message key="xmlui.administrative.catalogue.message.server.success.add">Message was successfully added.</message>
+        <message key="xmlui.administrative.catalogue.message.server.success.delete">Message was successfully deleted.</message>
+
+
+        <message key="xmlui.administrative.select.catalogue.title">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.trail">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.head">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.list.prefix">Catalogue: </message>
+  <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.gssort.column_heading">Browse</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.gssort">Browse</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.metadata.gssort">{0}</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.gssort">Browse {0}</message>
 </catalogue>

@@ -50,8 +50,20 @@
     <xsl:variable name="gsDBSearchParams">?query[3][field]=fundstelle.bandnummer&amp;query[3][operator]=like&amp;query[3][value]=</xsl:variable>
     <xsl:variable name="gsConventDBURL">http://klosterdatenbank.germania-sacra.de/gsn/</xsl:variable>
 
+
+    <xsl:variable name="fullitem">
+        <xsl:choose>
+                <xsl:when test="(/dri:document/dri:meta/dri:pageMeta/dri:metadata[@qualifier='queryString'] and /dri:document/dri:meta/dri:pageMeta/dri:metadata[@qualifier='queryString']='show=full')">
+                        <xsl:text>yes</xsl:text>
+                </xsl:when>
+                <xsl:otherwise>
+                         <xsl:text>no</xsl:text>
+                </xsl:otherwise>
+        </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="handle"><xsl:value-of select="/mets:METS/@OBJID" /></xsl:variable>
     <xsl:template name="itemSummaryView-DIM">
-        <!-- Generate the info about the item from the metadata section -->
+    <!-- Generate the info about the item from the metadata section -->
         <xsl:apply-templates select="./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim"
                              mode="itemSummaryView-DIM"/>
 
@@ -74,15 +86,13 @@
 
     <!-- An item rendered in the detailView pattern, the "full item record" view of a DSpace item in Manakin. -->
     <xsl:template name="itemDetailView-DIM">
-
         <!-- Output all of the metadata about the item from the metadata section -->
         <xsl:apply-templates select="mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim"
                              mode="itemDetailView-DIM"/>
 
         <!-- Generate the bitstream information from the file section -->
         <xsl:choose>
-		<xsl:when test="./mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file">
-			HIER
+            <xsl:when test="./mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file">
                 <h3><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-head</i18n:text></h3>
                 <div class="file-list">
                     <xsl:apply-templates select="./mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE' or @USE='CC-LICENSE']">
@@ -90,19 +100,12 @@
                         <xsl:with-param name="primaryBitstream" select="./mets:structMap[@TYPE='LOGICAL']/mets:div[@TYPE='DSpace Item']/mets:fptr/@FILEID"/>
                     </xsl:apply-templates>
                 </div>
-	</xsl:when>
-	<xsl:when test="./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='embargoed']">
-		<div class="embargo-info">
-                        <p><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed1</i18n:text><xsl:value-of select="translate(/mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='embargoed'], '-', '.')"/><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed2</i18n:text></p>
-                    </div>
-
-        </xsl:when>
-
+            </xsl:when>
             <!-- Special case for handling ORE resource maps stored as DSpace bitstreams -->
             <xsl:when test="./mets:fileSec/mets:fileGrp[@USE='ORE']">
                 <xsl:apply-templates select="./mets:fileSec/mets:fileGrp[@USE='ORE']" mode="itemDetailView-DIM" />
             </xsl:when>
-	    <xsl:otherwise>
+            <xsl:otherwise>
                 <h2><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-head</i18n:text></h2>
                 <table class="ds-table file-list">
                     <tr class="ds-table-header-row">
@@ -133,19 +136,89 @@
             </div>
 
         </div>
-        <div class="row files">
-            <div class="col-xs-12 col-sm-3 col-md-3 col-lg-3">
-                <xsl:call-template name="itemSummaryView-DIM-thumbnail"/>
-            </div>
-            <div class="col-xs-12 col-sm-9 col-md-9 col-lg-9">
-                <xsl:call-template name="itemSummaryView-DIM-file-section"/>
-	    </div>
-        </div>
-	<xsl:if test="//dim:field[@element='notes' and not(@qualifier)]">
-	    	<div class="alert alert-info" role="alert">
-			<xsl:value-of select="//dim:field[@element='notes' and not(@qualifier)]" />
+	  <div class="files">
+		<xsl:for-each select="//mets:fileSec/mets:fileGrp[@USE='CONTENT']/mets:file">
+		  <div class="row">
+	    		<div class="col-xs-12 col-sm-3 col-md-3 col-lg-3">
+				<xsl:call-template name="itemSummaryView-DIM-thumbnail">
+					<xsl:with-param name="grp" select="./@GROUPID"/>
+			  </xsl:call-template> 
+			</div>
+	               <div class="col-xs-12 col-sm-9 col-md-9 col-lg-9">
+			       <xsl:call-template name="itemSummaryView-DIM-file-section">
+				       <xsl:with-param name="grp" select="./@GROUPID"/>
+                          </xsl:call-template>
+	   	       </div>
+		  </div>
+	  </xsl:for-each>
+	  <xsl:if test="count(//mets:fileSec/mets:fileGrp[@USE='CONTENT']/mets:file) = 0">
+		  <div class="row"> 
+			  <div class="col-xs-12 col-sm-3 col-md-3 col-lg-3">
+			<img src="/themes/GermaniaSacra/images/no-document.png" alt="Thumbnail" class="hidden-xs hidden-sm img-thumbnail" />
+			</div>
+			<div class="col-xs-12 col-sm-9 col-md-9 col-lg-9">
+				<p><i18n:text>xmlui.no.files</i18n:text></p>
+		    <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gs']">
+			    <!--    <xsl:text> | </xsl:text>
+                        <a>
+                        <xsl:attribute name="href">
+                            <xsl:value-of select="concat($gsDBURL, 'books/view/', .)"/>
+                        </xsl:attribute>
+                        <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
+                        <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-gs-viewOpen</i18n:text>
+                        </a>
+
+			<xsl:text> | </xsl:text> -->
+                        <a>
+                        <xsl:attribute name="href">
+                            <xsl:value-of select="concat($gsDBURL, 'books/search/book:', .)"/>
+                        </xsl:attribute>
+                        <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
+                        <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-gs-searchOpen</i18n:text>
+		</a>
+		<br />
+                </xsl:for-each>
+			<!-- special GS row: link to GS search -->
+                                <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gsReg' and descendant::text()]">
+					<a href="{concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate(., ' ', '+'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text>             </a>
+                </xsl:for-each>
+
+          <xsl:if test="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='relation' and @qualifier='convent'] and descendant::text()">
+
+		  <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='relation' and @qualifier='convent']">
+			  <br />
+                         <a href="{concat($gsConventDBURL, substring-after(., ':'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-klosterDB</i18n:text><xsl:text>: </xsl:text><xsl:value-of select="substring-before(., ':')"/></a>
+                     <xsl:if test="position() != last()">
+                         <xsl:text>; </xsl:text>
+                     </xsl:if>
+                 </xsl:for-each>
+	 </xsl:if>
+	 <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='notes' and @qualifier='pod']">
+		 <br />
+                        <a>
+                                <xsl:attribute name="href">
+                                    <xsl:value-of select="."/>
+                            </xsl:attribute>
+                            <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
+                            <i18n:text>xmlui.item.printondemand</i18n:text>
+                        </a>
+                    </xsl:for-each>
+
+			</div>
 		</div>
-	</xsl:if>
+	  </xsl:if>
+	  <!--  <xsl:if test="count(//mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL']/mets:file) &gt; 1 and not(//mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='date' and @qualifier='embargoed'])">
+		  <xsl:variable name="handle"><xsl:value-of select="substring-after(//mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='identifier'][@qualifier='uri'], 'http://hdl.handle.net')" /></xsl:variable>
+                <a href="{concat($context-path, '/download', $handle, '.zip')}" ><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-zip</i18n:text></a>
+	</xsl:if> -->
+	</div>
+	<div class="row">
+	   <div class="col-xs-12">
+		<xsl:for-each select="//dim:field[@element='notes' and not(@qualifier)]">
+        	        <xsl:value-of select="."/>
+		</xsl:for-each>
+	   </div>
+	</div>
         <div class="row">
             <div class="col-xs-12">
                 <xsl:call-template name="parts"/>
@@ -154,24 +227,19 @@
                         <p><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed1</i18n:text><xsl:value-of select="translate(./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='embargoed'], '-', '.')"/><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed2</i18n:text></p>
                     </div>
                 </xsl:if>
-		<xsl:if test="//dim:field[@element='description' and @qualifier='abstract']">
-		    <div class="simple-item-view-description item-page-field-wrapper table">
-	                <span  class="bold">
-			    <i18n:text>xmlui.dri2xhtml.METS-1.0.item-abstract</i18n:text>:
-                	</span>
-	                <div>
-				<xsl:for-each select="//dim:field[@element='description' and @qualifier='abstract']">
-                	        <xsl:value-of select="." disable-output-escaping="yes"/>
-                        	<xsl:if test="count(following-sibling::dim:field[@element='description' and @qualifier='abstract']) != 0">
-	                            <div class="spacer">&#160;</div>
-        	                </xsl:if>
-                	    </xsl:for-each>
-			    <xsl:if test="count(//dim:field[@element='description' and @qualifier='abstract']) &gt; 1">
-        	                <div class="spacer">&#160;</div>
-                	    </xsl:if>
-	                </div>
-        	    </div>
-                </xsl:if>
+
+                <xsl:if test="./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='abstract']">
+                    <div class="item-summary-view-metadata">
+
+                        <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-abstract</i18n:text>: </span>
+                        <br />
+                        <span>
+                            <xsl:value-of select="./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='abstract']" disable-output-escaping="yes"/>
+
+                        </span>
+                    </div>
+		    </xsl:if> 
+
                 <hr />
                 <div id="socialmedia">
                     <i18n:text>xmlui.socialmedia.share</i18n:text>
@@ -194,15 +262,14 @@
                         </a></li>
                     </ul>
                 </div>
-                <hr />
+		<hr />
                 <xsl:call-template name="itemSummaryView-collections"/>
             </div>
         </div>
-
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-title">
-        <xsl:choose>
+	            <xsl:choose>
             <xsl:when test="dim:field[@element='description'][@qualifier='view']">
 
                 <h1 class="first-page-header">
@@ -210,16 +277,16 @@
                 </h1>
             </xsl:when>
 
-            <xsl:when test="count(dim:field[@element='title'][not(@qualifier)]) &gt; 1">
+            <xsl:when test="count(dim:field[@element='title'][not(@qualifier)]) &gt; 0">
                 <!-- Prepend volume in title -->
                 <h1 class="first-page-header">
-                    <xsl:if test="dim:field[@qualifier='ispartofseries'] and contains(dim:field[@qualifier='ispartofseries'], ';')">
+			<!-- <xsl:if test="dim:field[@qualifier='ispartofseries'] and contains(dim:field[@qualifier='ispartofseries'], ';')">
                         <xsl:value-of select="substring-after(dim:field[@qualifier='ispartofseries'], ';')"/><xsl:text>: </xsl:text>
-                    </xsl:if>
+		    </xsl:if> -->
 
                     <xsl:value-of select="dim:field[@element='title'][not(@qualifier)][1]/node()"/>
                 </h1>
-                <div class="simple-item-view-other">
+		<!-- <div class="simple-item-view-other">
                     <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-title</i18n:text>: </span>
                     <span>
                         <xsl:for-each select="dim:field[@element='title'][not(@qualifier)]">
@@ -230,7 +297,7 @@
                             </xsl:if>
                         </xsl:for-each>
                     </span>
-                </div>
+		</div> -->
             </xsl:when>
         </xsl:choose>
         <xsl:if test="dim:field[@element='title'][@qualifier='alternative']">
@@ -239,22 +306,16 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-thumbnail">
-        <div class="thumbnail">
-            <xsl:choose>
-                <xsl:when test="//mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']">
+	<xsl:param name="grp"/> 
+	<!-- <xsl:value-of select="$pos"/> -->
+	<div class="thumbnail">
+	   <xsl:choose>
+                <xsl:when test="//mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']/mets:file[@GROUPID=$grp]">
                     <xsl:variable name="src">
-                        <xsl:choose>
-                            <xsl:when test="/mets:METS/mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']/mets:file[@GROUPID=../../mets:fileGrp[@USE='CONTENT']/mets:file[@GROUPID=../../mets:fileGrp[@USE='THUMBNAIL']/mets:file/@GROUPID][1]/@GROUPID]">
+
                                 <xsl:value-of
-                                        select="/mets:METS/mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']/mets:file[@GROUPID=../../mets:fileGrp[@USE='CONTENT']/mets:file[@GROUPID=../../mets:fileGrp[@USE='THUMBNAIL']/mets:file/@GROUPID][1]/@GROUPID]/mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:value-of
-                                        select="//mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']/mets:file/mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </xsl:variable>
-                    <!-- Checking if Thumbnail is restricted and if so, show a restricted image -->
+					select="/mets:METS/mets:fileSec/mets:fileGrp[@USE='THUMBNAIL']/mets:file[@GROUPID=$grp]/mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
+		    </xsl:variable>
                     <xsl:choose>
                         <xsl:when test="contains($src,'isAllowed=n')"/>
                         <xsl:otherwise>
@@ -265,35 +326,41 @@
                             </img>
                         </xsl:otherwise>
                     </xsl:choose>
-                </xsl:when>
+	    </xsl:when>
+	    <xsl:when test="//dim:field[@element='type' and not(@qualifier)] = 'dataCollection'"> 
+		    <img class="img-thumbnail data" alt="Thumbnail" title="Data collection" src="/static/images/dataCollection.gif"></img>
+		</xsl:when>
                 <xsl:otherwise>
-		<img class="img-thumbnail" alt="Thumbnail" src="/themes/GermaniaSacra/images/no-document.png">
-			    <!-- <xsl:attribute name="data-src">
+                    <img class="img-thumbnail no-thumbnail" alt="Thumbnail">
+                        <xsl:attribute name="data-src">
                             <xsl:text>holder.js/100%x</xsl:text>
                             <xsl:value-of select="$thumbnail.maxheight"/>
                             <xsl:text>/text:No Thumbnail</xsl:text>
-			</xsl:attribute> -->
+                        </xsl:attribute>
                     </img>
                 </xsl:otherwise>
-            </xsl:choose>
+	</xsl:choose>
         </div>
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-fields">
-        <xsl:call-template name="itemSummaryView-DIM-authors"/>
-        <xsl:call-template name="itemSummaryView-DIM-edition"/>
-        <xsl:call-template name="itemSummaryView-DIM-date"/>
+	<xsl:call-template name="itemSummaryView-DIM-authors"/>
+	<!-- <xsl:call-template name="itemSummaryView-DIM-ispartof"/> -->
+	<xsl:call-template name="itemSummaryView-DIM-date"/>
+	<xsl:call-template name="itemSummaryView-DIM-edition"/>
+	<xsl:call-template name="itemSummaryView-DIM-journalarticle"/>
         <xsl:call-template name="itemSummaryView-DIM-publisher"/>
-        <xsl:call-template name="itemSummaryView-DIM-extent"/>
+	<xsl:call-template name="itemSummaryView-DIM-extent"/>
+	<xsl:call-template name="itemSummaryView-DIM-doi"/>
         <xsl:call-template name="itemSummaryView-DIM-isbn"/>
         <xsl:call-template name="itemSummaryView-DIM-toc"/>
-        <xsl:call-template name="itemSummaryView-DIM-series"/>
+	<xsl:call-template name="itemSummaryView-DIM-series"/> 
+	<xsl:call-template name="itemSummaryView-DIM-pages"/>
+	<xsl:call-template name="itemSummaryView-DIM-printedition"/>
 
-        <xsl:call-template name="itemSummaryView-DIM-gs-reg"/>
-        <xsl:call-template name="itemSummaryView-DIM-convent"/>
-	<!-- <xsl:call-template name="itemSummaryView-DIM-abstract"/> -->
+	<xsl:call-template name="itemSummaryView-DIM-abstract"/> 
 	<xsl:call-template name="itemSummaryView-DIM-URI"/>
-	<xsl:call-template name="itemSummaryView-DIM-biblio-export"/>
+	<xsl:call-template name="itemSummaryView-DIM-biblio-export"/> 
 	<xsl:call-template name="itemSummaryView-show-full"/>
 
 
@@ -350,7 +417,8 @@
                         <xsl:otherwise>
                             <i18n:text>xmlui.dri2xhtml.METS-1.0.no-author</i18n:text>
                         </xsl:otherwise>
-                    </xsl:choose>
+			</xsl:choose>
+			<xsl:call-template name="itemSummaryView-DIM-ispartof"/>
                 </div>
             </xsl:if>
         </xsl:if>
@@ -377,11 +445,11 @@
 
     <!-- dc.edition row -->
     <xsl:template name="itemSummaryView-DIM-edition">
-        <xsl:if test="dim:field[@element='edition' and descendant::text()]">
+        <xsl:if test="dim:field[@element='description' and @qualifier='edition']">
             <div class="simple-item-view-other">
                 <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-edition</i18n:text>: </span>
                 <span>
-                    <xsl:for-each select="dim:field[@element='edition']">
+                    <xsl:for-each select="dim:field[@qualifier='edition']">
                         <xsl:value-of select="."/>
                     </xsl:for-each>
                 </span>
@@ -390,27 +458,27 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-series">
-        <xsl:if test="dim:field[@element='relation' and @qualifier='ispartofseries' and descendant::text()]">
-            <xsl:if test="contains(dim:field[@element='relation' and @qualifier='ispartofseries'], 'NF')">
-                <div class="simple-item-view-other">
-                    <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB</i18n:text>: </span>
-                    <xsl:variable name="volume"><xsl:value-of select="normalize-space(substring-after(dim:field[@element='relation'][@qualifier='ispartofseries'], ';'))"/></xsl:variable>
-                    <xsl:choose>
-                        <xsl:when test="starts-with($volume, 'NF')">
-                            <xsl:choose>
-                                <xsl:when test="contains($volume, ',')">
+	    <xsl:if test="dim:field[@element='relation' and @qualifier='ispartofseries' and descendant::text()]">    
+		    <div class="simple-item-view-other">
+                        <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-series</i18n:text>: </span>
+        <xsl:for-each select="dim:field[@element='relation' and @qualifier='ispartofseries' and descendant::text()]">
+		<xsl:value-of select="."/>
+		<xsl:if test="position() != last()">
+			<xsl:text>, </xsl:text>
+		</xsl:if>
+	</xsl:for-each>
+		</div>
+    </xsl:if>
+    </xsl:template>
 
-                                    <a href="{concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate(substring-before($volume, ','), ' ', '+'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text></a>
-                                </xsl:when>
-                                <xsl:otherwise>
-                                    <a href="{concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate($volume, ' ', '+'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text>		</a>
-                                </xsl:otherwise>
-                            </xsl:choose>
-                        </xsl:when>
-                    </xsl:choose>
+    <xsl:template name="itemSummaryView-DIM-pages">
+	    <xsl:if test="//dim:field[@element='bibliographicCitation' and @qualifier='firstpage' and descendant::text()]">
+                    <div class="simple-item-view-other">
+                        <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-pages</i18n:text>: </span>
+			<xsl:value-of select="concat(//dim:field[@element='bibliographicCitation' and @qualifier='firstpage'], '-', //dim:field[@element='bibliographicCitation' and @qualifier='lastpage'])"/>
+
                 </div>
-            </xsl:if>
-        </xsl:if>
+    </xsl:if>
     </xsl:template>
 
     <!-- special GS row: link to GS search -->
@@ -418,7 +486,8 @@
         <xsl:if test="dim:field[@element='identifier' and @qualifier='gsReg' and descendant::text()]">
             <div class="simple-item-view-other">
 		    <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB</i18n:text>: </span>
-                <a href="{concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate(dim:field[@element='identifier' and @qualifier='gsReg'], ' ', '+'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text>             </a>
+		    <xsl:variable name="preg"><xsl:value-of select="concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate(dim:field[@element='identifier' and @qualifier='gsReg'], ' ', '+'))" /></xsl:variable>
+		<a href="$preg" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text>             </a>
             </div>
         </xsl:if>
     </xsl:template>
@@ -439,21 +508,23 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-biblio-export">
-        <div class="biblio-export hidden-xs hidden-sm visible-md visible-lg">
+	<!-- Don't show bibtex-Export for dataCollection -->
+        <xsl:if test="not(contains(//dim:field[@element='type' and not(@qualifier)], 'dataCollection'))">
+	    <div class="biblio-export">
             <a>
-                <xsl:attribute name="href">
-                    <xsl:value-of select="concat('/bibtex/handle/', substring-after(//dim:field[@element='identifier' and @qualifier='uri'],'hdl.handle.net/'))"/>
-                </xsl:attribute>
-                <i18n:text>xmlui.bibtex.export</i18n:text>
+		    <xsl:attribute name="href">
+			    <xsl:value-of select="concat('/bibtex/', /mets:METS/@OBJID)"/>
+                    </xsl:attribute>
+		<i18n:text>xmlui.bibtex.export</i18n:text>
             </a>
-        </div>
+	</div>
+     </xsl:if>
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-ispartof">
         <xsl:if test="dim:field[@element='relation' and @qualifier='ispartof' and descendant::text()]">
-            <div class="simple-item-view-other">
-                <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-ispartof</i18n:text>: </span>
-                <span>
+            <div class="ispartof">
+		    <!-- <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-ispartof</i18n:text>:</span> -->
                     <xsl:for-each select="dim:field[@element='relation' and @qualifier='ispartof']">
                         <xsl:choose>
                             <xsl:when test="starts-with(., 'http')">
@@ -469,9 +540,16 @@
                                 <xsl:value-of select="./node()"/>
                             </xsl:otherwise>
                         </xsl:choose>
-                        <br />
-                    </xsl:for-each>
-                </span>
+		    </xsl:for-each>
+		    <xsl:if test="//dim:field[@element='bibliographicCitation' and @qualifier='volume']">
+			    <xsl:value-of select="concat(', ', //dim:field[@element='bibliographicCitation' and @qualifier='volume'])"/>
+		    </xsl:if>
+		    <xsl:if test="//dim:field[@element='bibliographicCitation' and @qualifier='firstpage']">
+			    <xsl:value-of select="concat(', p. ', //dim:field[@element='bibliographicCitation' and @qualifier='firstpage'])"/>
+			    <xsl:if test="//dim:field[@element='bibliographicCitation' and @qualifier='lastpage']">
+				    <xsl:value-of select="concat('-', //dim:field[@element='bibliographicCitation' and @qualifier='lastpage'])"/>
+			    </xsl:if>
+                    </xsl:if>
             </div>
         </xsl:if>
     </xsl:template>
@@ -497,6 +575,7 @@
                     </xsl:otherwise>
                 </xsl:choose>
             </div>
+	   
         </xsl:if>
     </xsl:template>
 
@@ -515,6 +594,43 @@
         </xsl:if>
     </xsl:template>
 
+
+    <xsl:template name="itemSummaryView-DIM-journalarticle">
+        <xsl:if test="dim:field[@element='bibliographicCitation' and @qualifier='journal']">
+		<div class="simple-item-view-other">
+			<i18n:text><xsl:value-of select="//dim:field[@element='type']" /></i18n:text>
+			<xsl:text>; </xsl:text>
+                        <xsl:for-each select="//dim:field[@element='language' and @qualifier='iso'] ">
+                           <xsl:if test=". != 'other'">
+                                <xsl:text> </xsl:text><i18n:text><xsl:value-of select="." /></i18n:text>
+                                <xsl:if test="(position() != last())">
+                                        <xsl:text>,</xsl:text>
+                                </xsl:if>
+                           </xsl:if>
+                        </xsl:for-each>
+		</div>
+                <div class="simple-item-view-other">
+                <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-first-published</i18n:text>: </span>
+                <span>
+			<xsl:value-of select="dim:field[@element='bibliographicCitation' and @qualifier='journal']"/>
+		    <xsl:value-of select="concat(' (', //dim:field[@element='date' and @qualifier='issued'],') ')"/>
+                    <xsl:if test="//dim:field[@element='bibliographicCitation'][@qualifier='volume']">
+                        <xsl:value-of select="//dim:field[@element='bibliographicCitation'][@qualifier='volume']"/>
+		    </xsl:if>
+		    <xsl:if test="//dim:field[@element='bibliographicCitation'][@qualifier='issue']">
+                        <xsl:text>, </xsl:text><xsl:value-of select="//dim:field[@element='bibliographicCitation'][@qualifier='issue']"/>
+		    </xsl:if>
+		    <xsl:if test="//dim:field[@element='bibliographicCitation'][@qualifier='firstpage']">
+			    <xsl:value-of select="concat(', p. ', //dim:field[@element='bibliographicCitation'][@qualifier='firstpage'])"/>
+			    <xsl:if test="//dim:field[@element='bibliographicCitation'][@qualifier='lastpage']">
+				    <xsl:value-of select="concat('-', //dim:field[@element='bibliographicCitation'][@qualifier='lastpage'])"/>
+		            </xsl:if>
+		    </xsl:if>
+                </span>
+            </div>
+        </xsl:if>
+    </xsl:template>
+
     <xsl:template name="itemSummaryView-DIM-extent">
         <xsl:if test="dim:field[@qualifier='extent' and descendant::text()]">
             <div class="simple-item-view-other">
@@ -528,6 +644,7 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-language">
+     <xsl:if test="dim:field[@qualifier='language' and @qualifier='iso']">
         <div class="simple-item-view-other">
             <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-language</i18n:text>: </span>
             <span>
@@ -536,7 +653,8 @@
                     <xsl:if test="position() != last()"><xsl:text>, </xsl:text></xsl:if>
                 </xsl:for-each>
             </span>
-        </div>
+       </div>
+    </xsl:if>
     </xsl:template>
 
 
@@ -559,7 +677,35 @@
                 </span>
             </div>
         </xsl:if>
-    </xsl:template>
+   </xsl:template>
+
+    <xsl:template name="itemSummaryView-DIM-printedition">
+        <xsl:for-each select="dim:field[@qualifier='relation' or @qualifier='print']">
+	<div class="simple-item-view-other">
+		<a>
+		    <xsl:attribute name="href">
+			    <xsl:value-of select="."/>
+		    </xsl:attribute>
+		    <i18n:text>xmlui.dri2xhtml.METS-1.0.item-print-edition</i18n:text>
+                </a>
+            </div>
+        </xsl:for-each>
+   </xsl:template>
+
+    <xsl:template name="itemSummaryView-DIM-doi">
+        <xsl:for-each select="dim:field[@qualifier='identifier' or @qualifier='doi']">
+		<div class="simple-item-view-other">
+		<span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-doi</i18n:text>: </span>
+                <a>
+                    <xsl:attribute name="href">
+			    <xsl:value-of select="concat('https://doi.org/', .)"/>
+		    </xsl:attribute>
+		    <xsl:value-of select="concat('https://doi.org/', .)"/>
+                </a>
+            </div>
+        </xsl:for-each>
+   </xsl:template>
+
 
     <xsl:template name="itemSummaryView-DIM-notes">
         <xsl:if test="dim:field[@qualifier='notes' and @qualifier != 'intern' and descendant::text()]">
@@ -583,9 +729,16 @@
 
                 <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-uri</i18n:text>: </span>
                 <span>
-                    <a>
-                        <xsl:attribute name="href">
-                            <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
+			<a>
+			<xsl:attribute name="href">
+			<xsl:choose>
+                                    <xsl:when test="starts-with(dim:field[@element='identifier' and @qualifier='doi'], '10.26015')">
+                                            <xsl:value-of select="concat('https://doi.org/', dim:field[@element='identifier' and @qualifier='doi'])"/>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                            <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
+                                    </xsl:otherwise>
+                            </xsl:choose>
                         </xsl:attribute>
                         <xsl:value-of select="dim:field[@element='identifier' and @qualifier='uri']"/>
                     </a>
@@ -595,29 +748,36 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-date">
-        <xsl:if test="not(//dim:field[@element='description'][@qualifier='view'])">
-            <xsl:if test="dim:field[@element='date' and @qualifier='issued' and descendant::text()]">
-                <div class="simple-item-view-other">
-                    <i18n:text><xsl:value-of select="//dim:field[@element='type']" /></i18n:text>
-                </div>
+	    <xsl:if test="dim:field[@element='date' and @qualifier='issued'] and not(//dim:field[@element='bibliographicCitation' and @qualifier='journal'])">
+		    <!-- <div class="simple-item-view-other">
+			<i18n:text><xsl:value-of select="//dim:field[@element='type']" /></i18n:text>
+			<xsl:text>; </xsl:text>
+			<xsl:for-each select="//dim:field[@element='language' and @qualifier='iso'] ">
+			   <xsl:if test=". != 'other'">
+				<xsl:text> </xsl:text><i18n:text><xsl:value-of select="." /></i18n:text>
+				<xsl:if test="(position() != last())">
+					<xsl:text>,</xsl:text>
+				</xsl:if>
+			   </xsl:if>
+			</xsl:for-each>
+		</div> -->
                 <div class="simple-item-view-other">
                     <span class="bold"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-date</i18n:text>: </span>
                     <xsl:value-of select="dim:field[@element='date' and @qualifier='issued' and descendant::text()]"/>
                 </div>
             </xsl:if>
-        </xsl:if>
     </xsl:template>
 
     <xsl:template name="itemSummaryView-show-full">
-	    <!-- <div class="simple-item-view-show-full item-page-field-wrapper table"> -->
-		<!-- <h5>
+        <div class="hidden-xs hidden-sm simple-item-view-show-full item-page-field-wrapper table">
+		<!--<h5>
                 <i18n:text>xmlui.mirage2.itemSummaryView.MetaData</i18n:text>
 	    </h5> -->
-            <a id="full-data">
+            <a>
                 <xsl:attribute name="href"><xsl:value-of select="$ds_item_view_toggle_url"/></xsl:attribute>
-                <i18n:text>xmlui.ArtifactBrowser.ItemViewer.show_full</i18n:text>
-            </a>
-	    <!-- </div> -->
+		<i18n:text>xmlui.ArtifactBrowser.ItemViewer.show_full</i18n:text> 
+	    </a>
+        </div>
     </xsl:template>
 
     <xsl:template name="itemSummaryView-collections">
@@ -632,13 +792,10 @@
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-file-section">
+	    <xsl:param name="grp" />
+	    <div class="item-page-field-wrapper table word-break">
         <xsl:choose>
-            <xsl:when test="//mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file">
-                <div class="item-page-field-wrapper table word-break">
-			<!-- <h5>
-                        <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-viewOpen</i18n:text>
-		    </h5> -->
-
+		<xsl:when test="//mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file[@GROUPID=$grp]">
                     <xsl:variable name="label-1">
                         <xsl:choose>
                             <xsl:when test="confman:getProperty('mirage2.item-view.bitstream.href.label.1')">
@@ -661,45 +818,84 @@
                         </xsl:choose>
                     </xsl:variable>
 
-                    <xsl:for-each select="//mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file">
+		    <!--                    <xsl:for-each select="//mets:fileSec/mets:fileGrp[@USE='CONTENT' or @USE='ORIGINAL' or @USE='LICENSE']/mets:file"> -->
                         <xsl:call-template name="itemSummaryView-DIM-file-section-entry">
                             <xsl:with-param name="href" select="mets:FLocat[@LOCTYPE='URL']/@xlink:href" />
                             <xsl:with-param name="mimetype" select="@MIMETYPE" />
                             <xsl:with-param name="label-1" select="$label-1" />
                             <xsl:with-param name="label-2" select="$label-2" />
-                            <xsl:with-param name="title" select="mets:FLocat[@LOCTYPE='URL']/@xlink:title" />
+			    <!-- <xsl:with-param name="title" select="mets:FLocat[@LOCTYPE='URL']/@xlink:title" /> -->
+			    <xsl:with-param name="title"><xsl:text>Dokument</xsl:text></xsl:with-param>
                             <xsl:with-param name="label" select="mets:FLocat[@LOCTYPE='URL']/@xlink:label" />
-                            <xsl:with-param name="size" select="@SIZE" />
+			    <xsl:with-param name="size" select="@SIZE" />
+			    <xsl:with-param name="checksum" select="@CHECKSUM" />
                         </xsl:call-template>
+			<!-- </xsl:for-each> -->
+		<!-- <xsl:if test="contains(mets:FLocat[@LOCTYPE='URL']/@xlink:href, 'Allowed=y') or //dri:userMeta/@authenticated='yes'">	 -->
+			<!-- <a> 
+			<xsl:attribute name="href">
+				<xsl:value-of select="mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
+				</xsl:attribute>
+				Download
+		</a> -->
+		<xsl:if test="position() = 1">
+			<xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='notes' and @qualifier='pod']">
+			<br />
+			<a>
+                                <xsl:attribute name="href">
+                                    <xsl:value-of select="."/>
+                            </xsl:attribute>
+                            <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
+                            <i18n:text>xmlui.item.printondemand</i18n:text>
+                        </a>
                     </xsl:for-each>
-                    <br />
-                    <a>
+                                        <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gs']">
+		        <br /> 
+			<a>
                         <xsl:attribute name="href">
-                            <xsl:value-of select="concat($gsDBURL, 'books/view/', /mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gs'])"/>
+                            <xsl:value-of select="concat($gsDBURL, 'books/view/', .)"/>
                         </xsl:attribute>
                         <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
                         <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-gs-viewOpen</i18n:text>
-                    </a>
-                    <br />
-                    <a>
+                        </a>
+			<br />
+                        <a>
                         <xsl:attribute name="href">
-                            <xsl:value-of select="concat($gsDBURL, 'books/search/book:', /mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gs'])"/>
+                            <xsl:value-of select="concat($gsDBURL, 'books/search/book:', .)"/>
                         </xsl:attribute>
                         <xsl:attribute name="target"><xsl:text>_blank</xsl:text></xsl:attribute>
                         <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-gs-searchOpen</i18n:text>
-                    </a>
-                </div>
+                        </a>
+                </xsl:for-each>
+				<!-- special GS row: link to GS search -->
+				<xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='identifier' and @qualifier='gsReg' and descendant::text()]">
+					<br />
+                                <a href="{concat($gsDBURL, $gsDBSearch, $gsDBSearchParams, translate(., ' ', '+'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-persDB-long</i18n:text>             </a>
+                </xsl:for-each>
+
+          <xsl:if test="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='relation' and @qualifier='convent'] and descendant::text()">
+
+		  <xsl:for-each select="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='relation' and @qualifier='convent']">
+	   <br />
+                         <a href="{concat($gsConventDBURL, substring-after(., ':'))}" target="_blank"><i18n:text>xmlui.dri2xhtml.METS-1.0.item-klosterDB</i18n:text><xsl:text>: </xsl:text><xsl:value-of select="substring-before(., ':')"/></a>
+                     <xsl:if test="position() != last()">
+                         <xsl:text>; </xsl:text>
+                     </xsl:if>
+                 </xsl:for-each>
+         </xsl:if>
+
+ 	</xsl:if>
+	<!-- </xsl:if> -->
 	</xsl:when>
-	<xsl:when test="/mets:METS/mets:dmdSec/mets:mdWrap/mets:xmlData/dim:dim/dim:field[@element='date' and @qualifier='embargoed']">
-		 <div class="embargo-info">
-			 <p><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed1</i18n:text><xsl:value-of select="translate(/mets:METS/mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='embargoed'], '-', '.')"/><i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-embargoed2</i18n:text></p>
-                    </div>
+	<xsl:when test="./mets:dmdSec/mets:mdWrap[@OTHERMDTYPE='DIM']/mets:xmlData/dim:dim/dim:field[@element='description' and @qualifier='embargoed']">
+		<xsl:text>EMBARGOED</xsl:text>
 	</xsl:when>
             <!-- Special case for handling ORE resource maps stored as DSpace bitstreams -->
             <xsl:when test="//mets:fileSec/mets:fileGrp[@USE='ORE']">
                 <xsl:apply-templates select="//mets:fileSec/mets:fileGrp[@USE='ORE']" mode="itemSummaryView-DIM" />
-            </xsl:when>
+	</xsl:when>
     </xsl:choose>
+    </div>
     </xsl:template>
 
     <xsl:template name="itemSummaryView-DIM-file-section-entry">
@@ -709,12 +905,9 @@
         <xsl:param name="label-2" />
         <xsl:param name="title" />
         <xsl:param name="label" />
-        <xsl:param name="size" />
+	<xsl:param name="size" />
+	<xsl:param name="checksum" />
         <div>
-            <a>
-                <xsl:attribute name="href">
-                    <xsl:value-of select="$href"/>
-                </xsl:attribute>
                 <xsl:call-template name="getFileIcon">
                     <xsl:with-param name="mimetype">
                         <xsl:value-of select="substring-before($mimetype,'/')"/>
@@ -751,8 +944,18 @@
                             </xsl:with-param>
                         </xsl:call-template>
                     </xsl:otherwise>
-                </xsl:choose>
-                <xsl:text> (</xsl:text>
+	    </xsl:choose>
+	    
+			<!-- <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-size</i18n:text> -->
+			<xsl:text> (</xsl:text>
+		<xsl:call-template name="getFileTypeDesc">
+                            <xsl:with-param name="mimetype">
+                                <xsl:value-of select="substring-before(@MIMETYPE,'/')"/>
+                                <xsl:text>/</xsl:text>
+                                <xsl:value-of select="substring-after(@MIMETYPE,'/')"/>
+                            </xsl:with-param>
+                        </xsl:call-template>
+		<xsl:text>, </xsl:text>
                 <xsl:choose>
                     <xsl:when test="$size &lt; 1024">
                         <xsl:value-of select="$size"/>
@@ -771,9 +974,16 @@
                         <i18n:text>xmlui.dri2xhtml.METS-1.0.size-gigabytes</i18n:text>
                     </xsl:otherwise>
                 </xsl:choose>
-                <xsl:text>)</xsl:text>
-            </a>
-        </div>
+    		
+    		
+		<xsl:text>) </xsl:text>
+		<a>
+                        <xsl:attribute name="href">
+                                <xsl:value-of select="mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
+                                </xsl:attribute>
+                                Download
+                </a>
+	    </div>
     </xsl:template>
 
     <xsl:template match="dim:dim" mode="itemDetailView-DIM">
@@ -857,7 +1067,7 @@
         <xsl:param name="context" select="."/>
         <div class="file-wrapper row">
             <div class="col-xs-6 col-sm-3">
-                <div class="thumbnail">
+ 		<div class="thumbnail">
                     <a class="image-link">
                         <xsl:attribute name="href">
                             <xsl:value-of select="mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
@@ -873,13 +1083,12 @@
                                 </img>
                             </xsl:when>
                             <xsl:otherwise>
-				    <img class="img-thumbnail" alt="Thumbnail" src="/themes/GermaniaSacra/images/no-document.png">
-					<!--<xsl:attribute name="data-src">
-					    <xsl:text>holder.js/100%x</xsl:text>
+                                <img class="img-thumbnail no-thumbnail" alt="Thumbnail">
+                                    <xsl:attribute name="data-src">
+                                        <xsl:text>holder.js/100%x</xsl:text>
                                         <xsl:value-of select="$thumbnail.maxheight"/>
-					<xsl:text>/text:No Thumbnail</xsl:text>
-					
-				    </xsl:attribute> -->
+                                        <xsl:text>/text:No Thumbnail</xsl:text>
+                                    </xsl:attribute>
                                 </img>
                             </xsl:otherwise>
                         </xsl:choose>
@@ -961,7 +1170,16 @@
                             </xsl:attribute>
                             <xsl:value-of select="util:shortenString(mets:FLocat[@LOCTYPE='URL']/@xlink:label, 30, 5)"/>
                         </dd>
-                    </xsl:if>
+		</xsl:if>
+            <xsl:if test="($fullitem = 'yes')">
+                                <dt>
+                                                        MD5 Hash:
+                                </dt>
+                                <dd>
+					<xsl:value-of select="./@CHECKSUM"/>
+                                </dd>
+          </xsl:if>
+
                 </dl>
             </div>
 
@@ -971,7 +1189,7 @@
                         <xsl:call-template name="display-rights"/>
                     </xsl:when>
                     <xsl:otherwise>
-			     <xsl:call-template name="view-open"/> 
+                        <xsl:call-template name="view-open"/>
                     </xsl:otherwise>
                 </xsl:choose>
             </div>
@@ -984,7 +1202,7 @@
             <xsl:attribute name="href">
                 <xsl:value-of select="mets:FLocat[@LOCTYPE='URL']/@xlink:href"/>
             </xsl:attribute>
-	    <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-viewOpen</i18n:text> 
+            <i18n:text>xmlui.dri2xhtml.METS-1.0.item-files-viewOpen</i18n:text>
         </a>
     </xsl:template>
 
@@ -1015,7 +1233,7 @@
                 </a>
             </xsl:when>
             <xsl:otherwise>
-		    <!-- <xsl:call-template name="view-open"/> -->
+                <xsl:call-template name="view-open"/>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
@@ -1023,22 +1241,13 @@
     <xsl:template name="getFileIcon">
 	    <xsl:param name="mimetype"/>
 	    <xsl:if test="contains(mets:FLocat[@LOCTYPE='URL']/@xlink:href,'isAllowed=n')">
-		    <i aria-hidden="true" class="glyphicon glyphicon-lock" />
+		<i>
+		    <xsl:attribute name="class">
+	                <xsl:text>glyphicon glyphicon-lock</xsl:text>
+                    </xsl:attribute>
+        	</i>
+		<xsl:text> </xsl:text>
 	    </xsl:if>
-	    <!-- <i aria-hidden="true">
-            <xsl:attribute name="class">
-                <xsl:text>glyphicon </xsl:text>
-                <xsl:choose>
-                    <xsl:when test="contains(mets:FLocat[@LOCTYPE='URL']/@xlink:href,'isAllowed=n')">
-                        <xsl:text> glyphicon-lock</xsl:text>
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:text> glyphicon-file</xsl:text>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:attribute>
-	</i> -->
-        <xsl:text> </xsl:text>
     </xsl:template>
 
     <!-- Generate the license information from the file section -->

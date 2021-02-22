@@ -82,7 +82,7 @@ public class CollectionDepositor extends Depositor
 		Context context = swordService.getContext();
 		SWORDConfiguration swordConfig = swordService.getSwordConfig();
 		SWORDUrlManager urlManager = swordService.getUrlManager();
-
+		log.debug("content-type: " + deposit.getContentType() +  " collection: " + collection);
 		// FIXME: the spec is unclear what to do in this situation.  I'm going
 		// the throw a 415 (ERROR_CONTENT) until further notice
 		//
@@ -96,6 +96,7 @@ public class CollectionDepositor extends Depositor
 
 		// determine if this is an acceptable packaging type for the deposit
 		// if not, we throw a 415 HTTP error (Unsupported Media Type, ERROR_CONTENT)
+		log.debug("content-type: " + deposit.getPackaging() +  " collection: " + this.collection);
 		if (!swordConfig.isSupportedMediaType(deposit.getPackaging(), this.collection))
 		{
 			log.error("Unacceptable packaging type detected: " + deposit.getPackaging() + "for collection" + collection.getID());

@@ -1,11 +1,6 @@
 <!--
 
-    The contents of this file are subject to the license and copyright
-    detailed in the LICENSE and NOTICE files at the root of the source
-    tree and available online at
-
-    http://www.dspace.org/license/
-
+   GS
 -->
 
 <xsl:stylesheet
@@ -200,6 +195,34 @@
                         </span>
                     </h4>
 	    	</xsl:element>
+	    	<div>
+	    	                    <xsl:choose>
+                        <xsl:when test="dri:list[@n=(concat($handle, ':dc.description.abstract'))]/dri:item/dri:hi">
+                            <div class="abstract">
+                                <xsl:for-each select="dri:list[@n=(concat($handle, ':dc.description.abstract'))]/dri:item">
+                                    <xsl:apply-templates select="."/>
+                                    <xsl:text>...</xsl:text>
+                                    <br/>
+                                </xsl:for-each>
+
+                            </div>
+                        </xsl:when>
+                        <xsl:when test="dri:list[@n=(concat($handle, ':fulltext'))]">
+                            <div class="abstract">
+                                <xsl:for-each select="dri:list[@n=(concat($handle, ':fulltext'))]/dri:item">
+                                    <xsl:apply-templates select="."/>
+                                    <xsl:text>...</xsl:text>
+                                    <br/>
+                                </xsl:for-each>
+                            </div>
+                        </xsl:when>
+			<!-- <xsl:when test="dri:list[@n=(concat($handle, ':dc.description.abstract'))]/dri:item">
+                        <div class="abstract">
+                                <xsl:value-of select="util:shortenString(dri:list[@n=(concat($handle, ':dc.description.abstract'))]/dri:item[1], 220, 10)"/>
+			</div>
+		    </xsl:when> -->
+                    </xsl:choose>
+                    </div>
 		<xsl:if test="not(//dri:list[@n=(concat($handle, ':dc.description.view'))])">
 		<div class="artifact-info">
                     <span class="author h4">    <small>

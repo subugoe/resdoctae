@@ -36,7 +36,8 @@
 	<message key="xmlui.general.next">Weiter</message>
 	<message key="xmlui.general.untitled">Ohne Titel</message>
 	<message key="xmlui.general.perform">Ausführen</message>
-    <message key="xmlui.general.queue">In die Warteschleife</message>
+	<message key="xmlui.general.queue">In die Warteschleife</message>
+	<message key="xmlui.general.site.head">Dokumentenserver der <br/>Akademie der Wissenschaften zu Göttingen</message>
 	
 	
 	<!-- 
@@ -159,6 +160,7 @@
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.title">Titel</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.dateissued">Erscheinungsdtum</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.dateaccessioned">Zugangsdatum</message>
+	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.volume">Band</message>
 
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.order.asc">aufsteigend</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.order.desc">absteigend</message>
@@ -168,6 +170,9 @@
 
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.metadata.author"> {0} nach Autor {1}</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.author"> nach Autor</message>
+
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.volume">{0} nach Band</message>
+	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.volume">{0} nach Band</message>
 
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.sort">{0}</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.sort">{0}</message>
@@ -184,7 +189,10 @@
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.dateaccessioned"> {0} nach Zugangsdatum {1}</message>
 	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.dateaccessioned"> nach Zugangsdatum</message>
 
-	
+	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.metadata.series">Serien</message>
+	<message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.series">Serien</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.browse_series">Serien</message>
+
 	<!-- org.dspace.app.xmlui.artifactbrowser.CollectionViewer.java -->
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.search_scope">Suchbereich</message>
 	<message key="xmlui.ArtifactBrowser.CollectionViewer.all_of_dspace">Gesamter Bestand</message>
@@ -249,11 +257,11 @@
 	<message key="xmlui.ArtifactBrowser.ItemViewer.trail">Dokumentanzeige</message>
 	<message key="xmlui.ArtifactBrowser.ItemViewer.head_parent_collections">Das Dokument erscheint in:</message>
 	<message key="xmlui.ArtifactBrowser.ItemViewer.show_simple">Zur Kurzanzeige</message>
-	<message key="xmlui.ArtifactBrowser.ItemViewer.show_full">Langangzeige</message> 
+	<message key="xmlui.ArtifactBrowser.ItemViewer.show_full">&#160;&#160;</message> 
 	<message key="xmlui.ArtifactBrowser.ItemViewer.withdrawn">Diese Dokument wurde zurückgezogen und steht nicht mehr zur Verfügung.</message>
 	
 	<!-- org.dspace.app.xmlui.artifactbrowser.Navigation.java -->
-	<message key="xmlui.ArtifactBrowser.Navigation.head_browse">Blättern</message>
+	<message key="xmlui.ArtifactBrowser.Navigation.head_browse">Auflisten nach</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.head_all_of_dspace">Gesamter Bestand</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.communities_and_collections">Forschungsprojekte &amp; -Reihen</message>
 	<message key="xmlui.ArtifactBrowser.Navigation.browse_title">Titel</message>
@@ -2554,11 +2562,11 @@
 	</p> -->
 	<strong>res doctae</strong> ist die erste akademieeigene Plattform zur digitalen Herausgabe von Forschungsergebnissen. Der Name erinnert an die erste Druckreihe der Akademie, die „Göttingischen Zeitungen von Gelehrten Sachen“, die ihr Gründungspräsident Albrecht von Haller 1753 in ihre Obhut überführt hat, und die sie noch heute unter dem Titel „Göttingische Gelehrte Anzeigen“ herausgibt. Es ist mittlerweile das weltweit älteste Rezensionsorgan deutscher Sprache. <strong>res doctae</strong>
  bietet als institutionelles Repositorium allen Mitgliedern der Akademie sowie den Angehörigen ihrer wissenschaftlichen Kommissionen und Projekte die organisatorischen und technischen Rahmenbedingungen zur elektronischen Publikation wissenschaftlicher Dokumente.</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.metadata.volume">Blättern {0} nach Seriennummer {1}</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.volume">Blättern {0} nach Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.CollectionViewer.browse_volume">Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.volume.column_heading">Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.Navigation.browse_volume">Seriennummer</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.metadata.volume">Blättern {0} nach Bandnummer {1}</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.metadata.volume">Blättern {0} nach Bandnummer</message>
+        <message key="xmlui.ArtifactBrowser.CollectionViewer.browse_volume">Bundnummer</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.volume.column_heading">Bandnummer</message>
+        <message key="xmlui.ArtifactBrowser.Navigation.browse_volume">Bandnummer</message>
         <message key="xmlui.dri2xhtml.METS-1.0.item-toc">Inhaltsverzeichnis</message>
         <message key="xmlui.dri2xhtml.METS-1.0.item-editor">Hrsg.</message>
         <message key="xmlui.dri2xhtml.METS-1.0.item-files-dfg-viewOpen">Öffnen (DFG-Viewer)</message>
@@ -2847,11 +2855,11 @@ e innerhalb der Strukturen der elektronischen Dokumente sowie dynamisch erstellt
                 <!-- new browse index -->
 
         <message key="xmlui.ArtifactBrowser.Navigation.browse_serie">Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.serie.column_heading">Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.serie">Auflisten nach Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.metadata.serie">Blättern {0} nach Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.serie">Blättern {0} nach Seriennummer</message>
-        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.serie">Seriennummer</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.series.column_heading">Seriennummer</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.serie">Auflisten nach Serie</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.metadata.serie">Blättern {0} nach Serien</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.serie">Blättern {0} nach Serie</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.serie">Serien</message>
         <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.sort_by.author">Autor</message>
         <message key="xmlui.ArtifactBrowser.AbstractSearch.sort_by.dc.contributor.*_sort">Autor</message>
         <message key="xmlui.ArtifactBrowser.AbstractSearch.sort_by.dc.relation.ispartofseries_sort">Serie</message>
@@ -3014,6 +3022,7 @@ e innerhalb der Strukturen der elektronischen Dokumente sowie dynamisch erstellt
   <message key="workingPaper">Arbeitspapier</message>
   <message key="bibliography">Bibliografie</message>
   <message key="journalArticle">Zeitschriftenartikel</message>
+  <message key="dataCollection">Datensammlung</message>
   <message key="other">&#160;</message>
   <message key="xmlui.dri2xhtml.METS-1.0.item-type">Typ</message>
 
@@ -3256,7 +3265,7 @@ Einstellung Ihrer Veröffentlichungen auf <strong>res doctae</strong> dienen:<ul
 	</message>
 	<message key="xmlui.dri2xhtml.METS-1.0.item-edition">Ausgabe</message>
 
-	<message key="xmlui.ArtifactBrowser.AbstractRecentSubmissionTransformer.recent_submissions_more">Alle auflisten</message>
+	<message key="xmlui.ArtifactBrowser.AbstractRecentSubmissionTransformer.recent_submissions_more">Alle auflisten ➤</message>
 	<message key="xmlui.contact.link"><a href="https://adw-goe.de//ueber-uns/kontakt/">Kontakt</a></message>
 
 <!-- org.dspace.app.xmlui.Submission.submit.StartSubmissionLookupStep -->
@@ -3287,5 +3296,49 @@ Einstellung Ihrer Veröffentlichungen auf <strong>res doctae</strong> dienen:<ul
   <message key="xmlui.Submission.submit.PrefillStep.identifier.error">Der verwendete ID ist nicht gültig oder wurde nicht gefunden. Korrigieren Sie Ihre Angabe oder fahren Sie mit "weiter" manuell fort.</message>
   <message key="xmlui.Submission.submit.PrefillStep.help">Falls für die Publikation kein Identifier vorliegt, wählen Sie bitte "weiter". Ist ein Identifier vorhanden, werden die bibliographischen Daten zum Dokument im nächsten Schritt automatisch eingetragen.</message>
   <message key="xmlui.Submission.submit.PrefillStep.refresh_help">Bitte die Checkbox "Überschreiben" nur aktivieren, wenn Sie die eingetragene ID korrigieren wollen.</message>
-  <message key="xmlui.all.publications">Alle Publikationen</message>
+  <message key="xmlui.all.publications">Alle auflisten ➤</message>
+  <message key="xmlui.item.printondemand">Druckversion bestellen</message>
+  <message key="xmlui.no.files">Noch keine Datei(en) vorhanden.</message>
+  <message key="xmlui.gs.series">Publikationsreihen</message>
+
+    <message key="xmlui.administrative.Navigation.administrative_message_catalogues">Message Catalogues</message>
+
+        <message key="xmlui.administrative.catalogue.title">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.trail">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.head">Message Catalogue</message>
+        <message key="xmlui.administrative.catalogue.none.provided">Please select a message catalogue.</message>
+        <message key="xmlui.administrative.catalogue.does.not.exist">The selected catalogue does not exist.</message>
+        <message key="xmlui.administrative.catalogue.not.valid">The selected catalogue is not a valid catalogue file.</message>
+        <message key="xmlui.administrative.catalogue.message.not.loading">Message catalogue could not be loaded.</message>
+        <message key="xmlui.administrative.catalogue.message.update.success">The message was successfullly updated.</message>
+        <message key="xmlui.administrative.catalogue.message.update.failure">The message could not be updated.</message>
+        <message key="xmlui.administrative.catalogue.message.add">Add new message</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.message">Are you sure you want to delete the following key:</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.header">Delete Message</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.ok">Delete</message>
+        <message key="xmlui.administrative.catalogue.message.delete.modal.cancel">Cancel</message>
+
+        <message key="xmlui.administrative.catalogue.message.description">Click the buttons next to an input field to edit or delete a message, or click “Add” to add a new message. Your changes will be made immediately. Please wait for the page to finish processing before starting another change.</message>
+        <message key="xmlui.administrative.catalogue.message.loading">Loading, please wait...</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.key">Key:</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.key.missing">Please provide a message key.</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.message.value">Text:</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.header">Add Message</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.ok">Add</message>
+        <message key="xmlui.administrative.catalogue.message.add.modal.cancel">Cancel</message>
+        <message key="xmlui.administrative.catalogue.message.server.error.add">A server error occurred and the message could not be added. Please contact a system administrator and try again later.</message>
+        <message key="xmlui.administrative.catalogue.message.server.error.delete">A server error occurred and the message could not be deleted. Please contact a system administrator and try again later.</message>
+        <message key="xmlui.administrative.catalogue.message.server.success.add">Message was successfully added.</message>
+        <message key="xmlui.administrative.catalogue.message.server.success.delete">Message was successfully deleted.</message>
+
+
+        <message key="xmlui.administrative.select.catalogue.title">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.trail">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.head">Select Message Catalogue</message>
+        <message key="xmlui.administrative.select.catalogue.list.prefix">Catalogue: </message>
+
+  <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.gssort.column_heading">Aulisten</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.gssort">Auflisten</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.trail.item.metadata.gssort">{0}</message>
+        <message key="xmlui.ArtifactBrowser.ConfigurableBrowse.title.item.gssort">{0}</message>
 </catalogue>

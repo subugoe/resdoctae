@@ -240,6 +240,7 @@
 
             <link rel="stylesheet" href="{concat('/themes/Mirage2/', 'styles/main.css')}"/>
 	    <link rel="stylesheet" href="{concat('/themes/Mirage2/', 'styles/addon.css')}"/>
+	    <link rel="stylesheet" href="{concat('/themes/GermaniaSacra/', 'styles/addon.css')}"/>
 
             <!-- Add syndication feeds -->
             <xsl:for-each select="/dri:document/dri:meta/dri:pageMeta/dri:metadata[@element='feed']">
@@ -562,7 +563,9 @@
 		<span class="secondary"><i18n:text>xmlui.general.site.head</i18n:text></span>
 	    </div>
 	    <div id="gs">
-                <img src="/static/images/GS_rot.png" alt="Germania Sacra Logo" />
+		    <a href="germania-sacra.de">    
+			    <img src="/static/images/GS_rot.png" alt="Germania Sacra Logo" />
+		    </a>
              </div>
             <div id="clear"></div>
         </div>
